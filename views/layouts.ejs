@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+    <%- include('partials/head') %>
+    <body class="layout-fluid theme-dark">
+        <div class="page">     
+
+            <!-- Sidebar (kiri) -->
+            <%- include('partials/sidebar') %>
+
+            <!-- Konten utama (kanan) -->
+            <div class="page-wrapper">
+                <!-- Header -->
+                <%- include('partials/navbar') %>
+
+                <div class="page-body">
+                    <div class="container-xl">
+                        <%- body %>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <%- include('partials/footer') %>
+            </div>
+        </div>
+    <script src="/js/tabler.min.js"></script>
+</body>
+
+</html>

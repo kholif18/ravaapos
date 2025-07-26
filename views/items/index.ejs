@@ -1,0 +1,62 @@
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">Daftar Items</h2>
+        <div class="text-muted mt-1">Menampilkan semua item yang tersedia</div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <a href="/items/create" class="btn btn-primary">
+          <i class="ti ti-plus me-1"></i> Tambah Item
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Tabel Item</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nama</th>
+              <th>Harga</th>
+              <th>Stok</th>
+              <th class="w-4">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (items.length === 0) { %>
+              <tr>
+                <td colspan="5" class="text-center text-muted">Belum ada data</td>
+              </tr>
+            <% } else { %>
+              <% items.forEach((item, index) => { %>
+                <tr>
+                  <td><%= index + 1 %></td>
+                  <td><%= item.name %></td>
+                  <td>Rp <%= item.price.toLocaleString('id-ID') %></td>
+                  <td><%= item.stock || 0 %></td>
+                  <td>
+                    <a href="#" class="btn btn-sm btn-warning">
+                      <i class="ti ti-pencil"></i>
+                    </a>
+                    <a href="#" class="btn btn-sm btn-danger">
+                      <i class="ti ti-trash"></i>
+                    </a>
+                  </td>
+                </tr>
+              <% }); %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

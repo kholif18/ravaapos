@@ -5,6 +5,9 @@ const {
   Item,
   Category
 } = require('../models');
+const {
+  Op
+} = require('sequelize');
 
 // GET view
 exports.viewItems = async (req, res) => {
@@ -78,28 +81,41 @@ exports.createItem = async (req, res) => {
   }
 };
 
-// GET lazy/infinite JSON
 exports.getItemJson = async (req, res) => {
-  const {
-    offset = 0, limit = 25
-  } = req.query;
   try {
+    const {
+      offset = 0, limit = 25, category, q
+    } = req.query;
+    const where = {};
+
+    if (category) {
+      where.categoryId = category;
+    }
+
+    if (q) {
+      where.name = {
+        [Op.like]: `%${q}%`
+      };
+    }
+
     const items = await Item.findAll({
-      offset: parseInt(offset),
-      limit: parseInt(limit),
+      where,
       include: [{
         model: Category,
         as: 'category'
-      }],
+      }], // kamu pakai alias 'category', jaga konsistensinya
+      offset: parseInt(offset),
+      limit: parseInt(limit),
       order: [
-        ['id', 'DESC']
+        ['name', 'ASC']
       ]
     });
+
     res.json(items);
   } catch (err) {
     console.error(err);
     res.status(500).json({
-      message: 'Gagal memuat data'
+      error: 'Gagal memuat item.'
     });
   }
 };

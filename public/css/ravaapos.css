@@ -1,0 +1,58 @@
+#desktopToggleBtn {
+    border-radius: 0 5px 5px 0;
+}
+
+#desktopToggleWrapper.hidden {
+    display: none !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.list-group-item:hover {
+    background-color: #f0f0f0;
+    color: #000;
+    cursor: pointer;
+}
+
+.sort-icon {
+    font-size: 0.75em;
+    margin-left: 4px;
+}
+
+#itemTable thead th {
+    position: sticky;
+    top: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 10;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+#itemTable th,
+#itemTable td {
+    padding: 0.75rem 1rem;
+}
+
+#itemTable thead th:first-child {
+    border-top-left-radius: 0.5rem;
+}
+#itemTable thead th:last-child {
+    border-top-right-radius: 0.5rem;
+}
+
+@media (min-width: 992px) {
+    /* Sidebar hidden saat collapse */
+    .sidebar-wrapper.collapse:not(.show) {
+        display: none !important;
+    }
+
+    /* Tombol hanya muncul saat sidebar collapse */
+    #desktopToggleWrapper.hidden {
+        display: none !important;
+    }
+}

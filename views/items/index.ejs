@@ -1,70 +1,81 @@
 <!-- views/items/index.ejs -->
-<!-- Tombol Tampilkan hanya di mobile -->
-<div class="d-flex justify-content-between align-items-center mb-3 d-lg-none">
+<!-- Tombol Toggle Sidebar (Desktop) saat COLLAPSE -->
+<div id="desktopToggleWrapper"
+    class="d-none d-lg-block position-fixed"
+    style="top: 88px; left: 225px; z-index: 1030;">
+  <button id="desktopToggleBtn"
+          class="btn btn-primary btn-sm"
+          type="button"
+          title="Tampilkan Kategori">
+    <i class="bi bi-chevron-right"></i>
+  </button>
+</div>
+
+
+<!-- Tombol Toggle Sidebar (Mobile) -->
+<div class="d-flex justify-content-between align-items-center mb-2 d-lg-none">
   <strong>Kategori</strong>
-  <button class="btn btn-outline-primary btn-sm" type="button"
-    data-bs-toggle="collapse"
-    data-bs-target="#sidebarKategori"
-    aria-expanded="false"
-    aria-controls="sidebarKategori"
-    id="toggleSidebarBtn">
-    <i class="bi bi-list"></i> Tampilkan
+  <button id="mobileToggleBtn" class="btn btn-outline-primary btn-sm" type="button">
+    <i class="bi bi-chevron-down"></i>
   </button>
 </div>
 
 <div class="row">
   <!-- Sidebar kategori -->
-  <div class="col-lg-3 mb-4">
-    <div class="collapse d-lg-block show" id="sidebarKategori">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Kategori</strong>
-          <!-- Tombol close hanya di mobile -->
-          <button class="btn-close d-lg-none" type="button"
-            data-bs-toggle="collapse"
-            data-bs-target="#sidebarKategori"
-            aria-label="Tutup"></button>
-        </div>
-        <div class="list-group list-group-flush">
-          <a href="/items/view" class="list-group-item list-group-item-action <%= !selectedCategory ? 'active' : '' %>">Semua</a>
-          <% categories.forEach(cat => { %>
-            <a href="/items/view?category=<%= cat.id %>" class="list-group-item list-group-item-action <%= selectedCategory == cat.id ? 'active' : '' %>"><%= cat.name %></a>
-          <% }) %>
-        </div>
+  <div id="sidebarKategori" class="col-lg-2 mb-4 collapse">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+        <strong>Kategori</strong>
+        <!-- Tombol collapse (desktop only) -->
+        <button id="desktopCollapseBtn"
+          class="btn btn-outline-primary btn-sm d-none d-lg-inline-block"
+          type="button">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+      </div>
+      <div class="list-group list-group-flush">
+        <a href="/items/view" class="list-group-item py-2 px-3 text-decoration-none <%= !selectedCategory ? 'active' : '' %>">Semua</a>
+        <% categories.forEach(cat => { %>
+          <a href="/items/view?category=<%= cat.id %>" class="list-group-item py-2 px-3 text-decoration-none <%= selectedCategory == cat.id ? 'active' : '' %>"><%= cat.name %></a>
+        <% }) %>
       </div>
     </div>
   </div>
 
-  <div class="col-lg-9">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2>Daftar Items</h2>
-      <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">+ Tambah Item</button>
+  <div class="col" id="mainContent">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h2 class="flex-grow-1">Daftar Items</h2>
+
+      <!-- Filter pencarian -->
+      <form method="GET" action="/items/view" class="d-flex flex-grow-1 gap-2">
+        <input type="hidden" name="category" value="<%= selectedCategory || '' %>" />
+        <input type="text" name="q" class="form-control flex-grow-1" placeholder="Cari nama item..." value="<%= search || '' %>" />
+        <button type="submit" class="btn btn-secondary">Cari</button>
+      </form>
+
+      <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
+        + Tambah Item
+      </button>
     </div>
 
-    <!-- Filter pencarian -->
-    <form method="GET" action="/items/view" class="row g-2 mb-4">
-      <input type="hidden" name="category" value="<%= selectedCategory || '' %>" />
-      <div class="col-md-6">
-        <input type="text" name="q" class="form-control" placeholder="Cari nama item..." value="<%= search || '' %>" />
-      </div>
-      <div class="col-md-3">
-        <button type="submit" class="btn btn-secondary w-100">Cari</button>
-      </div>
-    </form>
 
     <!-- Tabel item -->
     <div class="card">
-      <div class="card-body" id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
-        <table class="table table-hover" id="itemTable">
+      <div class="card-body p-0" id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
+        <table class="table table-hover mb-0" id="itemTable">
           <thead>
             <tr>
-              <th>Nama</th>
-              <th>Harga</th>
-              <th>Stok</th>
-              <th>Kategori</th>
+              <th data-sort="code">Code <span class="sort-icon"></span></th>
+              <th data-sort="name">Name <span class="sort-icon"></span></th>
+              <th data-sort="category">Category <span class="sort-icon"></span></th>
+              <th data-sort="barcode">Barcode <span class="sort-icon"></span></th>
+              <th data-sort="cost">Cost <span class="sort-icon"></span></th>
+              <th data-sort="salePrice">Sale Price <span class="sort-icon"></span></th>
+              <th data-sort="unit">Unit <span class="sort-icon"></span></th>
               <th>Aksi</th>
             </tr>
           </thead>
+
           <tbody id="itemTableBody">
             <!-- data akan di-load via JS -->
           </tbody>
@@ -79,8 +90,8 @@
 <div class="modal fade" id="modalCreate" tabindex="-1" aria-labelledby="modalCreateLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form action="/items" method="POST" class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalCreateLabel">Tambah Item</h5>
+      <div class="modal-header bg-primary">
+        <h5 class="modal-title text-white" id="modalCreateLabel">Tambah Item</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -138,7 +149,7 @@
 
         <!-- Price Change Allowed -->
         <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" name="priceChangeAllowed" id="priceChangeAllowed" checked>
+          <input class="form-check-input" type="checkbox" name="priceChangeAllowed" id="priceChangeAllowed">
           <label class="form-check-label" for="priceChangeAllowed">Harga bisa diubah saat penjualan</label>
         </div>
       </div>
@@ -184,111 +195,227 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-  let offset = 0;
-  const limit = 25;
-  let loading = false;
-  let done = false;
+    function sortTableBy(column, ascending = true) {
+      const tbody = document.getElementById('itemTableBody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
 
-  async function loadMoreItems() {
-    if (loading || done) return;
-    loading = true;
-    document.getElementById('loadingIndicator').textContent = 'Loading...';
+      rows.sort((a, b) => {
+        let aVal = a.querySelector(`td[data-column="${column}"]`)?.textContent?.trim() || '';
+        let bVal = b.querySelector(`td[data-column="${column}"]`)?.textContent?.trim() || '';
 
-    const res = await fetch(`/items/json?offset=${offset}&limit=${limit}`);
-    if (!res.ok) return;
-    const items = await res.json();
+        // Jika angka, sort sebagai angka
+        if (!isNaN(aVal) && !isNaN(bVal)) {
+          aVal = parseFloat(aVal);
+          bVal = parseFloat(bVal);
+        }
 
-    if (items.length < limit) done = true;
-    offset += items.length;
+        if (aVal < bVal) return ascending ? -1 : 1;
+        if (aVal > bVal) return ascending ? 1 : -1;
+        return 0;
+      });
 
-    const tbody = document.getElementById('itemTableBody');
-    for (const item of items) {
-      const row = document.createElement('tr');
-      row.dataset.id = item.id;
-      row.dataset.name = item.name;
-      row.dataset.price = item.price;
-      row.dataset.category = item.categoryId;
-
-      row.innerHTML = `
-        <td>${item.name}</td>
-        <td>${item.salePrice}</td>
-        <td>${item.stock}</td>
-        <td>${item.category?.name || '-'}</td>
-        <td>
-          <button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${item.id}">Edit</button>
-          <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${item.id}">Hapus</button>
-        </td>`;
-      tbody.appendChild(row);
+      // Reset tbody
+      tbody.innerHTML = '';
+      rows.forEach(row => tbody.appendChild(row));
     }
 
-    document.getElementById('loadingIndicator').textContent = done ? 'Semua item dimuat' : '';
-    loading = false;
-  }
+    function updateSortIcons(column, ascending) {
+      document.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.textContent = '';
+      });
 
-  // Infinite scroll
-  document.getElementById('tableScrollContainer').addEventListener('scroll', () => {
-    const container = document.getElementById('tableScrollContainer');
-    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 10) {
-      loadMoreItems();
+      const activeHeader = document.querySelector(`th[data-sort="${column}"] .sort-icon`);
+      if (activeHeader) {
+        activeHeader.textContent = ascending ? '↓' : '↑';
+      }
     }
+    // Klik header untuk sort
+    const headers = document.querySelectorAll('#itemTable thead th[data-sort]');
+    let currentSort = { column: null, ascending: true };
+
+    // Klik header untuk sort
+    headers.forEach(header => {
+      header.addEventListener('click', () => {
+        const column = header.dataset.sort;
+        const ascending = (currentSort.column === column) ? !currentSort.ascending : true;
+        currentSort = { column, ascending };
+        sortTableBy(column, ascending);
+        updateSortIcons(column, ascending);
+      });
+    });
+
+    let offset = 0;
+    const limit = 25;
+    let loading = false;
+    let done = false;
+
+    function formatRupiah(num) {
+      return 'Rp ' + Number(num).toLocaleString('id-ID');
+    }
+
+    async function loadMoreItems() {
+      if (loading || done) return;
+      loading = true;
+      document.getElementById('loadingIndicator').textContent = 'Loading...';
+
+      const params = new URLSearchParams(window.location.search);
+      const category = params.get('category') || '';
+      const search = params.get('q') || '';
+
+      const res = await fetch(`/items/json?offset=${offset}&limit=${limit}&category=${category}&q=${search}`);
+
+      if (!res.ok) return;
+      const items = await res.json();
+
+      if (items.length < limit) done = true;
+      offset += items.length;
+
+      const tbody = document.getElementById('itemTableBody');
+      for (const item of items) {
+        const row = document.createElement('tr');
+        row.dataset.id = item.id;
+        row.dataset.name = item.name;
+        row.dataset.price = item.price;
+        row.dataset.category = item.categoryId;
+
+        row.innerHTML = `
+          <td data-column="code">${item.code}</td>
+          <td data-column="name">${item.name}</td>
+          <td data-column="category">${item.category?.name || '-'}</td>
+          <td data-column="barcode">${item.barcode || '-'}</td>
+          <td data-column="cost">${formatRupiah(item.cost)}</td>
+          <td data-column="salePrice">${formatRupiah(item.salePrice)}</td>
+          <td data-column="unit">${item.unit}</td>
+          <td>
+            <button class="btn btn-sm btn-warning btn-edit" data-bs-toggle="modal" data-bs-target="#modalEdit"><i class="ti ti-pencil"></i></button>
+            <button class="btn btn-sm btn-danger btn-delete"><i class="ti ti-trash  "></i></button>
+          </td>`;
+        tbody.appendChild(row);
+      }
+
+      document.getElementById('loadingIndicator').textContent = done ? 'Semua item dimuat' : '';
+      loading = false;
+    }
+
+    // Infinite scroll
+    document.getElementById('tableScrollContainer').addEventListener('scroll', () => {
+      const container = document.getElementById('tableScrollContainer');
+      if (container.scrollTop + container.clientHeight >= container.scrollHeight - 10) {
+        loadMoreItems();
+      }
+    });
+
+    loadMoreItems();
+
+    // AJAX untuk kalkulasi harga jual dua arah
+    const inputCost = document.getElementById('inputCost');
+    const inputMarkup = document.getElementById('inputMarkup');
+    const inputSalePrice = document.getElementById('inputSalePrice');
+
+    let lastChanged = null; // untuk menghindari loop tak berujung
+
+    function updateSalePrice() {
+      if (lastChanged === 'sale') return; // hindari loop
+      const cost = parseFloat(inputCost.value) || 0;
+      const markup = parseFloat(inputMarkup.value) || 0;
+      const sale = cost + (cost * markup / 100);
+      lastChanged = 'markup';
+      inputSalePrice.value = Number.isInteger(sale) ? sale : sale.toFixed(2);
+    }
+
+    function updateMarkup() {
+      if (lastChanged === 'markup') return; // hindari loop
+      const cost = parseFloat(inputCost.value) || 0;
+      const sale = parseFloat(inputSalePrice.value) || 0;
+      if (cost === 0) return; // hindari pembagian nol
+      const markup = ((sale - cost) / cost) * 100;
+      lastChanged = 'sale';
+      inputMarkup.value = Number.isInteger(markup) ? markup : markup.toFixed(2);
+    }
+
+    inputCost.addEventListener('input', () => {
+      lastChanged = null;
+      updateSalePrice();
+    });
+
+    inputMarkup.addEventListener('input', () => {
+      lastChanged = null;
+      updateSalePrice();
+    });
+
+    inputSalePrice.addEventListener('input', () => {
+      lastChanged = null;
+      updateMarkup();
+    });
   });
 
-  loadMoreItems();
+document.addEventListener('DOMContentLoaded', function () {
+  const sidebar = document.getElementById('sidebarKategori');
+  const desktopExpandBtn = document.getElementById('desktopToggleBtn');
+  const desktopCollapseBtn = document.getElementById('desktopCollapseBtn');
+  const desktopWrapper = document.getElementById('desktopToggleWrapper');
+  const mobileBtn = document.getElementById('mobileToggleBtn');
 
-  // AJAX untuk kalkulasi harga jual dua arah
-  const inputCost = document.getElementById('inputCost');
-  const inputMarkup = document.getElementById('inputMarkup');
-  const inputSalePrice = document.getElementById('inputSalePrice');
+  const bsCollapse = new bootstrap.Collapse(sidebar, { toggle: false });
 
-  let lastChanged = null; // untuk menghindari loop tak berujung
-
-  function updateSalePrice() {
-    if (lastChanged === 'sale') return; // hindari loop
-    const cost = parseFloat(inputCost.value) || 0;
-    const markup = parseFloat(inputMarkup.value) || 0;
-    const sale = cost + (cost * markup / 100);
-    lastChanged = 'markup';
-    inputSalePrice.value = sale.toFixed(2);
+  // Atur default state: collapse untuk mobile, expand untuk desktop
+  function initSidebarState() {
+    if (window.innerWidth < 992) {
+      bsCollapse.hide(); // collapse untuk mobile
+    } else {
+      bsCollapse.show(); // expand untuk desktop
+    }
+    updateButtons();
   }
 
-  function updateMarkup() {
-    if (lastChanged === 'markup') return; // hindari loop
-    const cost = parseFloat(inputCost.value) || 0;
-    const sale = parseFloat(inputSalePrice.value) || 0;
-    if (cost === 0) return; // hindari pembagian nol
-    const markup = ((sale - cost) / cost) * 100;
-    lastChanged = 'sale';
-    inputMarkup.value = markup.toFixed(2);
+  function updateButtons() {
+    const isShown = sidebar.classList.contains('show');
+    const isDesktop = window.innerWidth >= 992;
+
+    if (isDesktop) {
+      if (desktopWrapper) {
+        desktopWrapper.classList.toggle('hidden', isShown); // expand → hide tombol expand
+      }
+      if (desktopCollapseBtn) {
+        desktopCollapseBtn.classList.toggle('hidden', !isShown); // collapse → hide tombol collapse
+      }
+    }
+
+    if (mobileBtn) {
+      mobileBtn.innerHTML = isShown
+        ? '<i class="bi bi-chevron-left"></i>'
+        : '<i class="bi bi-chevron-down"></i>';
+    }
   }
 
-  inputCost.addEventListener('input', () => {
-    lastChanged = null;
-    updateSalePrice();
-  });
+  // Event toggle tombol desktop
+  if (desktopExpandBtn) {
+    desktopExpandBtn.addEventListener('click', () => {
+      bsCollapse.show();
+    });
+  }
 
-  inputMarkup.addEventListener('input', () => {
-    lastChanged = null;
-    updateSalePrice();
-  });
+  if (desktopCollapseBtn) {
+    desktopCollapseBtn.addEventListener('click', () => {
+      bsCollapse.hide();
+    });
+  }
 
-  inputSalePrice.addEventListener('input', () => {
-    lastChanged = null;
-    updateMarkup();
+  // Event toggle tombol mobile
+  if (mobileBtn) {
+    mobileBtn.addEventListener('click', () => {
+      sidebar.classList.contains('show') ? bsCollapse.hide() : bsCollapse.show();
+    });
+  }
+
+  sidebar.addEventListener('shown.bs.collapse', updateButtons);
+  sidebar.addEventListener('hidden.bs.collapse', updateButtons);
+
+  initSidebarState();
+
+  window.addEventListener('resize', () => {
+    initSidebarState();
   });
 });
 
-document.addEventListener('DOMContentLoaded', function () {
-    const toggleBtn = document.getElementById('toggleSidebarBtn');
-    const sidebar = document.getElementById('sidebarKategori');
-
-    if (sidebar) {
-      sidebar.addEventListener('shown.bs.collapse', () => {
-        toggleBtn.innerHTML = '<i class="bi bi-x"></i> Sembunyikan';
-      });
-
-      sidebar.addEventListener('hidden.bs.collapse', () => {
-        toggleBtn.innerHTML = '<i class="bi bi-list"></i> Tampilkan';
-      });
-    }
-  });
 </script>

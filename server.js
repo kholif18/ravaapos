@@ -1,32 +1,54 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const app = express();
-const db = require('./config/database');
+const session = require('express-session');
+const flash = require('connect-flash');
 const expressLayouts = require('express-ejs-layouts');
+const db = require('./app/models');
 const index = require('./app/routes/index');
 
-// Middleware
+const app = express();
+
+// ===== Middleware parsing =====
 app.use(express.json());
 app.use(express.urlencoded({
   extended: false
 }));
 app.use(express.static('public'));
 
-// View engine
+// ===== View engine setup =====
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(expressLayouts);
-app.set('layout', 'layouts'); // refers to views/layouts.ejs
+app.set('layout', 'layouts'); // views/layouts.ejs
 
-// Routes
+// ===== Session + Flash =====
+app.use(session({
+  secret: 'secret-rahasia-anda', // ganti dengan string unik
+  resave: false,
+  saveUninitialized: false
+}));
+
+app.use(flash());
+
+// Flash ke res.locals agar bisa diakses di EJS
+app.use((req, res, next) => {
+  res.locals.errors = req.flash('errors');
+  res.locals.error = req.flash('error');
+  res.locals.success = req.flash('success');
+  next();
+});
+
+// ===== Sidebar middleware =====
+const sidebarMiddleware = require('./app/middleware/sidebarCategories');
+app.use(sidebarMiddleware);
+
+// ===== Routes =====
 app.use('/', index);
 
-require('./app/models/Item');
-
-// Start server
+// ===== Start server =====
 const PORT = process.env.PORT || 3000;
-db.sync().then(() => {
-  console.log('Database connected');
-  app.listen(PORT, () => console.log(`RavaaPOS running on http://localhost:${PORT}`));
+db.sequelize.sync().then(() => {
+  console.log('Database ready');
+  app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));
 });

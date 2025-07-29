@@ -1,27 +1,37 @@
 <aside class="navbar navbar-vertical navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu">
-            <span class="navbar-toggler-icon"></span>
+        <span class="navbar-toggler-icon"></span>
         </button>
         <h1 class="navbar-brand">
-            <a href="/">
+        <a href="/">
             <img src="/static/logo.svg" height="32" alt="Logo" />
-            </a>
+        </a>
         </h1>
 
         <div class="collapse navbar-collapse" id="sidebar-menu">
-            <ul class="navbar-nav pt-lg-3">
-                <li class="nav-item">
-                    <a href="/" class="nav-link">
-                        <i class="ti ti-home me-2"></i> Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/items/view"  class="nav-link" >
-                        <i class="ti ti-box me-2"></i> Items
-                    </a>
-                </li>
-            </ul>
+        <ul class="navbar-nav pt-lg-3">
+
+            <!-- Dashboard -->
+            <li class="nav-item">
+                <a href="/" class="nav-link">
+                    <i class="ti ti-home me-2"></i> Dashboard
+                </a>
+            </li>
+
+            <!-- Items -->
+            <li class="nav-item">
+                <a href="/items/view" class="nav-link">
+                    <i class="ti ti-box me-2"></i> Items
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="/categories" class="nav-link">
+                    <i class="ti ti-tags me-2"></i> Kategori
+                </a>
+            </li>
+        </ul>
         </div>
     </div>
 </aside>

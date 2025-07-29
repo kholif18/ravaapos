@@ -1,62 +1,294 @@
-<div class="page-header d-print-none">
-  <div class="container-xl">
-    <div class="row g-2 align-items-center">
-      <div class="col">
-        <h2 class="page-title">Daftar Items</h2>
-        <div class="text-muted mt-1">Menampilkan semua item yang tersedia</div>
+<!-- views/items/index.ejs -->
+<!-- Tombol Tampilkan hanya di mobile -->
+<div class="d-flex justify-content-between align-items-center mb-3 d-lg-none">
+  <strong>Kategori</strong>
+  <button class="btn btn-outline-primary btn-sm" type="button"
+    data-bs-toggle="collapse"
+    data-bs-target="#sidebarKategori"
+    aria-expanded="false"
+    aria-controls="sidebarKategori"
+    id="toggleSidebarBtn">
+    <i class="bi bi-list"></i> Tampilkan
+  </button>
+</div>
+
+<div class="row">
+  <!-- Sidebar kategori -->
+  <div class="col-lg-3 mb-4">
+    <div class="collapse d-lg-block show" id="sidebarKategori">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Kategori</strong>
+          <!-- Tombol close hanya di mobile -->
+          <button class="btn-close d-lg-none" type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#sidebarKategori"
+            aria-label="Tutup"></button>
+        </div>
+        <div class="list-group list-group-flush">
+          <a href="/items/view" class="list-group-item list-group-item-action <%= !selectedCategory ? 'active' : '' %>">Semua</a>
+          <% categories.forEach(cat => { %>
+            <a href="/items/view?category=<%= cat.id %>" class="list-group-item list-group-item-action <%= selectedCategory == cat.id ? 'active' : '' %>"><%= cat.name %></a>
+          <% }) %>
+        </div>
       </div>
-      <div class="col-auto ms-auto d-print-none">
-        <a href="/items/create" class="btn btn-primary">
-          <i class="ti ti-plus me-1"></i> Tambah Item
-        </a>
+    </div>
+  </div>
+
+  <div class="col-lg-9">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>Daftar Items</h2>
+      <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">+ Tambah Item</button>
+    </div>
+
+    <!-- Filter pencarian -->
+    <form method="GET" action="/items/view" class="row g-2 mb-4">
+      <input type="hidden" name="category" value="<%= selectedCategory || '' %>" />
+      <div class="col-md-6">
+        <input type="text" name="q" class="form-control" placeholder="Cari nama item..." value="<%= search || '' %>" />
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-secondary w-100">Cari</button>
+      </div>
+    </form>
+
+    <!-- Tabel item -->
+    <div class="card">
+      <div class="card-body" id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
+        <table class="table table-hover" id="itemTable">
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Harga</th>
+              <th>Stok</th>
+              <th>Kategori</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="itemTableBody">
+            <!-- data akan di-load via JS -->
+          </tbody>
+        </table>
+        <div id="loadingIndicator" class="text-center text-muted py-3">Loading...</div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="page-body">
-  <div class="container-xl">
-    <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Tabel Item</h3>
+<!-- Modal Tambah Item -->
+<div class="modal fade" id="modalCreate" tabindex="-1" aria-labelledby="modalCreateLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form action="/items" method="POST" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCreateLabel">Tambah Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="table-responsive">
-        <table class="table table-vcenter card-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nama</th>
-              <th>Harga</th>
-              <th>Stok</th>
-              <th class="w-4">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if (items.length === 0) { %>
-              <tr>
-                <td colspan="5" class="text-center text-muted">Belum ada data</td>
-              </tr>
-            <% } else { %>
-              <% items.forEach((item, index) => { %>
-                <tr>
-                  <td><%= index + 1 %></td>
-                  <td><%= item.name %></td>
-                  <td>Rp <%= item.price.toLocaleString('id-ID') %></td>
-                  <td><%= item.stock || 0 %></td>
-                  <td>
-                    <a href="#" class="btn btn-sm btn-warning">
-                      <i class="ti ti-pencil"></i>
-                    </a>
-                    <a href="#" class="btn btn-sm btn-danger">
-                      <i class="ti ti-trash"></i>
-                    </a>
-                  </td>
-                </tr>
-              <% }); %>
-            <% } %>
-          </tbody>
-        </table>
+      <div class="modal-body">
+        <!-- Nama -->
+        <div class="mb-3">
+          <input type="text" name="name" class="form-control" placeholder="Nama item" required>
+        </div>
+
+        <!-- Kode & Barcode -->
+        <div class="mb-3">
+          <input type="text" name="code" class="form-control" placeholder="Kode item" required>
+        </div>
+        <div class="mb-3">
+          <input type="text" name="barcode" class="form-control" placeholder="Barcode (opsional)">
+        </div>
+
+        <!-- Unit & Category -->
+        <div class="mb-3">
+          <input type="text" name="unit" class="form-control" placeholder="Unit (mis. pcs, pkg)" required>
+        </div>
+        <div class="mb-3">
+          <select name="categoryId" class="form-select">
+            <option value="">Pilih Kategori</option>
+            <% categories.forEach(cat => { %>
+              <option value="<%= cat.id %>"><%= cat.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- Default Qty & Service -->
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" name="defaultQtyOne" id="defaultQtyOne" checked>
+          <label class="form-check-label" for="defaultQtyOne">Default Qty = 1</label>
+        </div>
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" name="isService" id="isService">
+          <label class="form-check-label" for="isService">Jasa (tidak menggunakan stok)</label>
+        </div>
+
+        <!-- Cost, Markup, Sale Price -->
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label>Harga Beli (Cost)</label>
+            <input type="number" step="0.01" name="cost" id="inputCost" class="form-control" required>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>Markup (%)</label>
+            <input type="number" step="0.01" name="markup" id="inputMarkup" class="form-control" required>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>Harga Jual</label>
+            <input type="number" step="0.01" name="salePrice" id="inputSalePrice" class="form-control" required>
+          </div>
+        </div>
+
+        <!-- Price Change Allowed -->
+        <div class="form-check form-switch mb-3">
+          <input class="form-check-input" type="checkbox" name="priceChangeAllowed" id="priceChangeAllowed" checked>
+          <label class="form-check-label" for="priceChangeAllowed">Harga bisa diubah saat penjualan</label>
+        </div>
       </div>
-    </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
   </div>
 </div>
+
+<!-- Modal edit item -->
+<div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editItemForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEditLabel">Edit Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="id" id="editItemId">
+        <div class="mb-3">
+          <input type="text" name="name" id="editName" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <input type="number" name="price" id="editPrice" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <select name="categoryId" id="editCategoryId" class="form-select">
+            <option value="">Pilih Kategori</option>
+            <% categories.forEach(cat => { %>
+              <option value="<%= cat.id %>"><%= cat.name %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+  let offset = 0;
+  const limit = 25;
+  let loading = false;
+  let done = false;
+
+  async function loadMoreItems() {
+    if (loading || done) return;
+    loading = true;
+    document.getElementById('loadingIndicator').textContent = 'Loading...';
+
+    const res = await fetch(`/items/json?offset=${offset}&limit=${limit}`);
+    if (!res.ok) return;
+    const items = await res.json();
+
+    if (items.length < limit) done = true;
+    offset += items.length;
+
+    const tbody = document.getElementById('itemTableBody');
+    for (const item of items) {
+      const row = document.createElement('tr');
+      row.dataset.id = item.id;
+      row.dataset.name = item.name;
+      row.dataset.price = item.price;
+      row.dataset.category = item.categoryId;
+
+      row.innerHTML = `
+        <td>${item.name}</td>
+        <td>${item.salePrice}</td>
+        <td>${item.stock}</td>
+        <td>${item.category?.name || '-'}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${item.id}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${item.id}">Hapus</button>
+        </td>`;
+      tbody.appendChild(row);
+    }
+
+    document.getElementById('loadingIndicator').textContent = done ? 'Semua item dimuat' : '';
+    loading = false;
+  }
+
+  // Infinite scroll
+  document.getElementById('tableScrollContainer').addEventListener('scroll', () => {
+    const container = document.getElementById('tableScrollContainer');
+    if (container.scrollTop + container.clientHeight >= container.scrollHeight - 10) {
+      loadMoreItems();
+    }
+  });
+
+  loadMoreItems();
+
+  // AJAX untuk kalkulasi harga jual dua arah
+  const inputCost = document.getElementById('inputCost');
+  const inputMarkup = document.getElementById('inputMarkup');
+  const inputSalePrice = document.getElementById('inputSalePrice');
+
+  let lastChanged = null; // untuk menghindari loop tak berujung
+
+  function updateSalePrice() {
+    if (lastChanged === 'sale') return; // hindari loop
+    const cost = parseFloat(inputCost.value) || 0;
+    const markup = parseFloat(inputMarkup.value) || 0;
+    const sale = cost + (cost * markup / 100);
+    lastChanged = 'markup';
+    inputSalePrice.value = sale.toFixed(2);
+  }
+
+  function updateMarkup() {
+    if (lastChanged === 'markup') return; // hindari loop
+    const cost = parseFloat(inputCost.value) || 0;
+    const sale = parseFloat(inputSalePrice.value) || 0;
+    if (cost === 0) return; // hindari pembagian nol
+    const markup = ((sale - cost) / cost) * 100;
+    lastChanged = 'sale';
+    inputMarkup.value = markup.toFixed(2);
+  }
+
+  inputCost.addEventListener('input', () => {
+    lastChanged = null;
+    updateSalePrice();
+  });
+
+  inputMarkup.addEventListener('input', () => {
+    lastChanged = null;
+    updateSalePrice();
+  });
+
+  inputSalePrice.addEventListener('input', () => {
+    lastChanged = null;
+    updateMarkup();
+  });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('toggleSidebarBtn');
+    const sidebar = document.getElementById('sidebarKategori');
+
+    if (sidebar) {
+      sidebar.addEventListener('shown.bs.collapse', () => {
+        toggleBtn.innerHTML = '<i class="bi bi-x"></i> Sembunyikan';
+      });
+
+      sidebar.addEventListener('hidden.bs.collapse', () => {
+        toggleBtn.innerHTML = '<i class="bi bi-list"></i> Tampilkan';
+      });
+    }
+  });
+</script>

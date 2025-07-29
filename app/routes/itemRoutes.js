@@ -1,39 +1,22 @@
 const express = require('express');
-const {
-  body
-} = require('express-validator');
 const router = express.Router();
 const itemController = require('../controllers/itemController');
 
-// ==========================
-//         VIEW
-// ==========================
-router.get('/view', itemController.viewItems); // Halaman untuk menampilkan daftar item
+// View halaman utama item
+router.get('/view', itemController.viewItems);
 
-// ==========================
-//          API
-// ==========================
+// Tambah item (non-AJAX)
+router.post('/', itemController.createItem);
 
-// Tambah item baru
-router.post(
-  '/',
-  [
-    body('name').notEmpty().withMessage('Name is required'),
-    body('price').isNumeric().withMessage('Price must be a number')
-  ],
-  itemController.createItem
-);
-
-// Ambil semua item (JSON)
+// API JSON untuk tabel/infinite scroll
+router.get('/json', itemController.getItemJson);
 router.get('/', itemController.getAllItems);
-
-router.get('/create', (req, res) => {
-  res.render('items/create', {
-    title: 'Tambah Item'
-  });
-});
 
 // Tambah stok
 router.post('/:id/stock', itemController.addStock);
+
+// Update & Delete (AJAX, opsional)
+router.post('/:id/update', itemController.updateItem);
+router.post('/:id/delete', itemController.deleteItem);
 
 module.exports = router;

@@ -50,5 +50,5 @@ app.use('/', index);
 const PORT = process.env.PORT || 3000;
 db.sequelize.sync().then(() => {
   console.log('Database ready');
-  app.listen(PORT, () => console.log(`Server jalan di port ${PORT}`));
+  app.listen(PORT, () => console.log(`Server jalan di http://localhost:${PORT}`));
 });

@@ -1,20 +1,20 @@
 <!-- views/items/index.ejs -->
   <!-- Versi MOBILE -->
   <div class="d-flex d-md-none mb-3 flex-wrap gap-2 align-items-start">
-    <h2 class="flex-grow-1">Daftar Items</h2>
+    <h2 class="flex-grow-1">Item List</h2>
 
     <form method="GET" action="/items/view" class="d-flex flex-grow-1 flex-wrap gap-2">
       <select name="category" class="form-select" onchange="this.form.submit()">
-        <option value="">Semua Kategori</option>
+        <option value="">All Categories</option>
         <% categories.forEach(cat => { %>
           <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
         <% }) %>
       </select>
 
-      <input type="text" name="q" class="form-control flex-grow-1" placeholder="Cari nama, kode, atau barcode..." value="<%= search || '' %>" />
+      <input type="text" name="q" class="form-control flex-grow-1" placeholder="Search name, code, or barcode..." value="<%= search || '' %>" />
 
       <button type="submit" class="btn btn-secondary flex-shrink-0 px-3">
-        <i class="ti ti-search"></i> Cari
+        <i class="ti ti-search"></i> Search
       </button>
 
       <% if (selectedCategory || search) { %>
@@ -25,7 +25,7 @@
     </form>
 
     <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
-      + Tambah Item
+      + Add Item
     </button>
   </div>
 

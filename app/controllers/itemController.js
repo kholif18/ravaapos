@@ -93,9 +93,22 @@ exports.getItemJson = async (req, res) => {
     }
 
     if (q) {
-      where.name = {
-        [Op.like]: `%${q}%`
-      };
+      where[Op.or] = [{
+          name: {
+            [Op.like]: `%${q}%`
+          }
+        },
+        {
+          code: {
+            [Op.like]: `%${q}%`
+          }
+        },
+        {
+          barcode: {
+            [Op.like]: `%${q}%`
+          }
+        }
+      ];
     }
 
     const items = await Item.findAll({

@@ -1,90 +1,57 @@
 <!-- views/items/index.ejs -->
-<!-- Tombol Toggle Sidebar (Desktop) saat COLLAPSE -->
-<div id="desktopToggleWrapper"
-    class="d-none d-lg-block position-fixed"
-    style="top: 88px; left: 225px; z-index: 1030;">
-  <button id="desktopToggleBtn"
-          class="btn btn-primary btn-sm"
-          type="button"
-          title="Tampilkan Kategori">
-    <i class="bi bi-chevron-right"></i>
-  </button>
-</div>
+  <div class="d-flex mb-3 flex-wrap gap-2">
+    <h2 class="flex-grow-1">Item List</h2>
 
-
-<!-- Tombol Toggle Sidebar (Mobile) -->
-<div class="d-flex justify-content-between align-items-center mb-2 d-lg-none">
-  <strong>Kategori</strong>
-  <button id="mobileToggleBtn" class="btn btn-outline-primary btn-sm" type="button">
-    <i class="bi bi-chevron-down"></i>
-  </button>
-</div>
-
-<div class="row">
-  <!-- Sidebar kategori -->
-  <div id="sidebarKategori" class="col-lg-2 mb-4 collapse">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
-        <strong>Kategori</strong>
-        <!-- Tombol collapse (desktop only) -->
-        <button id="desktopCollapseBtn"
-          class="btn btn-outline-primary btn-sm d-none d-lg-inline-block"
-          type="button">
-          <i class="bi bi-chevron-left"></i>
-        </button>
-      </div>
-      <div class="list-group list-group-flush">
-        <a href="/items/view" class="list-group-item py-2 px-3 text-decoration-none <%= !selectedCategory ? 'active' : '' %>">Semua</a>
+    <!-- Filter pencarian -->
+    <form method="GET" action="/items/view" class="d-flex flex-grow-1 gap-2">
+      <select name="category" class="form-select" onchange="this.form.submit()">
+        <option value="">All Categories</option>
         <% categories.forEach(cat => { %>
-          <a href="/items/view?category=<%= cat.id %>" class="list-group-item py-2 px-3 text-decoration-none <%= selectedCategory == cat.id ? 'active' : '' %>"><%= cat.name %></a>
+          <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
         <% }) %>
-      </div>
+      </select>
+      
+      <input type="text" name="q" class="form-control flex-grow-1" placeholder="Search name, kode, or barcode..." value="<%= search || '' %>" />
+      <button type="submit" class="btn btn-secondary flex-shrink-0 px-3"><i class="ti ti-search"></i> Search</button>
+
+      <% if (selectedCategory || search) { %>
+        <a href="/items/view" class="btn btn-outline-secondary flex-shrink-0 px-3">
+          <i class="ti ti-x"></i> Reset
+        </a>
+      <% } %>
+    </form>
+
+    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
+      + Add Item
+    </button>
+  </div>
+
+
+  <!-- Tabel item -->
+  <div class="card">
+    <div class="card-body p-0" id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
+      <table class="table table-hover mb-0" id="itemTable">
+        <thead>
+          <tr>
+            <th data-sort="code">Code <span class="sort-icon"></span></th>
+            <th data-sort="name">Name <span class="sort-icon"></span></th>
+            <th data-sort="category">Category <span class="sort-icon"></span></th>
+            <th data-sort="barcode">Barcode <span class="sort-icon"></span></th>
+            <th data-sort="cost">Cost <span class="sort-icon"></span></th>
+            <th data-sort="salePrice">Sale Price <span class="sort-icon"></span></th>
+            <th data-sort="unit">Unit <span class="sort-icon"></span></th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+
+        <tbody id="itemTableBody">
+          <!-- data akan di-load via JS -->
+        </tbody>
+      </table>
+      <div id="loadingIndicator" class="text-center text-muted py-3">Loading...</div>
     </div>
   </div>
 
-  <div class="col" id="mainContent">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-      <h2 class="flex-grow-1">Daftar Items</h2>
-
-      <!-- Filter pencarian -->
-      <form method="GET" action="/items/view" class="d-flex flex-grow-1 gap-2">
-        <input type="hidden" name="category" value="<%= selectedCategory || '' %>" />
-        <input type="text" name="q" class="form-control flex-grow-1" placeholder="Cari nama item..." value="<%= search || '' %>" />
-        <button type="submit" class="btn btn-secondary">Cari</button>
-      </form>
-
-      <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
-        + Tambah Item
-      </button>
-    </div>
-
-
-    <!-- Tabel item -->
-    <div class="card">
-      <div class="card-body p-0" id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
-        <table class="table table-hover mb-0" id="itemTable">
-          <thead>
-            <tr>
-              <th data-sort="code">Code <span class="sort-icon"></span></th>
-              <th data-sort="name">Name <span class="sort-icon"></span></th>
-              <th data-sort="category">Category <span class="sort-icon"></span></th>
-              <th data-sort="barcode">Barcode <span class="sort-icon"></span></th>
-              <th data-sort="cost">Cost <span class="sort-icon"></span></th>
-              <th data-sort="salePrice">Sale Price <span class="sort-icon"></span></th>
-              <th data-sort="unit">Unit <span class="sort-icon"></span></th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-
-          <tbody id="itemTableBody">
-            <!-- data akan di-load via JS -->
-          </tbody>
-        </table>
-        <div id="loadingIndicator" class="text-center text-muted py-3">Loading...</div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Modal Tambah Item -->
 <div class="modal fade" id="modalCreate" tabindex="-1" aria-labelledby="modalCreateLabel" aria-hidden="true">
@@ -348,74 +315,4 @@
       updateMarkup();
     });
   });
-
-document.addEventListener('DOMContentLoaded', function () {
-  const sidebar = document.getElementById('sidebarKategori');
-  const desktopExpandBtn = document.getElementById('desktopToggleBtn');
-  const desktopCollapseBtn = document.getElementById('desktopCollapseBtn');
-  const desktopWrapper = document.getElementById('desktopToggleWrapper');
-  const mobileBtn = document.getElementById('mobileToggleBtn');
-
-  const bsCollapse = new bootstrap.Collapse(sidebar, { toggle: false });
-
-  // Atur default state: collapse untuk mobile, expand untuk desktop
-  function initSidebarState() {
-    if (window.innerWidth < 992) {
-      bsCollapse.hide(); // collapse untuk mobile
-    } else {
-      bsCollapse.show(); // expand untuk desktop
-    }
-    updateButtons();
-  }
-
-  function updateButtons() {
-    const isShown = sidebar.classList.contains('show');
-    const isDesktop = window.innerWidth >= 992;
-
-    if (isDesktop) {
-      if (desktopWrapper) {
-        desktopWrapper.classList.toggle('hidden', isShown); // expand → hide tombol expand
-      }
-      if (desktopCollapseBtn) {
-        desktopCollapseBtn.classList.toggle('hidden', !isShown); // collapse → hide tombol collapse
-      }
-    }
-
-    if (mobileBtn) {
-      mobileBtn.innerHTML = isShown
-        ? '<i class="bi bi-chevron-left"></i>'
-        : '<i class="bi bi-chevron-down"></i>';
-    }
-  }
-
-  // Event toggle tombol desktop
-  if (desktopExpandBtn) {
-    desktopExpandBtn.addEventListener('click', () => {
-      bsCollapse.show();
-    });
-  }
-
-  if (desktopCollapseBtn) {
-    desktopCollapseBtn.addEventListener('click', () => {
-      bsCollapse.hide();
-    });
-  }
-
-  // Event toggle tombol mobile
-  if (mobileBtn) {
-    mobileBtn.addEventListener('click', () => {
-      sidebar.classList.contains('show') ? bsCollapse.hide() : bsCollapse.show();
-    });
-  }
-
-  sidebar.addEventListener('shown.bs.collapse', updateButtons);
-  sidebar.addEventListener('hidden.bs.collapse', updateButtons);
-
-  initSidebarState();
-
-  window.addEventListener('resize', () => {
-    initSidebarState();
-  });
-});
-
 </script>

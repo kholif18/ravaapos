@@ -25,6 +25,5 @@ Object.keys(db).forEach(modelName => {
 
 // ⬇️ Pastikan bagian ini ADA
 db.sequelize = sequelize;
-db.Sequelize = Sequelize;
 
 module.exports = db;

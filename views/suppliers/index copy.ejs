@@ -1,0 +1,167 @@
+<!-- Tombol tambah supplier -->
+<div class="d-flex mb-3 flex-wrap gap-2 align-items-start">
+  <h2 class="flex-grow-1">Daftar Supplier</h2>
+  <button class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSupplier">
+    + Tambah Supplier
+  </button>
+</div>
+
+<!-- Tabel Supplier -->
+<div class="card">
+  <div class="card-body">
+    <table class="table table-bordered" id="tableSupplier">
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Kontak</th>
+          <th>Email</th>
+          <th>Alamat</th>
+          <th>Catatan</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Offcanvas Bootstrap 5 -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasSupplier" aria-labelledby="offcanvasSupplierLabel">
+  <div class="offcanvas-header">
+    <h5 id="offcanvasSupplierLabel">Tambah Supplier</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Tutup"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="formSupplier">
+      <div class="mb-3">
+        <label class="form-label">Nama Supplier</label>
+        <input type="text" name="name" class="form-control" required />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Kontak</label>
+        <input type="text" name="contact" class="form-control" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Alamat</label>
+        <textarea name="address" class="form-control"></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Catatan</label>
+        <textarea name="notes" class="form-control"></textarea>
+      </div>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Batal</button>
+        <button type="submit" class="btn btn-primary" id="submitButton">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const offcanvasEl = document.getElementById('offcanvasSupplier');
+  const form = document.getElementById('formSupplier');
+  const submitButton = document.getElementById('submitButton');
+  const nameInput = form.querySelector('[name="name"]');
+
+  // Fokus input saat offcanvas dibuka
+  offcanvasEl.addEventListener('shown.bs.offcanvas', () => {
+    nameInput.focus();
+  });
+
+  // Reset form saat offcanvas ditutup
+  offcanvasEl.addEventListener('hidden.bs.offcanvas', () => {
+    form.reset();
+  });
+
+  // Handle form submit
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    submitButton.disabled = true;
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = `
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...`;
+
+    try {
+      const formData = new FormData(form);
+      const payload = JSON.stringify(Object.fromEntries(formData.entries()));
+
+      const response = await fetch('/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || 'Gagal menambahkan supplier');
+      }
+
+      bootstrap.Offcanvas.getInstance(offcanvasEl).hide();
+      await loadSuppliers();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      submitButton.disabled = false;
+      submitButton.innerHTML = originalText;
+    }
+  });
+
+  loadSuppliers(); // initial load
+});
+
+// Load ke tabel
+async function loadSuppliers() {
+  try {
+    const response = await fetch('/suppliers/api');
+    const data = await response.json();
+    const tbody = document.querySelector('#tableSupplier tbody');
+    tbody.innerHTML = '';
+
+    data.forEach((s) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${s.name}</td>
+        <td>${s.contact || '-'}</td>
+        <td>${s.email || '-'}</td>
+        <td>${s.address || '-'}</td>
+        <td>${s.notes || '-'}</td>
+        <td>
+          <button class="btn btn-sm btn-warning" onclick="editSupplier('${s.id}')">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSupplier('${s.id}')">Hapus</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  } catch (err) {
+    alert('Gagal memuat data supplier');
+    console.error(err);
+  }
+}
+
+// Hapus supplier
+async function deleteSupplier(id) {
+  if (!confirm('Yakin ingin menghapus supplier ini?')) return;
+
+  try {
+    const response = await fetch(`/suppliers/${id}`, { method: 'DELETE' });
+    if (!response.ok) throw new Error('Gagal menghapus supplier');
+    await loadSuppliers();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// Placeholder edit
+function editSupplier(id) {
+  console.log('Edit supplier:', id);
+}
+
+window.deleteSupplier = deleteSupplier;
+window.editSupplier = editSupplier;
+</script>

@@ -1,0 +1,62 @@
+<!-- Tombol tambah supplier -->
+<div class="d-flex mb-3 flex-wrap gap-2 align-items-start">
+  <h2 class="flex-grow-1">Daftar Supplier</h2>
+  <button class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSupplier">
+    + Tambah Supplier
+  </button>
+</div>
+
+<!-- Tabel Supplier -->
+<div class="card">
+  <div class="card-body">
+    <table class="table table-bordered" id="tableSupplier">
+      <thead>
+        <tr>
+          <th>Nama</th>
+          <th>Kontak</th>
+          <th>Email</th>
+          <th>Alamat</th>
+          <th>Catatan</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Offcanvas Bootstrap 5 -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasSupplier" aria-modal="true" role="dialog">
+  <div class="offcanvas-header">
+    <h5 id="offcanvasSupplierLabel">Tambah Supplier</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Tutup"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="formSupplier">
+      <div class="mb-3">
+        <label class="form-label">Nama Supplier</label>
+        <input type="text" name="name" class="form-control" required />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Kontak</label>
+        <input type="text" name="contact" class="form-control" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Alamat</label>
+        <textarea name="address" class="form-control"></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Catatan</label>
+        <textarea name="notes" class="form-control"></textarea>
+      </div>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Batal</button>
+        <button type="submit" class="btn btn-primary" id="submitButton">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -22,13 +22,13 @@
               <span class="badge bg-info"><%= cat.items?.length || 0 %> Item</span>
             </td>
             <td>
-              <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEdit"
+              <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalEdit"
                 data-id="<%= cat.id %>" data-name="<%= cat.name %>" >
                 <i class="bx bx-edit"></i>
               </button>
 
               <form action="/categories/<%= cat.id %>/delete" method="POST" style="display:inline">
-                <button type="submit" class="btn btn-sm btn-outline-danger">
+                <button type="submit" class="btn btn-sm btn-danger">
                   <i class="bx bx-trash"></i>
                 </button>
               </form>

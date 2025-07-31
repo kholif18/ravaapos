@@ -1,95 +1,59 @@
 <!-- views/items/index.ejs -->
-  <!-- Versi MOBILE -->
-  <div class="d-flex d-md-none mb-3 flex-wrap gap-2 align-items-start">
-    <h2 class="flex-grow-1">Item List</h2>
-
-    <form method="GET" action="/items/view" class="d-flex flex-grow-1 flex-wrap gap-2">
-      <select name="category" class="form-select" onchange="this.form.submit()">
-        <option value="">All Categories</option>
-        <% categories.forEach(cat => { %>
-          <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
-        <% }) %>
-      </select>
-
-      <input type="text" name="q" class="form-control flex-grow-1" placeholder="Search name, code, or barcode..." value="<%= search || '' %>" />
-
-      <button type="submit" class="btn btn-secondary flex-shrink-0 px-3">
-        <i class="ti ti-search"></i> Search
-      </button>
-
-      <% if (selectedCategory || search) { %>
-        <a href="/items/view" class="btn btn-outline-secondary flex-shrink-0 px-3">
-          <i class="ti ti-x"></i> Reset
-        </a>
-      <% } %>
-    </form>
-
-    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
+  <div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
+    <h5 class="card-title mb-0 flex-grow-1">Item Lists</h5>
+    <button class="btn btn-success" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
       + Add Item
     </button>
   </div>
-
-  <!-- Versi DESKTOP -->
-  <div class="d-none d-md-flex mb-3 flex-wrap gap-2 align-items-center">
-    <h2 class="flex-grow-1">Item List</h2>
-
-    <form method="GET" action="/items/view" class="d-flex flex-grow-1 gap-2">
-      <select name="category" class="form-select" onchange="this.form.submit()">
-        <option value="">All Categories</option>
-        <% categories.forEach(cat => { %>
-          <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
-        <% }) %>
-      </select>
-
-      <input type="text" name="q" class="form-control flex-grow-1" placeholder="Search name, code, or barcode..." value="<%= search || '' %>" />
-
-      <button type="submit" class="btn btn-secondary flex-shrink-0 px-3">
-        <i class="ti ti-search"></i> Search
-      </button>
-
-      <% if (selectedCategory || search) { %>
-        <a href="/items/view" class="btn btn-outline-secondary flex-shrink-0 px-3">
-          <i class="ti ti-x"></i> Reset
-        </a>
-      <% } %>
-    </form>
-
-    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
-      + Add Item
-    </button>
-  </div>
-
-
-  <!-- Tabel item -->
   <div class="card">
-    <div class="card-body p-0" id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
-      <table class="table table-hover mb-0" id="itemTable">
-        <thead>
-          <tr>
-            <th data-sort="code">Code <span class="sort-icon"></span></th>
-            <th data-sort="name">Name <span class="sort-icon"></span></th>
-            <th data-sort="category">Category <span class="sort-icon"></span></th>
-            <th data-sort="barcode">Barcode <span class="sort-icon"></span></th>
-            <th data-sort="cost">Cost <span class="sort-icon"></span></th>
-            <th data-sort="salePrice">Sale Price <span class="sort-icon"></span></th>
-            <th data-sort="unit">Unit <span class="sort-icon"></span></th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-
-        <tbody id="itemTableBody">
-          <!-- data akan di-load via JS -->
-        </tbody>
-      </table>
-      <div id="loadingIndicator" class="text-center text-muted py-3">Loading...</div>
+    <div class="card-header">
+      <form method="GET" action="/items" class="d-flex flex-grow-1 gap-2">
+        <select name="category" class="form-select" onchange="this.form.submit()">
+          <option value="">All Categories</option>
+          <% categories.forEach(cat => { %>
+            <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
+          <% }) %>
+        </select>
+  
+        <input type="text" name="q" class="form-control flex-grow-1" placeholder="Search name, code, or barcode..." value="<%= search || '' %>" />
+  
+        <button type="submit" class="btn btn-primary flex-shrink-0 px-3">
+          <i class="bx bx-search"></i> Search
+        </button>
+  
+        <% if (selectedCategory || search) { %>
+          <a href="/items" class="btn btn-outline-secondary flex-shrink-0 px-3">
+            <i class="bx bx-x"></i> Reset
+          </a>
+        <% } %>
+      </form>
+    </div>
+    <div class="card-body table-responsive text-nowrap">
+      <div id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
+        <table id="itemTable" class="table table-hover">
+          <thead>
+            <tr>
+              <th data-sort="code">Code <span class="sort-icon bx"></span></th>
+              <th data-sort="name">Name <span class="sort-icon bx"></span></th>
+              <th data-sort="category">Category <span class="sort-icon bx"></span></th>
+              <th data-sort="barcode">Barcode <span class="sort-icon bx"></span></th>
+              <th data-sort="cost">Cost <span class="sort-icon bx"></span></th>
+              <th data-sort="salePrice">Sale Price <span class="sort-icon bx"></span></th>
+              <th data-sort="unit">Unit <span class="sort-icon bx"></span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="itemTableBody" class="table-border-bottom-0"></tbody>
+        </table>
+        <div id="loadingIndicator" class="text-center text-muted py-3">Loading...</div>
+      </div>
     </div>
   </div>
-
 
 <!-- Modal Tambah Item -->
 <div class="modal fade" id="modalCreate" tabindex="-1" aria-labelledby="modalCreateLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <form action="/items" method="POST" class="modal-content">
+    <form id="formCreateItem" action="/items" method="POST" class="modal-content">
       <div class="modal-header bg-primary">
         <h5 class="modal-title text-white" id="modalCreateLabel">Tambah Item</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -161,38 +125,6 @@
   </div>
 </div>
 
-<!-- Modal edit item -->
-<div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form id="editItemForm" class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalEditLabel">Edit Item</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" name="id" id="editItemId">
-        <div class="mb-3">
-          <input type="text" name="name" id="editName" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <input type="number" name="price" id="editPrice" class="form-control" required>
-        </div>
-        <div class="mb-3">
-          <select name="categoryId" id="editCategoryId" class="form-select">
-            <option value="">Pilih Kategori</option>
-            <% categories.forEach(cat => { %>
-              <option value="<%= cat.id %>"><%= cat.name %></option>
-            <% }) %>
-          </select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-primary">Update</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     function sortTableBy(column, ascending = true) {
@@ -200,40 +132,42 @@
       const rows = Array.from(tbody.querySelectorAll('tr'));
 
       rows.sort((a, b) => {
-        let aVal = a.querySelector(`td[data-column="${column}"]`)?.textContent?.trim() || '';
-        let bVal = b.querySelector(`td[data-column="${column}"]`)?.textContent?.trim() || '';
+        const aCell = a.querySelector(`td[data-column="${column}"]`);
+        const bCell = b.querySelector(`td[data-column="${column}"]`);
 
-        // Jika angka, sort sebagai angka
-        if (!isNaN(aVal) && !isNaN(bVal)) {
-          aVal = parseFloat(aVal);
-          bVal = parseFloat(bVal);
+        let aVal = aCell?.dataset.value || aCell?.textContent?.trim() || '';
+        let bVal = bCell?.dataset.value || bCell?.textContent?.trim() || '';
+
+        // Coba ubah ke angka
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return ascending ? aNum - bNum : bNum - aNum;
         }
 
-        if (aVal < bVal) return ascending ? -1 : 1;
-        if (aVal > bVal) return ascending ? 1 : -1;
-        return 0;
+        return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       });
 
-      // Reset tbody
       tbody.innerHTML = '';
       rows.forEach(row => tbody.appendChild(row));
     }
 
+
     function updateSortIcons(column, ascending) {
       document.querySelectorAll('.sort-icon').forEach(icon => {
-        icon.textContent = '';
+        icon.className = 'sort-icon bx';
       });
 
-      const activeHeader = document.querySelector(`th[data-sort="${column}"] .sort-icon`);
-      if (activeHeader) {
-        activeHeader.textContent = ascending ? '↓' : '↑';
+      const iconEl = document.querySelector(`th[data-sort="${column}"] .sort-icon`);
+      if (iconEl) {
+        iconEl.classList.add(ascending ? 'bx-sort-down' : 'bx-sort-up');
       }
     }
-    // Klik header untuk sort
+
     const headers = document.querySelectorAll('#itemTable thead th[data-sort]');
     let currentSort = { column: null, ascending: true };
 
-    // Klik header untuk sort
     headers.forEach(header => {
       header.addEventListener('click', () => {
         const column = header.dataset.sort;
@@ -283,12 +217,12 @@
           <td data-column="name">${item.name}</td>
           <td data-column="category">${item.category?.name || '-'}</td>
           <td data-column="barcode">${item.barcode || '-'}</td>
-          <td data-column="cost">${formatRupiah(item.cost)}</td>
-          <td data-column="salePrice">${formatRupiah(item.salePrice)}</td>
+          <td data-column="cost" data-value="${item.cost}">${formatRupiah(item.cost)}</td>
+          <td data-column="salePrice" data-value="${item.salePrice}">${formatRupiah(item.salePrice)}</td>
           <td data-column="unit">${item.unit}</td>
           <td>
-            <button class="btn btn-sm btn-warning btn-edit" data-bs-toggle="modal" data-bs-target="#modalEdit"><i class="ti ti-pencil"></i></button>
-            <button class="btn btn-sm btn-danger btn-delete"><i class="ti ti-trash  "></i></button>
+            <button class="btn btn-sm btn-warning btn-edit" data-bs-toggle="modal" data-bs-target="#modalEdit"><i class="bx bx-pencil"></i></button>
+            <button class="btn btn-sm btn-danger btn-delete"><i class="bx bx-trash"></i></button>
           </td>`;
         tbody.appendChild(row);
       }
@@ -346,6 +280,145 @@
     inputSalePrice.addEventListener('input', () => {
       lastChanged = null;
       updateMarkup();
+    });
+
+    const formCreate = document.getElementById('formCreateItem');
+    formCreate.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData.entries());
+
+      // Convert checkbox ke boolean
+      data.defaultQty = formData.get('defaultQtyOne') === 'on';
+      data.service = formData.get('isService') === 'on';
+      data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
+
+      try {
+        const res = await fetch('/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) throw new Error('Gagal menambah item');
+
+        // Tutup modal dan reload tabel
+        bootstrap.Modal.getInstance(document.getElementById('modalCreate')).hide();
+        offset = 0;
+        done = false;
+        document.getElementById('itemTableBody').innerHTML = '';
+        await loadMoreItems();
+
+        showToast({
+          type: 'success',
+          title: 'Berhasil',
+          message: 'Item berhasil ditambahkan'
+        });
+
+      } catch (err) {
+        showToast({
+          type: 'danger',
+          title: 'Gagal',
+          message: err.message || 'Terjadi kesalahan'
+        });
+
+      }
+    });
+
+    document.getElementById('modalCreate').addEventListener('show.bs.modal', () => {
+      const form = document.getElementById('formCreateItem');
+      form.reset();
+
+      // Reset nilai default manual
+      document.getElementById('defaultQtyOne').checked = true;
+      document.getElementById('isService').checked = false;
+      document.getElementById('priceChangeAllowed').checked = false;
+
+      // Kosongkan juga perhitungan harga jika perlu
+      inputCost.value = '';
+      inputMarkup.value = '';
+      inputSalePrice.value = '';
+    });
+
+
+    function showToast({ title = 'Info', message = '', type = 'info', delay = 3000 }) {
+      const container = document.getElementById('toastContainer');
+      const template = document.getElementById('baseToastTemplate');
+
+      if (!container || !template) return;
+
+      const clone = template.firstElementChild.cloneNode(true);
+      clone.classList.remove('d-none');
+      clone.classList.add('show', `bg-${type}`);
+
+      const iconMap = {
+        success: 'bx-check-circle',
+        danger: 'bx-x-circle',
+        warning: 'bx-error-alt',
+        info: 'bx-info-circle'
+      };
+
+      const icon = iconMap[type] || 'bx-bell';
+      clone.querySelector('.toast-icon').classList.add(icon);
+      clone.querySelector('.toast-title').textContent = title;
+      clone.querySelector('.toast-body').textContent = message;
+      clone.querySelector('.toast-time').textContent = 'Baru saja';
+
+      container.appendChild(clone);
+
+      const bsToast = new bootstrap.Toast(clone, { delay });
+      bsToast.show();
+
+      clone.addEventListener('hidden.bs.toast', () => {
+        clone.remove();
+      });
+    }
+
+    document.getElementById('itemTableBody').addEventListener('click', async function (e) {
+      const btn = e.target.closest('.btn-delete');
+      if (!btn) return;
+
+      const row = btn.closest('tr');
+      const itemId = row.dataset.id;
+
+      const confirm = await Swal.fire({
+        title: 'Hapus item ini?',
+        text: "Tindakan ini tidak bisa dibatalkan.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, hapus',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#696cff',
+        cancelButtonColor: '#6c757d'
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      try {
+        const res = await fetch(`/items/${itemId}/delete`, {
+          method: 'POST'
+        });
+
+        if (!res.ok) throw new Error('Gagal menghapus item');
+
+        row.remove();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Item berhasil dihapus',
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal menghapus item',
+          text: err.message,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
     });
   });
 </script>

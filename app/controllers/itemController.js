@@ -16,28 +16,23 @@ exports.viewItems = async (req, res) => {
       category,
       q
     } = req.query;
-    const categories = await Category.findAll({
-      order: [
-        ['name', 'ASC']
-      ]
-    });
+    const categories = await Category.findAll();
+
+    const selectedCategory = category || '';
+    const search = q || '';
 
     res.render('items/index', {
-      title: 'Daftar Items',
-      items: [],
       categories,
-      selectedCategory: category || null,
-      search: q || '',
-      errors: req.flash('errors'),
-      error: req.flash('error'),
+      selectedCategory,
+      search
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Gagal memuat halaman.');
+    res.status(500).send('Server Error');
   }
 };
 
-// POST create (non-AJAX)
+// POST create (AJAX)
 exports.createItem = async (req, res) => {
   try {
     const {
@@ -55,8 +50,10 @@ exports.createItem = async (req, res) => {
     } = req.body;
 
     if (!name || isNaN(cost) || isNaN(markup) || isNaN(salePrice)) {
-      req.flash('error', 'Input tidak valid');
-      return res.redirect('/items/view');
+      return res.status(400).json({
+        success: false,
+        message: 'Input tidak valid'
+      });
     }
 
     await Item.create({
@@ -73,14 +70,19 @@ exports.createItem = async (req, res) => {
       priceChangeAllowed: !!priceChangeAllowed,
     });
 
-    res.redirect('/items/view');
+    res.json({
+      success: true
+    });
   } catch (err) {
     console.error(err);
-    req.flash('error', 'Gagal membuat item');
-    res.redirect('/items/view');
+    res.status(500).json({
+      success: false,
+      message: 'Gagal membuat item'
+    });
   }
 };
 
+// JSON untuk tabel infinite scroll
 exports.getItemJson = async (req, res) => {
   try {
     const {
@@ -116,7 +118,7 @@ exports.getItemJson = async (req, res) => {
       include: [{
         model: Category,
         as: 'category'
-      }], // kamu pakai alias 'category', jaga konsistensinya
+      }],
       offset: parseInt(offset),
       limit: parseInt(limit),
       order: [
@@ -152,7 +154,7 @@ exports.addStock = async (req, res) => {
   }
 };
 
-// Semua item
+// Semua item (opsional)
 exports.getAllItems = async (req, res) => {
   try {
     const items = await Item.findAll({
@@ -167,7 +169,7 @@ exports.getAllItems = async (req, res) => {
   }
 };
 
-// Update (opsional - AJAX)
+// Update (AJAX)
 exports.updateItem = async (req, res) => {
   const {
     name,
@@ -193,7 +195,7 @@ exports.updateItem = async (req, res) => {
   }
 };
 
-// Delete (opsional - AJAX)
+// Delete (AJAX)
 exports.deleteItem = async (req, res) => {
   try {
     const item = await Item.findByPk(req.params.id);

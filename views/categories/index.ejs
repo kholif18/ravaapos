@@ -1,42 +1,45 @@
-<h2>Daftar Kategori</h2>
+<div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
+  <h5 class="card-title mb-0 flex-grow-1">Categories</h5>
+  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCreate">
+    + Add Category
+  </button>
+</div>
+<div class="card">
+  <div class="card-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nama <i class="bx bx-sort-alt-2"></i></th>
+          <th>Jumlah Item</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% categories.forEach(cat => { %>
+          <tr>
+            <td><%= cat.name %></td>
+            <td>
+              <span class="badge bg-info"><%= cat.items?.length || 0 %> Item</span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEdit"
+                data-id="<%= cat.id %>" data-name="<%= cat.name %>" >
+                <i class="bx bx-edit"></i>
+              </button>
 
-<!-- Tombol tambah kategori -->
-<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalCreate">
-  + Tambah Kategori
-</button>
+              <form action="/categories/<%= cat.id %>/delete" method="POST" style="display:inline">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  <i class="bx bx-trash"></i>
+                </button>
+              </form>
+            </td>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Nama</th>
-      <th>Aksi</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% categories.forEach(cat => { %>
-      <tr>
-        <td><%= cat.name %></td>
-        <td>
-          <!-- Tombol edit kategori -->
-          <button 
-            class="btn btn-sm btn-secondary"
-            data-bs-toggle="modal"
-            data-bs-target="#modalEdit"
-            data-id="<%= cat.id %>"
-            data-name="<%= cat.name %>"
-          >
-            Edit
-          </button>
-
-          <!-- Form hapus -->
-          <form action="/categories/<%= cat.id %>/delete" method="POST" style="display:inline">
-            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-          </form>
-        </td>
-      </tr>
-    <% }) %>
-  </tbody>
-</table>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
 
 
 <div class="modal fade" id="modalCreate" tabindex="-1">

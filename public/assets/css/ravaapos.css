@@ -34,9 +34,21 @@
   z-index: auto;
 }
 
+#tableScrollContainer table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff; /* atau var(--bs-card-bg) agar menyesuaikan tema */
+  z-index: 2;
+}
+
 /*
 * Content
 ******************************************************************************/
+
+body.swal2-shown .layout-navbar,
+body.swal2-shown .layout-menu {
+  z-index: 1 !important;
+}
 
 .demo-blocks > * {
   display: block !important;

@@ -1,7 +1,6 @@
-<!-- Tombol tambah supplier -->
-<div class="d-flex mb-3 flex-wrap gap-2 align-items-start">
-  <h2 class="flex-grow-1">Daftar Supplier</h2>
-  <button class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSupplier">
+<div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
+  <h5 class="card-title mb-0 flex-grow-1">Daftar Supplier</h5>
+  <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
     + Tambah Supplier
   </button>
 </div>
@@ -9,7 +8,7 @@
 <!-- Tabel Supplier -->
 <div class="card">
   <div class="card-body">
-    <table class="table table-bordered" id="tableSupplier">
+    <table class="table table-hover" id="tableSupplier">
       <thead>
         <tr>
           <th>Nama</th>
@@ -22,41 +21,330 @@
       </thead>
       <tbody></tbody>
     </table>
+
+    <div class="d-flex mt-3 gap-3 align-items-center justify-content-between flex-wrap" id="paginationContainer">
+      <div class="d-flex align-items-center" style="min-width: 180px;">
+        <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
+        <select id="limitSelect" class="form-select form-select-sm" style="width: auto;">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+
+      <nav class="flex-grow-1 d-flex justify-content-center">
+        <ul class="pagination mb-0"></ul>
+      </nav>
+
+      <p class="mb-0 text-nowrap info" style="min-width: 200px;"></p>
+    </div>
+
   </div>
 </div>
 
-<!-- Offcanvas Bootstrap 5 -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasSupplier" aria-modal="true" role="dialog">
-  <div class="offcanvas-header">
-    <h5 id="offcanvasSupplierLabel">Tambah Supplier</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Tutup"></button>
-  </div>
-  <div class="offcanvas-body">
-    <form id="formSupplier">
-      <div class="mb-3">
-        <label class="form-label">Nama Supplier</label>
-        <input type="text" name="name" class="form-control" required />
+<div class="modal fade" id="modalCreate" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="formCreateSupplier" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Tambah Supplier</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="mb-3">
-        <label class="form-label">Kontak</label>
-        <input type="text" name="contact" class="form-control" />
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nama</label>
+          <input type="text" name="name" class="form-control" required autofocus>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Kontak</label>
+          <input type="text" name="phone" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Alamat</label>
+          <textarea name="address" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Catatan</label>
+          <textarea name="note" class="form-control" rows="2"></textarea>
+        </div>
       </div>
-      <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input type="email" name="email" class="form-control" />
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Alamat</label>
-        <textarea name="address" class="form-control"></textarea>
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Catatan</label>
-        <textarea name="notes" class="form-control"></textarea>
-      </div>
-      <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">Batal</button>
-        <button type="submit" class="btn btn-primary" id="submitButton">Simpan</button>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Simpan</button>
       </div>
     </form>
   </div>
 </div>
+
+<div class="modal fade" id="modalEdit" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="formEditSupplier" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Supplier</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nama</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Kontak</label>
+          <input type="text" name="phone" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Alamat</label>
+          <textarea name="address" class="form-control" rows="2"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Catatan</label>
+          <textarea name="note" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  // supplier.js
+  import { showToast } from '/assets/js/utils/toast.js';
+  import { resetModalForm } from '/assets/js/utils/resetModal.js';
+  import { confirmDelete } from '/assets/js/utils/confirm.js';
+
+  let currentPage = 1;
+  let currentLimit = 10;
+  let maxPage = 1;
+
+  async function loadSuppliers(page = 1, limit = 10) {
+    page = Math.max(1, Math.min(page, maxPage));
+
+    try {
+      const res = await fetch(`/suppliers/json?page=${page}&limit=${limit}`);
+      const { data, pagination } = await res.json();
+
+      currentPage = pagination.page;
+      currentLimit = pagination.limit;
+      maxPage = pagination.totalPages;
+
+      const tbody = document.querySelector('#tableSupplier tbody');
+      tbody.innerHTML = '';
+
+      data.forEach(supplier => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${supplier.name}</td>
+          <td>${supplier.phone || '-'}</td>
+          <td>${supplier.email || '-'}</td>
+          <td>${supplier.address || '-'}</td>
+          <td>${supplier.note || '-'}</td>
+          <td>
+            <button class="btn btn-sm btn-warning btn-edit" 
+              data-id="${supplier.id}"
+              data-name="${supplier.name}"
+              data-phone="${supplier.phone || ''}"
+              data-email="${supplier.email || ''}"
+              data-address="${supplier.address || ''}"
+              data-note="${supplier.note || ''}"
+              data-bs-toggle="modal" data-bs-target="#modalEdit">
+              <i class="bx bx-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-danger btn-delete" data-id="${supplier.id}">
+              <i class="bx bx-trash"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      initEditButtons();
+      initDeleteButtons();
+      renderPagination(pagination);
+    } catch (err) {
+      showToast({ type: 'danger', title: 'Error', message: 'Gagal memuat data supplier.' });
+    }
+  }
+
+  function renderPagination(pagination) {
+    const { page, totalPages, limit, totalItems } = pagination;
+    const container = document.querySelector('#paginationContainer');
+    const paginationEl = container.querySelector('ul.pagination');
+    const infoEl = container.querySelector('.info');
+
+    const buildBtn = (p, content, isActive = false, isDisabled = false) => `
+      <li class="page-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}">
+        <a href="#" class="page-link btn-page" data-page="${p}">${content}</a>
+      </li>
+    `;
+
+    let html = '';
+
+    // First and Prev
+    html += buildBtn(1, '<<', false, page === 1);
+    html += buildBtn(page - 1, '<', false, page === 1);
+
+    // Ellipsis before
+    if (page > 3) {
+      html += buildBtn(1, '1');
+      html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+
+    // Page numbers around current page
+    for (let i = Math.max(page - 2, 1); i <= Math.min(page + 2, totalPages); i++) {
+      html += buildBtn(i, `${i}`, i === page);
+    }
+
+    // Ellipsis after
+    if (page < totalPages - 2) {
+      html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+      html += buildBtn(totalPages, `${totalPages}`);
+    }
+
+    // Next and Last
+    html += buildBtn(page + 1, '>', false, page === totalPages);
+    html += buildBtn(totalPages, '>>', false, page === totalPages);
+
+    paginationEl.innerHTML = html;
+    infoEl.textContent = `Halaman ${page} dari ${totalPages} — Total ${totalItems} data`;
+  }
+
+
+  document.querySelector('#paginationContainer').addEventListener('click', (e) => {
+    const link = e.target.closest('.btn-page');
+    if (!link || link.closest('.page-item').classList.contains('disabled')) return;
+
+    e.preventDefault(); // penting agar href="#" tidak scroll ke atas
+
+    const page = parseInt(link.dataset.page);
+    if (!isNaN(page)) {
+      loadSuppliers(page, currentLimit);
+    }
+  });
+
+
+  document.getElementById('limitSelect').addEventListener('change', e => {
+    const newLimit = parseInt(e.target.value);
+    loadSuppliers(1, newLimit);
+  });
+
+  function initEditButtons() {
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const form = document.getElementById('formEditSupplier');
+        form.dataset.id = btn.dataset.id;
+        form.querySelector('[name="name"]').value = btn.dataset.name;
+        form.querySelector('[name="phone"]').value = btn.dataset.phone;
+        form.querySelector('[name="email"]').value = btn.dataset.email;
+        form.querySelector('[name="address"]').value = btn.dataset.address;
+        form.querySelector('[name="note"]').value = btn.dataset.note;
+      });
+    });
+  }
+
+  function initDeleteButtons() {
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const confirmed = await confirmDelete('Supplier ini akan dihapus dan tidak dapat dikembalikan.');
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/suppliers/${id}/delete`, { method: 'POST' });
+          const result = await res.json();
+
+          if (res.ok && result.success) {
+            showToast({ type: 'success', title: 'Dihapus', message: result.message });
+            loadSuppliers(currentPage, currentLimit);
+          } else {
+            showToast({ type: 'danger', title: 'Gagal', message: result.message });
+          }
+        } catch (err) {
+          showToast({ type: 'danger', title: 'Error', message: 'Gagal menghapus supplier.' });
+        }
+      });
+    });
+  }
+
+  document.getElementById('formCreateSupplier').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const formData = Object.fromEntries(new FormData(this).entries());
+
+    try {
+      const res = await fetch('/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalCreate')).hide();
+        showToast({ type: 'success', title: 'Berhasil', message: result.message });
+        resetModalForm(document.getElementById('modalCreate'));
+        loadSuppliers(currentPage, currentLimit);
+      } else {
+        showToast({ type: 'danger', title: 'Gagal', message: result.message });
+      }
+    } catch (err) {
+      showToast({ type: 'danger', title: 'Error', message: 'Gagal menyimpan supplier.' });
+    }
+  });
+
+  document.getElementById('formEditSupplier').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const id = this.dataset.id;
+    const formData = Object.fromEntries(new FormData(this).entries());
+
+    try {
+      const res = await fetch(`/suppliers/${id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalEdit')).hide();
+        showToast({ type: 'success', title: 'Berhasil', message: result.message });
+        resetModalForm(document.getElementById('modalEdit'));
+        loadSuppliers(currentPage, currentLimit);
+      } else {
+        showToast({ type: 'danger', title: 'Gagal', message: result.message });
+      }
+    } catch (err) {
+      showToast({ type: 'danger', title: 'Error', message: 'Gagal mengubah supplier.' });
+    }
+  });
+
+  document.getElementById('modalCreate').addEventListener('shown.bs.modal', () => {
+    document.querySelector('#modalCreate input[name="name"]').focus();
+  });
+
+  document.getElementById('modalCreate').addEventListener('hidden.bs.modal', () => {
+    resetModalForm(document.getElementById('modalCreate'));
+  });
+
+  document.getElementById('modalEdit').addEventListener('shown.bs.modal', () => {
+    document.querySelector('#modalEdit input[name="name"]').focus();
+  });
+
+  document.getElementById('modalEdit').addEventListener('hidden.bs.modal', () => {
+    resetModalForm(document.getElementById('modalEdit'));
+  });
+
+  // Initial load
+  loadSuppliers();
+
+</script>

@@ -4,10 +4,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: false
         },
-        contact: DataTypes.STRING,
+        phone: DataTypes.STRING,
         address: DataTypes.TEXT,
         email: DataTypes.STRING,
-        notes: DataTypes.TEXT
+        note: DataTypes.TEXT
     });
 
     Supplier.associate = models => {

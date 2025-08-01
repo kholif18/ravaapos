@@ -1,7 +1,7 @@
 <!-- views/items/index.ejs -->
   <div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
     <h5 class="card-title mb-0 flex-grow-1">Item Lists</h5>
-    <button class="btn btn-success" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
+    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
       + Add Item
     </button>
   </div>
@@ -17,7 +17,7 @@
   
         <input type="text" name="q" class="form-control flex-grow-1" placeholder="Search name, code, or barcode..." value="<%= search || '' %>" />
   
-        <button type="submit" class="btn btn-primary flex-shrink-0 px-3">
+        <button type="submit" class="btn btn-info flex-shrink-0 px-3">
           <i class="bx bx-search"></i> Search
         </button>
   
@@ -29,7 +29,7 @@
       </form>
     </div>
     <div class="card-body table-responsive text-nowrap">
-      <div id="tableScrollContainer" style="max-height: 70vh; overflow-y: auto;">
+      <div id="tableScrollContainer" style="max-height: 63vh; overflow-y: auto;">
         <table id="itemTable" class="table table-hover">
           <thead>
             <tr>
@@ -125,300 +125,225 @@
   </div>
 </div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    function sortTableBy(column, ascending = true) {
-      const tbody = document.getElementById('itemTableBody');
-      const rows = Array.from(tbody.querySelectorAll('tr'));
+<script type="module">
+  import { showToast } from '/assets/js/utils/toast.js';
+  import { resetModalForm } from '/assets/js/utils/resetModal.js';
+  import { confirmDelete } from '/assets/js/utils/confirm.js';
 
-      rows.sort((a, b) => {
-        const aCell = a.querySelector(`td[data-column="${column}"]`);
-        const bCell = b.querySelector(`td[data-column="${column}"]`);
+  const modalCreate = document.getElementById('modalCreate');
+  const formCreate = document.getElementById('formCreateItem');
+  const tbody = document.getElementById('itemTableBody');
+  const scrollContainer = document.getElementById('tableScrollContainer');
 
-        let aVal = aCell?.dataset.value || aCell?.textContent?.trim() || '';
-        let bVal = bCell?.dataset.value || bCell?.textContent?.trim() || '';
+  let offset = 0;
+  const limit = 25;
+  let loading = false;
+  let done = false;
 
-        // Coba ubah ke angka
-        const aNum = parseFloat(aVal);
-        const bNum = parseFloat(bVal);
+  async function loadMoreItems() {
+    if (loading || done) return;
+    loading = true;
+    document.getElementById('loadingIndicator').textContent = 'Loading...';
 
-        if (!isNaN(aNum) && !isNaN(bNum)) {
-          return ascending ? aNum - bNum : bNum - aNum;
-        }
+    const params = new URLSearchParams(window.location.search);
+    const category = params.get('category') || '';
+    const search = params.get('q') || '';
 
-        return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      });
-
-      tbody.innerHTML = '';
-      rows.forEach(row => tbody.appendChild(row));
-    }
-
-
-    function updateSortIcons(column, ascending) {
-      document.querySelectorAll('.sort-icon').forEach(icon => {
-        icon.className = 'sort-icon bx';
-      });
-
-      const iconEl = document.querySelector(`th[data-sort="${column}"] .sort-icon`);
-      if (iconEl) {
-        iconEl.classList.add(ascending ? 'bx-sort-down' : 'bx-sort-up');
-      }
-    }
-
-    const headers = document.querySelectorAll('#itemTable thead th[data-sort]');
-    let currentSort = { column: null, ascending: true };
-
-    headers.forEach(header => {
-      header.addEventListener('click', () => {
-        const column = header.dataset.sort;
-        const ascending = (currentSort.column === column) ? !currentSort.ascending : true;
-        currentSort = { column, ascending };
-        sortTableBy(column, ascending);
-        updateSortIcons(column, ascending);
-      });
-    });
-
-    let offset = 0;
-    const limit = 25;
-    let loading = false;
-    let done = false;
-
-    function formatRupiah(num) {
-      return 'Rp ' + Number(num).toLocaleString('id-ID');
-    }
-
-    async function loadMoreItems() {
-      if (loading || done) return;
-      loading = true;
-      document.getElementById('loadingIndicator').textContent = 'Loading...';
-
-      const params = new URLSearchParams(window.location.search);
-      const category = params.get('category') || '';
-      const search = params.get('q') || '';
-
+    try {
       const res = await fetch(`/items/json?offset=${offset}&limit=${limit}&category=${category}&q=${search}`);
-
-      if (!res.ok) return;
       const items = await res.json();
 
       if (items.length < limit) done = true;
       offset += items.length;
 
-      const tbody = document.getElementById('itemTableBody');
+      const fragment = document.createDocumentFragment();
       for (const item of items) {
         const row = document.createElement('tr');
         row.dataset.id = item.id;
-        row.dataset.name = item.name;
-        row.dataset.price = item.price;
-        row.dataset.category = item.categoryId;
-
         row.innerHTML = `
           <td data-column="code">${item.code}</td>
           <td data-column="name">${item.name}</td>
           <td data-column="category">${item.category?.name || '-'}</td>
           <td data-column="barcode">${item.barcode || '-'}</td>
-          <td data-column="cost" data-value="${item.cost}">${formatRupiah(item.cost)}</td>
-          <td data-column="salePrice" data-value="${item.salePrice}">${formatRupiah(item.salePrice)}</td>
+          <td data-column="cost" data-value="${item.cost}">Rp ${Number(item.cost).toLocaleString('id-ID')}</td>
+          <td data-column="salePrice" data-value="${item.salePrice}">Rp ${Number(item.salePrice).toLocaleString('id-ID')}</td>
           <td data-column="unit">${item.unit}</td>
           <td>
             <button class="btn btn-sm btn-warning btn-edit" data-bs-toggle="modal" data-bs-target="#modalEdit"><i class="bx bx-edit"></i></button>
             <button class="btn btn-sm btn-danger btn-delete"><i class="bx bx-trash"></i></button>
           </td>`;
-        tbody.appendChild(row);
+        fragment.appendChild(row);
       }
+      tbody.appendChild(fragment);
 
       document.getElementById('loadingIndicator').textContent = done ? 'Semua item dimuat' : '';
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'danger', title: 'Error', message: 'Gagal memuat data.' });
+    } finally {
       loading = false;
     }
+  }
 
-    // Infinite scroll
-    document.getElementById('tableScrollContainer').addEventListener('scroll', () => {
-      const container = document.getElementById('tableScrollContainer');
-      if (container.scrollTop + container.clientHeight >= container.scrollHeight - 10) {
-        loadMoreItems();
-      }
-    });
+  const inputCost = document.getElementById('inputCost');
+  const inputMarkup = document.getElementById('inputMarkup');
+  const inputSalePrice = document.getElementById('inputSalePrice');
 
-    loadMoreItems();
+  let lastChanged = null;
 
-    // AJAX untuk kalkulasi harga jual dua arah
-    const inputCost = document.getElementById('inputCost');
-    const inputMarkup = document.getElementById('inputMarkup');
-    const inputSalePrice = document.getElementById('inputSalePrice');
+  function updateSalePrice() {
+    if (lastChanged === 'sale') return;
+    const cost = parseFloat(inputCost.value) || 0;
+    const markup = parseFloat(inputMarkup.value) || 0;
+    const sale = cost + (cost * markup / 100);
+    lastChanged = 'markup';
+    inputSalePrice.value = Number.isInteger(sale) ? sale : sale.toFixed(2);
+  }
 
-    let lastChanged = null; // untuk menghindari loop tak berujung
+  function updateMarkup() {
+    if (lastChanged === 'markup') return;
+    const cost = parseFloat(inputCost.value) || 0;
+    const sale = parseFloat(inputSalePrice.value) || 0;
+    if (cost === 0) return;
+    const markup = ((sale - cost) / cost) * 100;
+    lastChanged = 'sale';
+    inputMarkup.value = Number.isInteger(markup) ? markup : markup.toFixed(2);
+  }
 
-    function updateSalePrice() {
-      if (lastChanged === 'sale') return; // hindari loop
-      const cost = parseFloat(inputCost.value) || 0;
-      const markup = parseFloat(inputMarkup.value) || 0;
-      const sale = cost + (cost * markup / 100);
-      lastChanged = 'markup';
-      inputSalePrice.value = Number.isInteger(sale) ? sale : sale.toFixed(2);
+  inputCost?.addEventListener('input', () => {
+    lastChanged = null;
+    updateSalePrice();
+  });
+  inputMarkup?.addEventListener('input', () => {
+    lastChanged = null;
+    updateSalePrice();
+  });
+  inputSalePrice?.addEventListener('input', () => {
+    lastChanged = null;
+    updateMarkup();
+  });
+
+  scrollContainer.addEventListener('scroll', () => {
+    if (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 10) {
+      loadMoreItems();
     }
+  });
 
-    function updateMarkup() {
-      if (lastChanged === 'markup') return; // hindari loop
-      const cost = parseFloat(inputCost.value) || 0;
-      const sale = parseFloat(inputSalePrice.value) || 0;
-      if (cost === 0) return; // hindari pembagian nol
-      const markup = ((sale - cost) / cost) * 100;
-      lastChanged = 'sale';
-      inputMarkup.value = Number.isInteger(markup) ? markup : markup.toFixed(2);
-    }
+  formCreate.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(formCreate);
+    const data = Object.fromEntries(formData.entries());
 
-    inputCost.addEventListener('input', () => {
-      lastChanged = null;
-      updateSalePrice();
-    });
+    data.defaultQty = formData.get('defaultQtyOne') === 'on';
+    data.service = formData.get('isService') === 'on';
+    data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
 
-    inputMarkup.addEventListener('input', () => {
-      lastChanged = null;
-      updateSalePrice();
-    });
+    try {
+      const res = await fetch('/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
 
-    inputSalePrice.addEventListener('input', () => {
-      lastChanged = null;
-      updateMarkup();
-    });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        bootstrap.Modal.getInstance(modalCreate).hide();
+        showToast({ type: 'success', title: 'Berhasil', message: 'Item berhasil ditambahkan' });
 
-    const formCreate = document.getElementById('formCreateItem');
-    formCreate.addEventListener('submit', async function (e) {
-      e.preventDefault();
-
-      const formData = new FormData(this);
-      const data = Object.fromEntries(formData.entries());
-
-      // Convert checkbox ke boolean
-      data.defaultQty = formData.get('defaultQtyOne') === 'on';
-      data.service = formData.get('isService') === 'on';
-      data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
-
-      try {
-        const res = await fetch('/items', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        if (!res.ok) throw new Error('Gagal menambah item');
-
-        // Tutup modal dan reload tabel
-        bootstrap.Modal.getInstance(document.getElementById('modalCreate')).hide();
         offset = 0;
         done = false;
-        document.getElementById('itemTableBody').innerHTML = '';
+        tbody.innerHTML = '';
         await loadMoreItems();
-
-        showToast({
-          type: 'success',
-          title: 'Berhasil',
-          message: 'Item berhasil ditambahkan'
-        });
-
-      } catch (err) {
-        showToast({
-          type: 'danger',
-          title: 'Gagal',
-          message: err.message || 'Terjadi kesalahan'
-        });
-
+        resetModalForm(modalCreate);
+      } else {
+        showToast({ type: 'danger', title: 'Gagal', message: result.message });
       }
-    });
-
-    document.getElementById('modalCreate').addEventListener('show.bs.modal', () => {
-      const form = document.getElementById('formCreateItem');
-      form.reset();
-
-      // Reset nilai default manual
-      document.getElementById('defaultQtyOne').checked = true;
-      document.getElementById('isService').checked = false;
-      document.getElementById('priceChangeAllowed').checked = false;
-
-      // Kosongkan juga perhitungan harga jika perlu
-      inputCost.value = '';
-      inputMarkup.value = '';
-      inputSalePrice.value = '';
-    });
-
-
-    function showToast({ title = 'Info', message = '', type = 'info', delay = 3000 }) {
-      const container = document.getElementById('toastContainer');
-      const template = document.getElementById('baseToastTemplate');
-
-      if (!container || !template) return;
-
-      const clone = template.firstElementChild.cloneNode(true);
-      clone.classList.remove('d-none');
-      clone.classList.add('show', `bg-${type}`);
-
-      const iconMap = {
-        success: 'bx-check-circle',
-        danger: 'bx-x-circle',
-        warning: 'bx-error-alt',
-        info: 'bx-info-circle'
-      };
-
-      const icon = iconMap[type] || 'bx-bell';
-      clone.querySelector('.toast-icon').classList.add(icon);
-      clone.querySelector('.toast-title').textContent = title;
-      clone.querySelector('.toast-body').textContent = message;
-      clone.querySelector('.toast-time').textContent = 'Baru saja';
-
-      container.appendChild(clone);
-
-      const bsToast = new bootstrap.Toast(clone, { delay });
-      bsToast.show();
-
-      clone.addEventListener('hidden.bs.toast', () => {
-        clone.remove();
-      });
+    } catch (err) {
+      showToast({ type: 'danger', title: 'Error', message: 'Gagal menyimpan data.' });
     }
+  });
 
-    document.getElementById('itemTableBody').addEventListener('click', async function (e) {
-      const btn = e.target.closest('.btn-delete');
-      if (!btn) return;
+  modalCreate.addEventListener('hidden.bs.modal', () => resetModalForm(modalCreate));
 
-      const row = btn.closest('tr');
-      const itemId = row.dataset.id;
+  modalCreate.addEventListener('shown.bs.modal', () => {
+    modalCreate.querySelector('[name="name"]')?.focus();
+  });
 
-      const confirm = await Swal.fire({
-        title: 'Hapus item ini?',
-        text: "Tindakan ini tidak bisa dibatalkan.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, hapus',
-        cancelButtonText: 'Batal',
-        confirmButtonColor: '#696cff',
-        cancelButtonColor: '#6c757d'
-      });
+  function sortTableBy(column, ascending = true) {
+    const rows = Array.from(tbody.querySelectorAll('tr'));
 
-      if (!confirm.isConfirmed) return;
+    rows.sort((a, b) => {
+      const aCell = a.querySelector(`td[data-column="${column}"]`);
+      const bCell = b.querySelector(`td[data-column="${column}"]`);
 
-      try {
-        const res = await fetch(`/items/${itemId}/delete`, {
-          method: 'POST'
-        });
+      let aVal = aCell?.dataset.value || aCell?.textContent?.trim() || '';
+      let bVal = bCell?.dataset.value || bCell?.textContent?.trim() || '';
 
-        if (!res.ok) throw new Error('Gagal menghapus item');
+      const aNum = parseFloat(aVal);
+      const bNum = parseFloat(bVal);
 
-        row.remove();
-
-        Swal.fire({
-          icon: 'success',
-          title: 'Item berhasil dihapus',
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } catch (err) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Gagal menghapus item',
-          text: err.message,
-          timer: 2000,
-          showConfirmButton: false,
-        });
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return ascending ? aNum - bNum : bNum - aNum;
       }
+
+      return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  function updateSortIcons(column, ascending) {
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+      icon.className = 'sort-icon bx';
+    });
+
+    const iconEl = document.querySelector(`th[data-sort="${column}"] .sort-icon`);
+    if (iconEl) {
+      iconEl.classList.add(ascending ? 'bx-sort-down' : 'bx-sort-up');
+    }
+  }
+
+  const headers = document.querySelectorAll('#itemTable thead th[data-sort]');
+  let currentSort = { column: null, ascending: true };
+
+  headers.forEach(header => {
+    header.addEventListener('click', () => {
+      const column = header.dataset.sort;
+      const ascending = (currentSort.column === column) ? !currentSort.ascending : true;
+      currentSort = { column, ascending };
+      sortTableBy(column, ascending);
+      updateSortIcons(column, ascending);
     });
   });
+
+
+  // Delete
+  tbody.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.btn-delete');
+    if (!btn) return;
+
+    const row = btn.closest('tr');
+    const itemId = row.dataset.id;
+
+    const confirmed = await confirmDelete('Item ini akan dihapus dan tidak bisa dikembalikan.');
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/items/${itemId}/delete`, { method: 'POST' });
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        row.remove();
+        showToast({ type: 'success', title: 'Berhasil', message: result.message });
+      } else {
+        showToast({ type: 'danger', title: 'Gagal', message: result.message });
+      }
+    } catch (err) {
+      showToast({ type: 'danger', title: 'Error', message: 'Gagal menghapus item.' });
+    }
+  });
+
+  loadMoreItems();
 </script>

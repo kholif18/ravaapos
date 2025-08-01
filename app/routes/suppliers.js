@@ -2,13 +2,19 @@ const express = require('express');
 const router = express.Router();
 const supplierController = require('../controllers/supplierController');
 
-// View
-router.get('/', supplierController.view);
+// GET halaman utama supplier
+router.get('/', supplierController.getAll);
 
-// API endpoints
-router.get('/api', supplierController.getAll);
+// API JSON list supplier
+router.get('/json', supplierController.getAllJSON);
+
+// POST tambah supplier
 router.post('/', supplierController.create);
-router.put('/:id', supplierController.update);
-router.delete('/:id', supplierController.remove);
+
+// POST update supplier
+router.post('/:id/update', supplierController.update);
+
+// POST hapus supplier
+router.post('/:id/delete', supplierController.delete);
 
 module.exports = router;

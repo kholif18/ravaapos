@@ -23,6 +23,7 @@ exports.viewItems = async (req, res) => {
 
     res.render('items/index', {
       categories,
+      activePage: 'items',
       selectedCategory,
       search
     });

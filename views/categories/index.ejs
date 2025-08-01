@@ -1,56 +1,108 @@
 <div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
   <h5 class="card-title mb-0 flex-grow-1">Categories</h5>
-  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCreate">
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
     + Add Category
   </button>
 </div>
 <div class="card">
   <div class="card-body">
-    <table class="table">
+    <table class="table table-hover">
       <thead>
         <tr>
-          <th>Nama <i class="bx bx-sort-alt-2"></i></th>
+          <th id="thNama" style="cursor:pointer" title="Urutkan berdasarkan nama">Nama <i id="iconSortNama" class="bx bx-sort-alt-2"></i></th>
           <th>Jumlah Item</th>
           <th>Aksi</th>
         </tr>
       </thead>
-      <tbody>
-        <% categories.forEach(cat => { %>
-          <tr>
-            <td><%= cat.name %></td>
-            <td>
-              <span class="badge bg-info"><%= cat.items?.length || 0 %> Item</span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalEdit"
-                data-id="<%= cat.id %>" data-name="<%= cat.name %>" >
-                <i class="bx bx-edit"></i>
-              </button>
-
-              <form action="/categories/<%= cat.id %>/delete" method="POST" style="display:inline">
-                <button type="submit" class="btn btn-sm btn-danger">
-                  <i class="bx bx-trash"></i>
-                </button>
-              </form>
-            </td>
-
-          </tr>
-        <% }) %>
+      <tbody id="categoryTbody">
+        <%- include('_tbody', { categories }) %>
       </tbody>
     </table>
+
+    <div class="d-flex mt-3 gap-3 align-items-center justify-content-between flex-wrap">
+      <!-- Select kiri -->
+      <form method="get" class="d-flex align-items-center" style="min-width: 180px;">
+        <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
+        <select id="limitSelect" class="form-select form-select-sm" name="limit" onchange="this.form.submit()">
+          <% [10, 25, 50].forEach(val => { %>
+            <option value="<%= val %>" <%= pagination.limit === val ? 'selected' : '' %>><%= val %></option>
+          <% }) %>
+        </select>
+      </form>
+
+      <!-- Pagination tengah -->
+      <nav aria-label="Page navigation" class="flex-grow-1 d-flex justify-content-center">
+        <ul class="pagination mb-0">
+          <% const current = pagination.page;
+            const total = pagination.totalPages;
+            const limit = pagination.limit;
+            const buildHref = (page) => `?page=${page}&limit=${limit}`;
+            const createPage = (n) => `
+              <li class="page-item ${n === current ? 'active' : ''}">
+                <a class="page-link" href="${buildHref(n)}">${n}</a>
+              </li>
+            `;
+          %>
+
+          <li class="page-item first <%= current === 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= current > 1 ? buildHref(1) : 'javascript:void(0);' %>">
+              <i class="tf-icon bx bx-chevrons-left"></i>
+            </a>
+          </li>
+
+          <li class="page-item prev <%= current === 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= current > 1 ? buildHref(current - 1) : 'javascript:void(0);' %>">
+              <i class="tf-icon bx bx-chevron-left"></i>
+            </a>
+          </li>
+
+          <% if (current > 3) { %>
+            <%- createPage(1) %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+
+          <% for (let i = Math.max(current - 2, 1); i <= Math.min(current + 2, total); i++) { %>
+            <%- createPage(i) %>
+          <% } %>
+
+          <% if (current < total - 2) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            <%- createPage(total) %>
+          <% } %>
+
+          <li class="page-item next <%= current === total ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= current < total ? buildHref(current + 1) : 'javascript:void(0);' %>">
+              <i class="tf-icon bx bx-chevron-right"></i>
+            </a>
+          </li>
+
+          <li class="page-item last <%= current === total ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= current < total ? buildHref(total) : 'javascript:void(0);' %>">
+              <i class="tf-icon bx bx-chevrons-right"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Info kanan -->
+      <p class="mb-0 text-nowrap" style="min-width: 200px;">
+        Halaman <%= pagination.page %> dari <%= pagination.totalPages %> — Total <%= pagination.totalItems %> data
+      </p>
+    </div>
+
   </div>
 </div>
 
 
 <div class="modal fade" id="modalCreate" tabindex="-1">
   <div class="modal-dialog">
-    <form class="modal-content" action="/categories" method="POST">
+    <form id="formCreateCategory" class="modal-content" action="/categories" method="POST">
       <div class="modal-header">
         <h5 class="modal-title">Tambah Kategori</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="text" name="name" class="form-control" placeholder="Nama kategori" required>
+        <input type="text" name="name" class="form-control" placeholder="Nama kategori" required autofocus>
       </div>
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">Simpan</button>
@@ -62,7 +114,7 @@
 
 <div class="modal fade" id="modalEdit" tabindex="-1">
   <div class="modal-dialog">
-    <form class="modal-content" method="POST" id="formEdit">
+    <form id="formEditCategory" class="modal-content" method="POST" id="formEdit">
       <div class="modal-header">
         <h5 class="modal-title">Edit Kategori</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -77,18 +129,160 @@
   </div>
 </div>
 
+<script type="module">
+  import { showToast } from '/assets/js/utils/toast.js';
+  import { resetModalForm } from '/assets/js/utils/resetModal.js';
+  import { confirmDelete } from '/assets/js/utils/confirm.js';
 
-<script>
+  const modalCreate = document.getElementById('modalCreate');
   const modalEdit = document.getElementById('modalEdit');
-  modalEdit.addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const id = button.getAttribute('data-id');
-    const name = button.getAttribute('data-name');
+  const tbody = document.getElementById('categoryTbody');
 
-    const form = document.getElementById('formEdit');
-    const input = document.getElementById('editName');
+  async function reloadTable() {
+    try {
+      const res = await fetch('/categories/partial');
+      const html = await res.text();
+      tbody.innerHTML = html;
 
-    input.value = name;
-    form.action = `/categories/${id}/update`;
+      initDeleteButtons();
+      initEditButtons();
+    } catch (err) {
+      console.error('Gagal memuat ulang tabel:', err);
+      showToast({ type: 'danger', title: 'Error', message: 'Gagal memuat ulang tabel' });
+    }
+  }
+
+  document.getElementById('formCreateCategory').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const name = formData.get('name');
+
+    try {
+      const res = await fetch('/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success) {
+        bootstrap.Modal.getInstance(modalCreate).hide();
+        document.querySelector('button[data-bs-target="#modalCreate"]')?.focus();
+        showToast({ type: 'success', title: 'Berhasil', message: result.message });
+        resetModalForm(modalCreate);
+        await reloadTable();
+      } else {
+        showToast({ type: 'danger', title: 'Gagal', message: result.message });
+      }
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'danger', title: 'Error', message: 'Kesalahan server.' });
+    }
   });
+
+  document.getElementById('formEditCategory').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const id = this.dataset.id;
+    const name = document.getElementById('editName').value;
+
+    try {
+      const res = await fetch(`/categories/${id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+
+      const result = await res.json();
+      if (res.ok && result.success) {
+        bootstrap.Modal.getInstance(modalEdit).hide();
+        document.querySelector('button[data-bs-target="#modalCreate"]')?.focus();
+        showToast({ type: 'success', title: 'Berhasil', message: result.message });
+        resetModalForm(modalEdit);
+        await reloadTable();
+      } else {
+        showToast({ type: 'danger', title: 'Gagal', message: result.message });
+      }
+    } catch (err) {
+      console.error(err);
+      showToast({ type: 'danger', title: 'Error', message: 'Kesalahan server.' });
+    }
+  });
+
+  function initEditButtons() {
+    document.querySelectorAll('button[data-bs-target="#modalEdit"]').forEach(button => {
+      button.addEventListener('click', () => {
+        const id = button.getAttribute('data-id');
+        const name = button.getAttribute('data-name');
+        const form = document.getElementById('formEditCategory');
+
+        document.getElementById('editName').value = name;
+        form.dataset.id = id;
+      });
+    });
+  }
+
+  function initDeleteButtons() {
+    document.querySelectorAll('.btn-delete').forEach(button => {
+      button.addEventListener('click', async () => {
+        const id = button.getAttribute('data-id');
+        const confirmed = await confirmDelete("Kategori ini akan dihapus dan tidak bisa dikembalikan.");
+
+        if (confirmed) {
+          try {
+            const res = await fetch(`/categories/${id}/delete`, { method: 'POST' });
+            const result = await res.json();
+            if (res.ok && result.success) {
+              showToast({ type: 'success', title: 'Dihapus', message: result.message });
+              await reloadTable();
+            } else {
+              showToast({ type: 'danger', title: 'Gagal', message: result.message });
+            }
+          } catch (err) {
+            showToast({ type: 'danger', title: 'Error', message: 'Terjadi kesalahan.' });
+          }
+        }
+      });
+    });
+  }
+
+  function sortCategoryTableByName(ascending = true) {
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    rows.sort((a, b) => {
+      const aVal = a.querySelector('td[data-column="name"]')?.dataset.value?.toLowerCase() || '';
+      const bVal = b.querySelector('td[data-column="name"]')?.dataset.value?.toLowerCase() || '';
+      return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    });
+
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+  }
+
+  function updateCategorySortIcon(ascending) {
+    const icon = document.getElementById('iconSortNama');
+    icon.classList.remove('bx-sort-alt-2', 'bx-sort-up', 'bx-sort-down');
+    icon.classList.add(ascending ? 'bx-sort-up' : 'bx-sort-down');
+  }
+
+  let isAscending = true;
+  document.getElementById('thNama')?.addEventListener('click', () => {
+    isAscending = !isAscending;
+    sortCategoryTableByName(isAscending);
+    updateCategorySortIcon(isAscending);
+  });
+
+
+  modalCreate.addEventListener('shown.bs.modal', () => {
+    modalCreate.querySelector('input[name="name"]').focus();
+  });
+
+  modalEdit.addEventListener('shown.bs.modal', () => {
+    document.getElementById('editName').focus();
+  });
+
+  modalCreate.addEventListener('hidden.bs.modal', () => resetModalForm(modalCreate));
+  modalEdit.addEventListener('hidden.bs.modal', () => resetModalForm(modalEdit));
+
+  initDeleteButtons();
+  initEditButtons();
 </script>

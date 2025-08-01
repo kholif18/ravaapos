@@ -1,29 +1,10 @@
-const db = require('../models');
-const Supplier = db.Supplier;
+const {
+    Supplier
+} = require('../models');
+const {
+    validationResult
+} = require('express-validator');
 
-/**
- * GET /suppliers (untuk render halaman HTML)
- */
-exports.view = async (req, res) => {
-    try {
-        const suppliers = await Supplier.findAll({
-            order: [
-                ['name', 'ASC']
-            ]
-        });
-
-        res.render('suppliers/index', {
-            title: 'Daftar Supplier',
-            suppliers,
-        });
-    } catch (error) {
-        res.status(500).send('Gagal memuat halaman supplier');
-    }
-};
-
-/**
- * GET /suppliers/api (untuk fetch() AJAX)
- */
 exports.getAll = async (req, res) => {
     try {
         const suppliers = await Supplier.findAll({
@@ -31,85 +12,139 @@ exports.getAll = async (req, res) => {
                 ['name', 'ASC']
             ]
         });
-        res.json(suppliers);
-    } catch (error) {
-        res.status(500).json({
-            message: 'Gagal mengambil supplier',
-            error: error.message,
+        res.render('suppliers/index', {
+            suppliers,
+            activePage: 'suppliers'
         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
     }
 };
 
-/**
- * POST /suppliers
- */
-exports.create = async (req, res) => {
-    try {
-        const supplier = await Supplier.create(req.body);
-        res.status(201).json({
-            message: 'Supplier berhasil ditambahkan',
-            data: supplier,
-        });
-    } catch (error) {
-        res.status(400).json({
-            message: 'Gagal menambahkan supplier',
-            error: error.message,
-        });
-    }
-};
+exports.getAllJSON = async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
-/**
- * PUT /suppliers/:id
- */
-exports.update = async (req, res) => {
     try {
-        const updated = await Supplier.update(req.body, {
-            where: {
-                id: req.params.id
-            },
+        const {
+            count,
+            rows
+        } = await Supplier.findAndCountAll({
+            order: [
+                ['name', 'ASC']
+            ],
+            limit,
+            offset
         });
 
-        if (updated[0] === 0) {
-            return res.status(404).json({
-                message: 'Supplier tidak ditemukan'
-            });
-        }
+        const totalPages = Math.ceil(count / limit);
 
         res.json({
+            data: rows,
+            pagination: {
+                page,
+                limit,
+                totalItems: count,
+                totalPages
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal memuat data supplier'
+        });
+    }
+};
+
+exports.create = async (req, res) => {
+    const {
+        name,
+        phone,
+        email,
+        address,
+        note
+    } = req.body;
+    try {
+        await Supplier.create({
+            name,
+            phone,
+            email,
+            address,
+            note
+        });
+        res.json({
+            success: true,
+            message: 'Supplier berhasil ditambahkan'
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal menambah supplier'
+        });
+    }
+};
+
+exports.update = async (req, res) => {
+    const id = req.params.id;
+    const {
+        name,
+        phone,
+        email,
+        address,
+        note
+    } = req.body;
+
+    try {
+        const supplier = await Supplier.findByPk(id);
+        if (!supplier) return res.status(404).json({
+            success: false,
+            message: 'Supplier tidak ditemukan'
+        });
+
+        await supplier.update({
+            name,
+            phone,
+            email,
+            address,
+            note
+        });
+        res.json({
+            success: true,
             message: 'Supplier berhasil diperbarui'
         });
-    } catch (error) {
-        res.status(400).json({
-            message: 'Gagal memperbarui supplier',
-            error: error.message,
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal memperbarui supplier'
         });
     }
 };
 
-/**
- * DELETE /suppliers/:id
- */
-exports.remove = async (req, res) => {
+exports.delete = async (req, res) => {
+    const id = req.params.id;
+
     try {
-        const deleted = await Supplier.destroy({
-            where: {
-                id: req.params.id
-            },
+        const supplier = await Supplier.findByPk(id);
+        if (!supplier) return res.status(404).json({
+            success: false,
+            message: 'Supplier tidak ditemukan'
         });
 
-        if (!deleted) {
-            return res.status(404).json({
-                message: 'Supplier tidak ditemukan'
-            });
-        }
-
+        await supplier.destroy();
         res.json({
+            success: true,
             message: 'Supplier berhasil dihapus'
         });
-    } catch (error) {
-        res.status(400).json({
-            message: 'Gagal menghapus supplier',
-            error: error.message,
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Gagal menghapus supplier'
         });
     }
 };

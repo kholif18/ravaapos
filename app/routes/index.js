@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const itemRoutes = require('./itemRoutes');
+const productRoutes = require('./productRoutes');
 const db = require('../../config/database');
 const dashboardController = require('../controllers/dashboardController');
 const categoryRoutes = require('./category');
@@ -18,7 +18,7 @@ router.use('/categories', categoryRoutes);
 router.use('/suppliers', supplierRoutes);
 router.use('/customers', customerRoutes);
 
-// REST API routes untuk /items
-router.use('/items', itemRoutes);
+// REST API routes untuk /products
+router.use('/products', productRoutes);
 
 module.exports = router;

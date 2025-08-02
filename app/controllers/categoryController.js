@@ -1,6 +1,6 @@
 const {
     Category,
-    Item
+    Product
 } = require('../models');
 const {
     fn,
@@ -11,47 +11,59 @@ const {
 } = require('express-validator');
 
 exports.getAll = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
 
-    const {
-        count,
-        rows
-    } = await Category.findAndCountAll({
-        attributes: {
-            include: [
-                [fn('COUNT', col('items.id')), 'itemCount']
-            ]
-        },
-        include: [{
-            model: Item,
-            as: 'items',
-            attributes: []
-        }],
-        group: ['Category.id'],
-        limit,
-        offset,
-        order: [
-            ['name', 'ASC']
-        ],
-        subQuery: false
-    });
-
-    const totalPages = Math.ceil(count.length ? count.length / limit : count / limit);
-
-    res.render('categories/index', {
-        title: 'Categories',
-        categories: rows,
-        activePage: 'categories',
-        pagination: {
-            page,
+        // Ambil semua kategori dengan jumlah product per kategori
+        const {
+            count,
+            rows
+        } = await Category.findAndCountAll({
+            attributes: {
+                include: [
+                    [fn('COUNT', col('products.id')), 'productCount']
+                ]
+            },
+            include: [{
+                model: Product,
+                as: 'products',
+                attributes: []
+            }],
+            group: ['Category.id'],
+            order: [
+                ['name', 'ASC']
+            ],
             limit,
-            totalItems: count.length ? count.length : count,
-            totalPages,
-        },
-    });
+            offset,
+            subQuery: false
+        });
+
+        // Karena pakai GROUP BY, count adalah array. Kita hitung jumlah kategori dari count.length
+        const totalItems = Array.isArray(count) ? count.length : count;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        res.render('categories/index', {
+            title: 'Categories',
+            categories: rows,
+            activePage: 'categories',
+            pagination: {
+                page,
+                limit,
+                totalProduct: totalItems,
+                totalPages,
+            },
+        });
+    } catch (err) {
+        console.error('Error saat mengambil data kategori:', err);
+        res.status(500).render('error', {
+            message: 'Gagal memuat data kategori',
+            error: err
+        });
+    }
 };
+
 
 // POST /categories
 exports.create = async (req, res) => {
@@ -128,7 +140,7 @@ exports.delete = async (req, res) => {
             message: 'Kategori tidak ditemukan'
         });
 
-        await Item.update({
+        await Product.update({
             categoryId: null
         }, {
             where: {
@@ -155,12 +167,12 @@ exports.getAllJson = async (req, res) => {
         const categories = await Category.findAll({
             attributes: {
                 include: [
-                    [fn('COUNT', col('items.id')), 'itemCount']
+                    [fn('COUNT', col('products.id')), 'productCount']
                 ]
             },
             include: {
-                model: Item,
-                as: 'items',
+                model: Product,
+                as: 'products',
                 attributes: []
             },
             group: ['Category.id'],
@@ -184,12 +196,12 @@ exports.getPartial = async (req, res) => {
         const categories = await Category.findAll({
             attributes: {
                 include: [
-                    [fn('COUNT', col('items.id')), 'itemCount']
+                    [fn('COUNT', col('products.id')), 'productCount']
                 ]
             },
             include: {
-                model: Item,
-                as: 'items',
+                model: Product,
+                as: 'products',
                 attributes: []
             },
             group: ['Category.id'],

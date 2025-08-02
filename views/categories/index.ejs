@@ -10,7 +10,7 @@
       <thead>
         <tr>
           <th id="thNama" style="cursor:pointer" title="Urutkan berdasarkan nama">Nama <i id="iconSortNama" class="bx bx-sort-alt-2"></i></th>
-          <th>Jumlah Item</th>
+          <th>Jumlah Product</th>
           <th>Aksi</th>
         </tr>
       </thead>
@@ -23,13 +23,13 @@
       <!-- Select kiri -->
       <form method="get" class="d-flex align-items-center" style="min-width: 180px;">
         <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
-        <select id="limitSelect" class="form-select form-select-sm" name="limit" onchange="this.form.submit()">
+        <select id="limitSelect" class="form-select form-select-sm" style="width: auto;" name="limit" onchange="this.form.submit()">
           <% [10, 25, 50].forEach(val => { %>
             <option value="<%= val %>" <%= pagination.limit === val ? 'selected' : '' %>><%= val %></option>
           <% }) %>
         </select>
       </form>
-
+      
       <!-- Pagination tengah -->
       <nav aria-label="Page navigation" class="flex-grow-1 d-flex justify-content-center">
         <ul class="pagination mb-0">

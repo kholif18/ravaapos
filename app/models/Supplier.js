@@ -11,8 +11,10 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Supplier.associate = models => {
-        // contoh jika ada relasi ke PurchaseOrder nanti
-        // Supplier.hasMany(models.PurchaseOrder, { foreignKey: 'supplierId' });
+        Supplier.hasMany(models.Product, {
+            foreignKey: 'supplierId',
+            as: 'products'
+        });
     };
 
     return Supplier;

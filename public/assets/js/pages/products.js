@@ -7,10 +7,15 @@ import {
 import {
     confirmDelete
 } from '/assets/js/utils/confirm.js';
+import {
+    showInputErrors,
+    resetInputErrors
+} from '/assets/js/utils/formError.js';
+
 
 const modalCreate = document.getElementById('modalCreate');
-const formCreate = document.getElementById('formCreateItem');
-const tbody = document.getElementById('itemTableBody');
+const formCreate = document.getElementById('formCreateProduct');
+const tbody = document.getElementById('productTableBody');
 const scrollContainer = document.getElementById('tableScrollContainer');
 
 let currentSearch = '';
@@ -19,7 +24,7 @@ const limit = 25;
 let loading = false;
 let done = false;
 
-async function loadMoreItems() {
+async function loadMoreProducts() {
     if (loading || done) return;
     loading = true;
     document.getElementById('loadingIndicator').textContent = 'Loading...';
@@ -29,24 +34,24 @@ async function loadMoreItems() {
     const search = currentSearch || '';
 
     try {
-        const res = await fetch(`/items/json?offset=${offset}&limit=${limit}&category=${category}&q=${search}`);
-        const items = await res.json();
+        const res = await fetch(`/products/json?offset=${offset}&limit=${limit}&category=${category}&q=${search}`);
+        const products = await res.json();
 
-        if (items.length < limit) done = true;
-        offset += items.length;
+        if (products.length < limit) done = true;
+        offset += products.length;
 
         const fragment = document.createDocumentFragment();
-        for (const item of items) {
+        for (const product of products) {
             const row = document.createElement('tr');
-            row.dataset.id = item.id;
+            row.dataset.id = product.id;
             row.innerHTML = `
-          <td data-column="code">${item.code}</td>
-          <td data-column="name">${item.name}</td>
-          <td data-column="category">${item.category?.name || '-'}</td>
-          <td data-column="barcode">${item.barcode || '-'}</td>
-          <td data-column="cost" data-value="${item.cost}">Rp ${Number(item.cost).toLocaleString('id-ID')}</td>
-          <td data-column="salePrice" data-value="${item.salePrice}">Rp ${Number(item.salePrice).toLocaleString('id-ID')}</td>
-          <td data-column="unit">${item.unit}</td>
+          <td data-column="code">${product.code}</td>
+          <td data-column="name">${product.name}</td>
+          <td data-column="category">${product.category?.name || '-'}</td>
+          <td data-column="barcode">${product.barcode || '-'}</td>
+          <td data-column="cost" data-value="${product.cost}">Rp ${Number(product.cost).toLocaleString('id-ID')}</td>
+          <td data-column="salePrice" data-value="${product.salePrice}">Rp ${Number(product.salePrice).toLocaleString('id-ID')}</td>
+          <td data-column="unit">${product.unit}</td>
           <td>
             <button class="btn btn-sm btn-warning btn-edit" data-bs-toggle="modal" data-bs-target="#modalEdit"><i class="bx bx-edit"></i></button>
             <button class="btn btn-sm btn-danger btn-delete"><i class="bx bx-trash"></i></button>
@@ -55,7 +60,7 @@ async function loadMoreItems() {
         }
         tbody.appendChild(fragment);
 
-        document.getElementById('loadingIndicator').textContent = done ? 'Semua item dimuat' : '';
+        document.getElementById('loadingIndicator').textContent = done ? 'Semua Product dimuat' : '';
     } catch (err) {
         console.error(err);
         showToast({
@@ -68,17 +73,18 @@ async function loadMoreItems() {
     }
 }
 
-document.getElementById('searchItem')?.addEventListener('input', async e => {
+document.getElementById('searchProduct')?.addEventListener('input', async e => {
     currentSearch = e.target.value.trim();
     offset = 0;
     done = false;
     tbody.innerHTML = '';
-    await loadMoreItems();
+    await loadMoreProducts();
 });
 
 const inputCost = document.getElementById('inputCost');
 const inputMarkup = document.getElementById('inputMarkup');
 const inputSalePrice = document.getElementById('inputSalePrice');
+const checkboxService = document.getElementById('isService');
 
 let lastChanged = null;
 
@@ -114,9 +120,26 @@ inputSalePrice?.addEventListener('input', () => {
     updateMarkup();
 });
 
+document.getElementById('enableLowStockWarning').addEventListener('change', function () {
+    document.getElementById('lowStockWarning').disabled = !this.checked;
+});
+
+document.getElementById('enableAltDesc').addEventListener('change', function () {
+    document.getElementById('altDescription').disabled = !this.checked;
+});
+
+checkboxService?.addEventListener('change', () => {
+    const isService = checkboxService.checked;
+
+    if (isService) {
+        if (!inputCost.value) inputCost.value = '0';
+        inputMarkup.value = '';
+    }
+});
+
 scrollContainer.addEventListener('scroll', () => {
     if (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 10) {
-        loadMoreItems();
+        loadMoreProducts();
     }
 });
 
@@ -130,7 +153,7 @@ formCreate.addEventListener('submit', async (e) => {
     data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
 
     try {
-        const res = await fetch('/items', {
+        const res = await fetch('/products', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -144,20 +167,24 @@ formCreate.addEventListener('submit', async (e) => {
             showToast({
                 type: 'success',
                 title: 'Berhasil',
-                message: 'Item berhasil ditambahkan'
+                message: 'Product berhasil ditambahkan'
             });
 
             offset = 0;
             done = false;
             tbody.innerHTML = '';
-            await loadMoreItems();
+            await loadMoreProducts();
             resetModalForm(modalCreate);
         } else {
-            showToast({
-                type: 'danger',
-                title: 'Gagal',
-                message: result.message
-            });
+            if (result.errors) {
+                showInputErrors(result.errors, formCreate);
+            } else {
+                showToast({
+                    type: 'danger',
+                    title: 'Gagal',
+                    message: result.message
+                });
+            }
         }
     } catch (err) {
         showToast({
@@ -168,7 +195,10 @@ formCreate.addEventListener('submit', async (e) => {
     }
 });
 
-modalCreate.addEventListener('hidden.bs.modal', () => resetModalForm(modalCreate));
+modalCreate.addEventListener('hidden.bs.modal', () => {
+    resetModalForm(modalCreate);
+    resetInputErrors(formCreate);
+});
 
 modalCreate.addEventListener('shown.bs.modal', () => {
     modalCreate.querySelector('[name="name"]')?.focus();
@@ -209,7 +239,7 @@ function updateSortIcons(column, ascending) {
     }
 }
 
-const headers = document.querySelectorAll('#itemTable thead th[data-sort]');
+const headers = document.querySelectorAll('#productTable thead th[data-sort]');
 let currentSort = {
     column: null,
     ascending: true
@@ -235,14 +265,14 @@ tbody.addEventListener('click', async function (e) {
     if (!btn) return;
 
     const row = btn.closest('tr');
-    const itemId = row.dataset.id;
+    const productId = row.dataset.id;
 
-    const confirmed = await confirmDelete('Item ini akan dihapus dan tidak bisa dikembalikan.');
+    const confirmed = await confirmDelete('Product ini akan dihapus dan tidak bisa dikembalikan.');
 
     if (!confirmed) return;
 
     try {
-        const res = await fetch(`/items/${itemId}/delete`, {
+        const res = await fetch(`/products/${productId}/delete`, {
             method: 'POST'
         });
         const result = await res.json();
@@ -265,9 +295,9 @@ tbody.addEventListener('click', async function (e) {
         showToast({
             type: 'danger',
             title: 'Error',
-            message: 'Gagal menghapus item.'
+            message: 'Gagal menghapus Product.'
         });
     }
 });
 
-loadMoreItems();
+loadMoreProducts();

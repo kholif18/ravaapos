@@ -26,9 +26,10 @@ exports.getAll = async (req, res) => {
             ]
         });
         res.render('customers/index', {
+            title: 'Customers',
             customers,
             activePage: 'customers',
-            query: req.query
+            query: req.query,
         });
     } catch (err) {
         console.error(err);
@@ -151,17 +152,110 @@ exports.destroy = async (req, res) => {
         const id = req.params.id;
         const customer = await Customer.findByPk(id);
         if (!customer) return res.status(404).json({
+            success: false,
             message: 'Customer tidak ditemukan'
         });
 
         await customer.destroy();
-        res.json({
+
+        return res.json({
+            success: true,
             message: 'Customer berhasil dihapus'
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({
+        return res.status(500).json({
+            success: false,
             message: 'Gagal menghapus customer'
         });
     }
 };
+
+exports.getJson = async (req, res) => {
+    try {
+        const customers = await Customer.findAll({
+            order: [
+                ['createdAt', 'DESC']
+            ]
+        });
+        res.json(customers);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: 'Gagal mengambil data customer'
+        });
+    }
+};
+
+exports.getListAJAX = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const type = req.query.type || '';
+        const status = req.query.status || '';
+        const sort = req.query.sort || 'createdAt';
+        const order = req.query.order === 'ASC' ? 'ASC' : 'DESC';
+
+        const where = {};
+
+        if (search) {
+            const {
+                Op
+            } = require('sequelize');
+            where[Op.or] = [{
+                    name: {
+                        [Op.like]: `%${search}%`
+                    }
+                },
+                {
+                    email: {
+                        [Op.like]: `%${search}%`
+                    }
+                },
+                {
+                    phone: {
+                        [Op.like]: `%${search}%`
+                    }
+                },
+            ];
+        }
+
+        if (type) {
+            where.type = type;
+        }
+
+        if (status) {
+            where.status = status;
+        }
+        
+        const {
+            count,
+            rows
+        } = await Customer.findAndCountAll({
+            where,
+            limit,
+            offset,
+            order: [
+                [sort, order]
+            ],
+        });
+
+        res.json({
+            data: rows,
+            pagination: {
+                page,
+                totalPages: Math.ceil(count / limit),
+                limit,
+                totalItems: count,
+            },
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: 'Gagal mengambil data customer'
+        });
+    }
+};
+

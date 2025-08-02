@@ -1,280 +1,162 @@
+<!-- Customer Table View -->
 <div class="container-xxl flex-grow-1 container-p-y">
-    <div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
-        <h5 class="card-title mb-0 flex-grow-1">Daftar Customer</h5>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCustomer">
-        + Tambah Customer
-        </button>
-    </div>
+  <div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
+    <h5 class="card-title mb-0 flex-grow-1">Daftar Customer</h5>
+    <button class="btn btn-primary" id="btnAddCustomer" data-bs-toggle="modal" data-bs-target="#modalCustomer">
+      + Tambah Customer
+    </button>
+  </div>
 
-    <!-- Table -->
-    <div class="card">
-        <div class="card-body table-responsive">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
+  <!-- Table -->
+  <div class="card">
+    
+    <div class="card-body ">
+      <!-- Filter -->
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <input type="text" id="searchInput" class="form-control" placeholder="Cari nama, email, atau no HP...">
+        </div>
+        <div class="col-md-2">
+          <select id="filterType" class="form-select">
+            <option value="">Semua Jenis</option>
+            <option value="umum">Umum</option>
+            <option value="member">Member</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select id="filterStatus" class="form-select">
+            <option value="">Semua Status</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Nonaktif</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-secondary w-100" id="btnResetFilter">
+            <i class="bx bx-refresh"></i> Reset
+          </button>
+        </div>
+      </div>
+
+      <!-- Data tabel -->
+       <div class="table-responsive">
+        <table class="table table-hover mb-0" id="customerTable">
+          <thead class="table-light">
             <tr>
-                <th>Nama</th>
-                <th>Jenis</th>
-                <th>Email / HP</th>
-                <th>Tanggal Daftar</th>
-                <th>Status</th>
-                <th class="text-center">Aksi</th>
+              <th style="cursor: pointer;" id="sortByName">
+                Nama
+                <i class="bx bx-sort-alt-2" id="sortIcon"></i>
+              </th>
+              <th style="cursor: pointer;" id="sortByType">
+                Jenis
+                <i class="bx bx-sort-alt-2" id="typeSortIcon"></i>
+              </th>
+              <th>Email / HP</th>
+              <th>Tanggal Daftar</th>
+              <th>Status</th>
+              <th class="text-center">Aksi</th>
             </tr>
-            </thead>
-            <tbody>
-            <% customers.forEach(customer => { %>
-                <tr>
-                <td><%= customer.name %></td>
-                <td>
-                    <% if (customer.type === 'member') { %>
-                        <span class="badge bg-primary">Member</span><br>
-                        <small class="text-muted">Sejak <%= customer.memberSince ? customer.memberSince.toLocaleDateString('id-ID') : '-' %></small>
-                    <% } else { %>
-                        <span class="badge bg-secondary">Umum</span>
-                    <% } %>
-                </td>
-                <td>
-                    <%= customer.email || '-' %><br>
-                    <small><%= customer.phone || '-' %></small>
-                </td>
-                <td><%= customer.createdAt.toLocaleDateString() %></td>
-                <td>
-                    <span class="badge bg-<%= customer.status === 'active' ? 'success' : 'danger' %>">
-                    <%= customer.status === 'active' ? 'Aktif' : 'Nonaktif' %>
-                    </span>
-                </td>
-                <td class="text-center">
-                    <% const customerEncoded = Buffer.from(JSON.stringify(customer)).toString('base64'); %>
-                    <button class="btn btn-sm btn-warning me-1 btn-edit"
-                        data-id="<%= customer.id %>"
-                        data-customer="<%= customerEncoded %>">
-                        <i class="bx bx-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger btn-delete" data-id="<%= customer.id %>" data-name="<%= customer.name %>"><i class="bx bx-trash"></i></button>
-                </td>
-                </tr>
-            <% }) %>
-            </tbody>
+          </thead>
+          <tbody id="customerTableBody">
+            <!-- Data via JS -->
+          </tbody>
         </table>
-        </div>
+      </div>
+      <div class="d-flex mt-3 gap-3 align-items-center justify-content-between flex-wrap" id="paginationContainer">
+      <div class="d-flex align-items-center" style="min-width: 180px;">
+        <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
+        <select id="limitSelect" class="form-select form-select-sm" style="width: auto;">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+
+      <nav class="flex-grow-1 d-flex justify-content-center">
+        <ul class="pagination mb-0"></ul>
+      </nav>
+
+      <p class="mb-0 text-nowrap info" style="min-width: 200px;"></p>
     </div>
+
+    </div>
+  </div>
 </div>
 
-<!-- Modal Tambah Customer -->
+<!-- Modal Tambah/Edit Customer -->
 <div class="modal fade" id="modalCustomer" tabindex="-1" aria-labelledby="modalCustomerLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <form id="formCustomer" class="modal-content" method="POST" action="/customers">
-        <div class="modal-header">
-            <h5 class="modal-title" id="modalCustomerLabel">Tambah Customer</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+  <div class="modal-dialog modal-lg">
+    <form id="formCustomer" class="modal-content" method="POST" action="/customers">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCustomerLabel">Tambah Customer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" name="name" class="form-control" required />
         </div>
-        <div class="modal-body row g-3">
-            <div class="col-md-6">
-            <label class="form-label">Nama Lengkap</label>
-            <input type="text" name="name" class="form-control" required />
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Jenis Customer</label>
-                <select name="type" class="form-select" id="selectCustomerType" required>
-                    <option value="umum">Umum</option>
-                    <option value="member">Member</option>
-                </select>
-            </div>
-
-            <div class="col-md-6">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" />
-            </div>
-            <div class="col-md-6">
-            <label class="form-label">No HP / WA</label>
-            <input type="text" name="phone" class="form-control" />
-            </div>
-
-            <div class="col-md-6">
-            <label class="form-label">Tanggal Lahir</label>
-            <input type="date" name="birthdate" class="form-control" />
-            </div>
-            <div class="col-md-6">
-            <label class="form-label">Alamat</label>
-            <textarea name="address" class="form-control" rows="2"></textarea>
-            </div>
-
-            <div class="col-md-12">
-            <label class="form-label">Catatan</label>
-            <textarea name="note" class="form-control" rows="2"></textarea>
-            </div>
-
-            <!-- Tambahan jika member -->
-            <div class="col-md-6 d-none" id="memberFields">
-            <label class="form-label">Kode Member</label>
-            <input type="text" name="memberCode" class="form-control" readonly placeholder="Otomatis" />
-            </div>
-
-            <div class="col-md-3 d-none" id="memberFieldsDiskon">
-            <label class="form-label">Diskon Tetap (%)</label>
-            <input type="number" name="memberDiscount" class="form-control" value="0" min="0" max="100" />
-            </div>
-
-            <div class="col-md-3 d-none" id="memberFieldsPoin">
-            <label class="form-label">Poin</label>
-            <input type="number" name="point" class="form-control" value="0" readonly />
-            </div>
-
-            <div class="col-md-6">
-            <label class="form-label">Status</label>
-            <select name="status" class="form-select">
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-            </select>
-            </div>
+        <div class="col-md-6">
+          <label class="form-label">Jenis Customer</label>
+          <select name="type" class="form-select" id="selectCustomerType" required>
+            <option value="umum">Umum</option>
+            <option value="member">Member</option>
+          </select>
         </div>
 
-        <div class="modal-footer">
-            <button type="submit" class="btn btn-primary">Simpan</button>
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+        <div class="col-md-6">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" />
         </div>
-        </form>
-    </div>
+        <div class="col-md-6">
+          <label class="form-label">No HP / WA</label>
+          <input type="text" name="phone" class="form-control" />
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Tanggal Lahir</label>
+          <input type="date" name="birthdate" class="form-control" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Alamat</label>
+          <textarea name="address" class="form-control" rows="2"></textarea>
+        </div>
+
+        <div class="col-md-12">
+          <label class="form-label">Catatan</label>
+          <textarea name="note" class="form-control" rows="2"></textarea>
+        </div>
+
+        <!-- Tambahan jika member -->
+        <div class="col-md-6 d-none" id="memberFields">
+          <label class="form-label">Kode Member</label>
+          <input type="text" name="memberCode" class="form-control" readonly placeholder="Otomatis" />
+        </div>
+
+        <div class="col-md-3 d-none" id="memberFieldsDiskon">
+          <label class="form-label">Diskon Tetap (%)</label>
+          <input type="number" name="memberDiscount" class="form-control" value="0" min="0" max="100" />
+        </div>
+
+        <div class="col-md-3 d-none" id="memberFieldsPoin">
+          <label class="form-label">Poin</label>
+          <input type="number" name="point" class="form-control" value="0" readonly />
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <option value="active">Aktif</option>
+            <option value="inactive">Nonaktif</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Simpan</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<script type="module">
-    import { showToast } from '/assets/js/utils/toast.js';
-    import { resetModalForm } from '/assets/js/utils/resetModal.js';
-    import { confirmDelete } from '/assets/js/utils/confirm.js';
-
-    document.getElementById('formCustomer').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const data = Object.fromEntries(formData.entries());
-
-        const isEdit = this.action.includes('/customers/') && this.action.includes('_method=PUT');
-        const method = 'POST';
-        const url = isEdit ? this.action : '/customers';
-
-        if (isEdit) {
-        data._method = 'PUT'; // <== untuk method-override
-        }
-
-
-        try {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            const result = await res.json();
-
-            if (res.ok && result.success) {
-            const modalInstance = bootstrap.Modal.getInstance(this.closest('.modal'));
-            modalInstance.hide();
-
-            resetModalForm(this, {
-                defaultAction: '/customers',
-                hideFields: ['#memberFields', '#memberFieldsDiskon', '#memberFieldsPoin']
-            });
-
-            showToast({
-                title: 'Berhasil',
-                message: result.message || 'Data customer berhasil disimpan',
-                type: 'success'
-            });
-
-            setTimeout(() => location.reload(), 1000); // Bisa diganti reloadTable() kalau sudah AJAX
-            } else {
-            showToast({
-                title: 'Gagal',
-                message: result.message || 'Gagal menyimpan data',
-                type: 'danger'
-            });
-            }
-        } catch (err) {
-            console.error(err);
-            showToast({
-            title: 'Error',
-            message: 'Kesalahan server',
-            type: 'danger'
-            });
-        }
-    });
-
-    // customer.js
-    document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('formCustomer');
-        const modalEl = document.getElementById('modalCustomer');
-        const modal = new bootstrap.Modal(modalEl);
-
-        // Show modal for edit
-        document.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => {
-            const data = JSON.parse(atob(btn.dataset.customer));
-
-            form.action = `/customers/${data.id}?_method=PUT`;
-            form.querySelector('[name="name"]').value = data.name;
-            form.querySelector('[name="type"]').value = data.type;
-            form.querySelector('[name="email"]').value = data.email || '';
-            form.querySelector('[name="phone"]').value = data.phone || '';
-            form.querySelector('[name="birthdate"]').value = data.birthdate || '';
-            form.querySelector('[name="address"]').value = data.address || '';
-            form.querySelector('[name="note"]').value = data.note || '';
-            form.querySelector('[name="status"]').value = data.status;
-
-            // Member fields
-            if (data.type === 'member') {
-                document.getElementById('memberFields').classList.remove('d-none');
-                document.getElementById('memberFieldsDiskon').classList.remove('d-none');
-                document.getElementById('memberFieldsPoin').classList.remove('d-none');
-
-                form.querySelector('[name="memberCode"]').value = data.memberCode || '';
-                form.querySelector('[name="memberDiscount"]').value = data.memberDiscount || 0;
-                form.querySelector('[name="point"]').value = data.point || 0;
-            }
-
-            modal.show();
-            });
-        });
-
-        // Delete with confirmation
-        document.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => {
-            const id = btn.dataset.id;
-            const name = btn.dataset.name;
-
-            confirmDelete(`Yakin hapus customer "${name}"?`, () => {
-                fetch(`/customers/${id}`, { method: 'DELETE' })
-                .then(res => {
-                    if (res.ok) {
-                    showToast({
-                        title: 'Sukses',
-                        message: 'Customer berhasil dihapus',
-                        type: 'success'
-                    });
-                    setTimeout(() => location.reload(), 1000);
-                    } else {
-                    showToast({
-                        title: 'Gagal',
-                        message: 'Gagal menghapus customer',
-                        type: 'danger'
-                        });
-                    }
-                });
-            });
-            });
-        });
-
-        // Reset modal saat ditutup
-        modalEl.addEventListener('hidden.bs.modal', () => {
-            resetModalForm(modalEl, {
-                defaultAction: '/customers',
-                hideFields: ['#memberFields', '#memberFieldsDiskon', '#memberFieldsPoin']
-            });
-        });
-    });
-
-    // Tampilkan field member jika pilih "Member"
-    document.getElementById('selectCustomerType').addEventListener('change', function () {
-        const isMember = this.value === 'member';
-        document.querySelectorAll('#memberFields, #memberFieldsDiskon, #memberFieldsPoin').forEach(el => {
-        el.classList.toggle('d-none', !isMember);
-        });
-    });
-</script>
+<script type="module" src="/assets/js/pages/customers.js"></script>

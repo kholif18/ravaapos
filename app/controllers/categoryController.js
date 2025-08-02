@@ -41,6 +41,7 @@ exports.getAll = async (req, res) => {
     const totalPages = Math.ceil(count.length ? count.length / limit : count / limit);
 
     res.render('categories/index', {
+        title: 'Categories',
         categories: rows,
         activePage: 'categories',
         pagination: {

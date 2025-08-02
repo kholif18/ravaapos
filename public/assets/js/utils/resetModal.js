@@ -4,7 +4,17 @@ export function resetModalForm(modalEl, options = {}) {
 
     const form = modalEl.querySelector('form');
     if (form) {
-        form.reset();
+        // Reset semua field value secara manual
+        form.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else if (input.tagName === 'SELECT') {
+                input.selectedIndex = 0;
+            } else {
+                input.value = '';
+            }
+        });
+
         form.removeAttribute('data-id');
 
         if (options.defaultAction) {
@@ -12,9 +22,12 @@ export function resetModalForm(modalEl, options = {}) {
         }
     }
 
-    const inputs = modalEl.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => input.classList.remove('is-invalid'));
+    // Bersihkan invalid/error class
+    modalEl.querySelectorAll('input, textarea, select').forEach(input => {
+        input.classList.remove('is-invalid');
+    });
 
+    // Sembunyikan field opsional
     if (Array.isArray(options.hideFields)) {
         options.hideFields.forEach(selector => {
             const el = modalEl.querySelector(selector);
@@ -22,6 +35,7 @@ export function resetModalForm(modalEl, options = {}) {
         });
     }
 
+    // Reset title modal jika disediakan
     if (options.title) {
         const titleEl = modalEl.querySelector('.modal-title');
         if (titleEl) titleEl.textContent = options.title;

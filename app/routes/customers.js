@@ -7,8 +7,9 @@ router.get('/', customerController.getAll);
 
 // Simpan customer baru
 router.post('/', customerController.create);
-router.put('/:id', customerController.update);
-router.delete('/:id', customerController.destroy);
-
+router.post('/:id/update', customerController.update);
+router.post('/:id/delete', customerController.destroy);
+router.get('/json', customerController.getJson);
+router.get('/list', customerController.getListAJAX);
 
 module.exports = router;

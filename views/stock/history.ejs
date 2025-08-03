@@ -1,0 +1,42 @@
+<h5 class="mb-3">Riwayat Stok: <%= product.name %> (<%= product.code %>)</h5>
+
+<a href="/stock" class="btn btn-secondary mb-3"><i class="bx bx-arrow-back"></i> Kembali ke Stock</a>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Jenis</th>
+                    <th>Jumlah</th>
+                    <th>Catatan</th>
+                    <th>Dibuat Oleh</th>
+                </tr>
+                </thead>
+                <tbody>
+                <% if (history.length === 0) { %>
+                    <tr><td colspan="5" class="text-center">Belum ada riwayat stok</td></tr>
+                <% } else { %>
+                    <% history.forEach(item => { %>
+                    <tr>
+                        <td><%= new Date(item.createdAt).toLocaleString() %></td>
+                        <td>
+                        <% if (item.type === 'add') { %> Penambahan <% } %>
+                        <% if (item.type === 'adjust') { %> Stock Opname <% } %>
+                        <% if (item.type === 'purchase') { %> Pembelian <% } %>
+                        </td>
+                        <td class="<%= item.qty > 0 ? 'text-success' : 'text-danger' %>">
+                        <%= item.qty > 0 ? '+' : '' %><%= item.qty %>
+                        </td>
+                        <td><%= item.note || '-' %></td>
+                        <td><%= item.createdBy || '-' %></td>
+                    </tr>
+                    <% }) %>
+                <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

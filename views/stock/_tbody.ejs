@@ -1,0 +1,42 @@
+<% products.forEach(p => { 
+     const isService = p.service === true || p.service === 'true'; // aman dari boolean dan string
+%>
+    <tr>
+        <td><%= p.code %></td>
+        <td><%= p.name %></td>
+        <td>
+            <% if (p.stock < 0) { %>
+            <span class="badge bg-danger px-3 float-end"><%= p.stock %></span>
+            <% } else if (p.stock === 0) { %>
+            <span class="badge bg-info px-3 float-end"><%= p.stock %></span>
+            <% } else { %>
+            <span class="badge bg-success px-3 float-end"><%= p.stock %></span>
+            <% } %>
+        </td>
+        <td><%= p.unit %></td>
+        <td><%= p.cost ? formatRupiah(p.cost) : 0 %></td>
+        <td><%= p.salePrice ? formatRupiah(p.salePrice) : 0 %></td>
+        <td><%= formatRupiah(p.nilai) %></td>
+        <td class="text-center">
+            <% if (isService) { %>
+                <span class="text-muted small fst-italic text-nowrap">Tanpa stok</span>
+            <% } else { %>
+                <button 
+                    class="btn btn-sm btn-success btn-add-stock"
+                    data-id="<%= p.id %>">
+                    <i class="bx bx-plus"></i>
+                </button>
+                <button 
+                    class="btn btn-sm btn-warning btn-adjust-stock" 
+                    data-id="<%= p.id %>" 
+                    data-stock="<%= p.stock %>">
+                    <i class="bx bx-clipboard"></i>
+                </button>
+                <button class="btn btn-sm btn-info" onclick="window.location.href='/stock/history/<%= p.id %>'">
+                    <i class="bx bx-detail"></i>
+                </button>
+            <% } %>
+        </td>
+        
+    </tr>
+<% }) %>

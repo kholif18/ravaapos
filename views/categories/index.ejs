@@ -1,15 +1,27 @@
-<div class="d-flex mb-3 gap-2 justify-content-between align-items-center">
-  <h5 class="card-title mb-0 flex-grow-1">Categories</h5>
-  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
-    + Add Category
-  </button>
+<div class="d-flex mb-3 justify-content-between align-items-center">
+  <h5 class="card-title mb-0">Categories</h5>
+
+  <div class="d-flex align-items-center gap-2">
+    <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate" title="Add Category (Alt+N)">
+      + Add Category
+    </button>
+  </div>
 </div>
+
 <div class="card">
   <div class="card-body">
+    <div class="d-flex mb-3">
+      <div class="me-2">
+        <input type="text" id="searchCategory" class="form-control" placeholder="Cari Kategori...">
+      </div>
+      <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
+    </div>
     <table class="table table-hover">
       <thead>
         <tr>
           <th id="thNama" style="cursor:pointer" title="Urutkan berdasarkan nama">Nama <i id="iconSortNama" class="bx bx-sort-alt-2"></i></th>
+          <th>Prefix</th>
           <th>Jumlah Product</th>
           <th>Aksi</th>
         </tr>
@@ -93,7 +105,6 @@
   </div>
 </div>
 
-
 <div class="modal fade" id="modalCreate" tabindex="-1">
   <div class="modal-dialog">
     <form id="formCreateCategory" class="modal-content" action="/categories" method="POST">
@@ -102,7 +113,15 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="text" name="name" class="form-control" placeholder="Nama kategori" required autofocus>
+        <div class="mb-3">
+          <input type="text" name="name" class="form-control" placeholder="Nama kategori" required>
+        </div>
+        <div class="mb-0">
+          <label for="categoryPrefix" class="form-label">Prefix Kode (mis. EL, MN)</label>
+          <input type="text" class="form-control" id="categoryPrefix" name="prefix" required maxlength="5">
+          <div class="invalid-feedback" id="prefixError">Prefix harus 2-5 huruf kapital.</div>
+          <div class="form-text">Digunakan untuk generate kode produk</div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">Simpan</button>
@@ -120,7 +139,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="text" name="name" id="editName" class="form-control" required>
+        <div class="mb-3">
+          <input type="text" name="name" id="editName" class="form-control" required>
+        </div>
+        <div class="mb-0">
+          <input type="hidden" id="editPrefix" name="prefix">
+        </div>
       </div>
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">Update</button>
@@ -130,3 +154,4 @@
 </div>
 
 <script type="module" src="/assets/js/pages/categories.js"></script>
+<script type="module" src="/assets/js/utils/shortcut.js"></script>

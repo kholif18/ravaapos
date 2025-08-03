@@ -1,0 +1,50 @@
+<% products.forEach(p => { 
+     const isService = p.service === true || p.service === 'true'; // aman dari boolean dan string
+%>
+    <tr>
+        <td><%= p.code %></td>
+        <td><%= p.name %></td>
+        <td>
+            <% if (p.stock < 0) { %>
+            <span class="badge bg-danger px-3"><%= p.stock %></span>
+            <% } else if (p.stock === 0) { %>
+            <span class="badge bg-info px-3"><%= p.stock %></span>
+            <% } else { %>
+            <span class="badge bg-success px-3"><%= p.stock %></span>
+            <% } %>
+        </td>
+        <td><%= p.unit %></td>
+        <td><%= p.cost ? formatRupiah(p.cost) : 0 %></td>
+        <td><%= p.salePrice ? formatRupiah(p.salePrice) : 0 %></td>
+        <td><%= formatRupiah(p.stock * p.salePrice) %></td>
+        <td>
+            <button class="btn btn-sm btn-warning" data-id="<%= p.id %>" <%= isService ? 'disabled' : '' %>>
+            <i class="bx bx-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-info" data-id="<%= p.id %>"><i class="bx bx-detail"></i></button>
+        </td>
+    </tr>
+<% }) %>
+
+// Debug
+<% products.forEach(p => { %>
+  <tr>
+    <td><%= p.code %></td>
+    <td><%= p.name %></td>
+    <td><%= p.stock %></td>
+    <td><%= p.unit %></td>
+    <td><%= formatRupiah(p.cost) %></td>
+    <td><%= formatRupiah(p.salePrice) %></td>
+    <td><%= formatRupiah(p.stock * p.salePrice) %></td>
+    <td>
+      <%= typeof p.service %>: <%= p.service %> |
+      <% if (p.service === true) { %>
+        <span>TRUE (boolean)</span>
+      <% } else if (p.service === 'true') { %>
+        <span>'true' (string)</span>
+      <% } else if (!p.service) { %>
+        <span>FALSE</span>
+      <% } %>
+    </td>
+  </tr>
+<% }) %>

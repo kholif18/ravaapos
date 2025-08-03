@@ -23,6 +23,7 @@ let offset = 0;
 const limit = 25;
 let loading = false;
 let done = false;
+let totalProductCount = 0;
 
 async function loadMoreProducts() {
     if (loading || done) return;
@@ -35,7 +36,15 @@ async function loadMoreProducts() {
 
     try {
         const res = await fetch(`/products/json?offset=${offset}&limit=${limit}&category=${category}&q=${search}`);
-        const products = await res.json();
+        const {
+            products,
+            total
+        } = await res.json();
+
+        if (offset === 0) {
+            totalProductCount = total;
+            document.getElementById('totalProductCount').textContent = total;
+        }
 
         if (products.length < limit) done = true;
         offset += products.length;
@@ -124,16 +133,27 @@ document.getElementById('enableLowStockWarning').addEventListener('change', func
     document.getElementById('lowStockWarning').disabled = !this.checked;
 });
 
-document.getElementById('enableAltDesc').addEventListener('change', function () {
-    document.getElementById('altDescription').disabled = !this.checked;
-});
-
 checkboxService?.addEventListener('change', () => {
     const isService = checkboxService.checked;
 
     if (isService) {
         if (!inputCost.value) inputCost.value = '0';
         inputMarkup.value = '';
+    }
+});
+
+document.getElementById('categorySelect').addEventListener('change', async function () {
+    const categoryId = this.value;
+    if (!categoryId) return;
+
+    try {
+        const res = await fetch(`/products/generate-code?categoryId=${categoryId}`);
+        const data = await res.json();
+        if (data.code) {
+            document.getElementById('productCode').value = data.code;
+        }
+    } catch (err) {
+        console.error('Gagal generate kode:', err);
     }
 });
 
@@ -148,7 +168,7 @@ formCreate.addEventListener('submit', async (e) => {
     const formData = new FormData(formCreate);
     const data = Object.fromEntries(formData.entries());
 
-    data.defaultQty = formData.get('defaultQtyOne') === 'on';
+    data.defaultQty = formData.get('defaultQty') === 'on';
     data.service = formData.get('isService') === 'on';
     data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
 
@@ -174,7 +194,11 @@ formCreate.addEventListener('submit', async (e) => {
             done = false;
             tbody.innerHTML = '';
             await loadMoreProducts();
-            resetModalForm(modalCreate);
+            resetModalForm(modalCreate, {
+                defaults: {
+                    defaultQty: true
+                }
+            });
         } else {
             if (result.errors) {
                 showInputErrors(result.errors, formCreate);
@@ -196,7 +220,11 @@ formCreate.addEventListener('submit', async (e) => {
 });
 
 modalCreate.addEventListener('hidden.bs.modal', () => {
-    resetModalForm(modalCreate);
+    resetModalForm(modalCreate, {
+        defaults: {
+            defaultQty: true
+        }
+    });
     resetInputErrors(formCreate);
 });
 

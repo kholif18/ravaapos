@@ -1,13 +1,14 @@
 <% categories.forEach(cat => { %>
     <tr>
         <td data-column="name" data-value="<%= cat.name %>"><%= cat.name %></td>
+        <td data-column="prefix" data-value="<%= cat.prefix %>"><%= cat.prefix %></td>
         <td>
             <span class="badge bg-info"><strong><%= cat.dataValues.productCount || 0 %></strong></span> Product
         </td>
 
         <td>
             <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalEdit"
-                data-id="<%= cat.id %>" data-name="<%= cat.name %>">
+                data-id="<%= cat.id %>" data-name="<%= cat.name %>" data-prefix="<%= cat.prefix %>">
                 <i class="bx bx-edit"></i>
             </button>
             <button class="btn btn-sm btn-danger btn-delete" data-id="<%= cat.id %>">

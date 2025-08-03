@@ -12,12 +12,10 @@ router.get('/', productController.viewProducts);
 
 // Tambah product (non-AJAX)
 router.post('/', upload.single('image'), productController.createProduct);
+router.get('/generate-code', productController.generateProductCode);
 
 // API JSON untuk tabel/infinite scroll
 router.get('/json', productController.getProductJson);
-
-// Tambah stok
-router.post('/:id/stock', productController.addStock);
 
 // Update & Delete (AJAX)
 router.post('/:id/update', productController.updateProduct);

@@ -1,0 +1,156 @@
+<h5 class="card-title mb-3">Stock Product</h5>
+<div class="card">
+    <div class="card-body">
+        <!-- Filter -->
+        <div class="row mb-3 align-items-center">
+            <div class="col-md-4">
+                <select id="categoryFilter" class="form-select">
+                <option value="">Semua Kategori</option>
+                <% categories.forEach(cat => { %>
+                    <option value="<%= cat.id %>"><%= cat.name %> (<%= cat.products.length %>)</option>
+                <% }) %>
+                </select>
+            </div>
+
+            <div class="col-md-8 d-flex justify-content-end align-items-center gap-3">
+                <!-- Badge Ringkasan Stock -->
+                <div class="d-flex gap-2">
+                    <span class="badge bg-danger px-3" id="badgeNegative">0</span>
+                    <span class="badge bg-info px-3" id="badgeZero">0</span>
+                    <span class="badge bg-success px-3" id="badgePositive">0</span>
+                </div>
+                <!-- Tombol Export -->
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-secondary" title="Export Print"><i class="bx bx-printer"></i></button>
+                    <button class="btn btn-outline-secondary" title="Export PDF"><i class="bx bxs-file-pdf"></i></button>
+                    <button class="btn btn-outline-secondary" title="Export Excel"><i class="bx bxs-file-export"></i></button>
+                </div>
+            </div>
+            </div>
+
+            <div class="row mb-3">
+            <div class="col-md-6">
+                <input type="text" id="searchProduct" class="form-control" placeholder="Cari produk...">
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+                <button class="btn btn-outline-secondary" id="filterNegative">Negative Qty</button>
+                <button class="btn btn-outline-secondary" id="filterNonZero">Non Zero</button>
+                <button class="btn btn-outline-secondary" id="filterZero">Zero</button>
+                <button class="btn btn-outline-dark" id="resetFilters">
+                    <i class="bx bx-sync"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabel Produk -->
+        <div class="table-responsive" style="max-height: 63vh; overflow-y: auto;">
+            <table class="table table-bordered table-hover table-sm">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Kode</th>
+                    <th>Nama</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Cost</th>
+                    <th>Harga Jual</th>
+                    <th>Nilai</th>
+                    <th style="width: 15%;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="stockTbody">
+                <%- include('_tbody', { products, formatRupiah }) %>
+            </tbody>
+            </table>
+        </div>
+
+        <!-- Ringkasan -->
+        <div class="mt-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Total Produk:</strong> <%= products.length %></p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>Cost Price</strong></p>
+                    <p><strong>Total Cost:</strong> Rp <%= formatRupiah(totalCost) %></p>
+                </div>
+                <div class="col-md-3">
+                    <p><strong>Sale Price</strong></p>
+                    <p><strong>Total Value:</strong> Rp <%= formatRupiah(totalSale) %></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Tambah Stock -->
+<div class="modal fade" id="modalStockAdd" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="formStockAdd" class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">Tambah Stok Produk</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="productIdStock">
+            <div class="mb-3">
+            <label>Jumlah Stok</label>
+            <input type="number" id="addQty" class="form-control" required>
+            </div>
+            <div class="mb-3">
+            <label>Catatan</label>
+            <textarea class="form-control" id="addNote" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <button class="btn btn-primary" type="submit">Simpan</button>
+        </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="modalStockAdjust" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="formStockAdjust" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Stock Opname</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="productIdAdjust">
+
+                <!-- Stok Lama -->
+                <div class="mb-3">
+                <label>Stok Saat Ini</label>
+                <input type="number" id="currentQty" class="form-control" readonly>
+                </div>
+
+                <!-- Jumlah Baru -->
+                <div class="mb-3">
+                <label>Jumlah Fisik (Real)</label>
+                <input type="number" id="adjustQty" class="form-control" min="0" required>
+                </div>
+
+                <!-- Selisih -->
+                <div class="mb-3">
+                <label>Selisih</label>
+                <input type="text" id="qtyDiff" class="form-control" readonly>
+                </div>
+
+                <!-- Catatan -->
+                <div class="mb-3">
+                <label>Catatan</label>
+                <textarea class="form-control" id="adjustNote" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button class="btn btn-primary" type="submit">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script type="module" src="/assets/js/pages/stock.js"></script>

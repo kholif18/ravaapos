@@ -1,13 +1,18 @@
-// public/assets/js/utils/resetModal.js
 export function resetModalForm(modalEl, options = {}) {
     if (!modalEl) return;
 
     const form = modalEl.querySelector('form');
     if (form) {
-        // Reset semua field value secara manual
         form.querySelectorAll('input, select, textarea').forEach(input => {
+            const name = input.name;
+
             if (input.type === 'checkbox' || input.type === 'radio') {
-                input.checked = false;
+                // Tetapkan default value dari options.defaults jika tersedia
+                if (options.defaults && name in options.defaults) {
+                    input.checked = !!options.defaults[name];
+                } else {
+                    input.checked = false;
+                }
             } else if (input.tagName === 'SELECT') {
                 input.selectedIndex = 0;
             } else {
@@ -22,7 +27,7 @@ export function resetModalForm(modalEl, options = {}) {
         }
     }
 
-    // Bersihkan invalid/error class
+    // Bersihkan class error
     modalEl.querySelectorAll('input, textarea, select').forEach(input => {
         input.classList.remove('is-invalid');
     });
@@ -35,7 +40,7 @@ export function resetModalForm(modalEl, options = {}) {
         });
     }
 
-    // Reset title modal jika disediakan
+    // Ganti judul modal
     if (options.title) {
         const titleEl = modalEl.querySelector('.modal-title');
         if (titleEl) titleEl.textContent = options.title;

@@ -48,6 +48,56 @@ exports.viewProducts = async (req, res) => {
   }
 };
 
+exports.generateProductCode = async (req, res) => {
+  try {
+    const {
+      categoryId
+    } = req.query;
+
+    if (!categoryId) return res.status(400).json({
+      error: 'Kategori tidak valid'
+    });
+
+    const category = await Category.findByPk(categoryId);
+    if (!category || !category.prefix) {
+      return res.status(400).json({
+        error: 'Prefix kategori tidak ditemukan'
+      });
+    }
+
+    const prefix = category.prefix;
+
+    const lastProduct = await Product.findOne({
+      where: {
+        code: {
+          [Op.like]: `${prefix}%`
+        }
+      },
+      order: [
+        ['code', 'DESC']
+      ]
+    });
+
+    let nextCode = `${prefix}0001`;
+    if (lastProduct) {
+      const match = lastProduct.code.match(new RegExp(`^${prefix}(\\d+)$`));
+      if (match) {
+        const number = parseInt(match[1]) + 1;
+        nextCode = `${prefix}${number.toString().padStart(4, '0')}`;
+      }
+    }
+
+    return res.json({
+      code: nextCode
+    });
+  } catch (err) {
+    console.error('Gagal generate kode:', err);
+    return res.status(500).json({
+      error: 'Gagal generate kode'
+    });
+  }
+};
+
 const toBoolean = val => val === 'true' || val === true || val === 'on';
 
 // POST create (AJAX)
@@ -70,18 +120,23 @@ exports.createProduct = async (req, res) => {
       preferredQty,
       lowStockWarning,
       lowStockThreshold,
-      altDescription
+      enableAltDesc
     } = req.body;
 
     const isService = toBoolean(service);
     const allowPriceChange = toBoolean(priceChangeAllowed);
     const hasLowStockWarning = toBoolean(lowStockWarning);
     const isDefaultQty = toBoolean(defaultQty);
+    const isEnableAltDesc = toBoolean(enableAltDesc);
 
+    const tax = parseFloat(req.body.tax);
     const errors = {};
 
     if (!name?.trim()) errors.name = 'Nama harus diisi';
     if (!code?.trim()) errors.code = 'Kode harus diisi';
+    if (req.body.tax && (isNaN(tax) || tax < 0 || tax > 100)) {
+      errors.tax = 'Pajak harus antara 0 - 100';
+    }
 
     let parsedCost = parseFloat(cost);
     let parsedMarkup = parseFloat(markup);
@@ -144,7 +199,8 @@ exports.createProduct = async (req, res) => {
       preferredQty: parsedPreferredQty || 0,
       lowStockWarning: hasLowStockWarning,
       lowStockThreshold: hasLowStockWarning ? parsedLowStockThreshold : null,
-      altDescription: altDescription?.trim() || null,
+      tax: isNaN(tax) ? null : tax,
+      enableAltDesc: isEnableAltDesc,
       image: imagePath
     });
 
@@ -179,11 +235,9 @@ exports.getProductJson = async (req, res) => {
     const {
       offset = 0, limit = 25, category, q
     } = req.query;
-    const where = {};
 
-    if (category) {
-      where.categoryId = category;
-    }
+    const where = {};
+    if (category) where.categoryId = category;
 
     if (q) {
       where[Op.or] = [{
@@ -204,7 +258,10 @@ exports.getProductJson = async (req, res) => {
       ];
     }
 
-    const products = await Product.findAll({
+    const {
+      rows: products,
+      count
+    } = await Product.findAndCountAll({
       where,
       include: [{
         model: Category,
@@ -217,30 +274,14 @@ exports.getProductJson = async (req, res) => {
       ]
     });
 
-    res.json(products);
+    res.json({
+      products,
+      total: count
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({
       error: 'Gagal memuat product.'
-    });
-  }
-};
-
-// Tambah stok
-exports.addStock = async (req, res) => {
-  try {
-    const product = await Product.findByPk(req.params.id);
-    if (!product) return res.status(404).json({
-      message: 'Product tidak ditemukan'
-    });
-
-    product.stock += parseInt(req.body.stock);
-    await product.save();
-    res.json(product);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      message: 'Gagal menambah stok'
     });
   }
 };

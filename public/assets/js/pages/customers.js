@@ -344,7 +344,6 @@ modalEl.addEventListener('shown.bs.modal', () => {
     if (inputName) inputName.focus();
 });
 
-
 typeSelect.addEventListener('change', () => {
     toggleMemberFields(typeSelect.value === 'member');
 });

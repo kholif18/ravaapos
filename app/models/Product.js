@@ -57,9 +57,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true
     },
-    altDescription: {
-      type: DataTypes.TEXT,
+    tax: {
+      type: DataTypes.FLOAT,
       allowNull: true
+    },
+    enableAltDesc: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     },
     image: {
       type: DataTypes.STRING,
@@ -76,6 +80,11 @@ module.exports = (sequelize, DataTypes) => {
     Product.belongsTo(models.Supplier, {
       foreignKey: 'supplierId',
       as: 'supplier'
+    });
+
+    Product.hasMany(models.StockHistory, {
+      foreignKey: 'productId',
+      as: 'histories'
     });
   };
 

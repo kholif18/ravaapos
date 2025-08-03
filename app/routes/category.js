@@ -12,6 +12,7 @@ router.get('/', categoryController.getAll);
 router.post('/', categoryController.create);
 
 router.get('/partial', categoryController.getPartial);
+router.get('/search', categoryController.searchAjax);
 
 // Mengupdate kategori
 router.post('/:id/update', categoryController.update);

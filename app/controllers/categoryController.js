@@ -4,19 +4,17 @@ const {
 } = require('../models');
 const {
     fn,
-    col
+    col,
+    Op
 } = require('sequelize');
-const {
-    validationResult
-} = require('express-validator');
 
+// GET /categories
 exports.getAll = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
-        // Ambil semua kategori dengan jumlah product per kategori
         const {
             count,
             rows
@@ -26,11 +24,11 @@ exports.getAll = async (req, res) => {
                     [fn('COUNT', col('products.id')), 'productCount']
                 ]
             },
-            include: [{
+            include: {
                 model: Product,
                 as: 'products',
                 attributes: []
-            }],
+            },
             group: ['Category.id'],
             order: [
                 ['name', 'ASC']
@@ -40,7 +38,6 @@ exports.getAll = async (req, res) => {
             subQuery: false
         });
 
-        // Karena pakai GROUP BY, count adalah array. Kita hitung jumlah kategori dari count.length
         const totalItems = Array.isArray(count) ? count.length : count;
         const totalPages = Math.ceil(totalItems / limit);
 
@@ -64,31 +61,42 @@ exports.getAll = async (req, res) => {
     }
 };
 
-
 // POST /categories
 exports.create = async (req, res) => {
-    try {
-        const {
-            name
-        } = req.body;
-        if (!name) {
-            return res.status(400).json({
-                success: false,
-                message: 'Nama tidak boleh kosong'
-            });
-        }
+    const {
+        name,
+        prefix
+    } = req.body;
+    const cleanedPrefix = prefix?.trim().toUpperCase();
 
-        const category = await Category.create({
-            name
+    if (!name?.trim()) {
+        return res.status(400).json({
+            success: false,
+            message: 'Nama tidak boleh kosong'
         });
-        res.status(201).json({
+    }
+
+    if (!cleanedPrefix || !/^[A-Z]{2,5}$/.test(cleanedPrefix)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Prefix harus 2-5 huruf kapital'
+        });
+    }
+
+    try {
+        const category = await Category.create({
+            name: name.trim(),
+            prefix: cleanedPrefix
+        });
+
+        return res.status(201).json({
             success: true,
             message: 'Kategori berhasil ditambahkan',
             category
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({
+        console.error('Gagal menambahkan kategori:', err);
+        return res.status(500).json({
             success: false,
             message: 'Gagal menambahkan kategori'
         });
@@ -97,21 +105,40 @@ exports.create = async (req, res) => {
 
 // POST /categories/:id/update
 exports.update = async (req, res) => {
-    try {
-        const {
-            id
-        } = req.params;
-        const {
-            name
-        } = req.body;
+    const {
+        id
+    } = req.params;
+    const {
+        name,
+        prefix
+    } = req.body;
+    const cleanedPrefix = prefix?.trim().toUpperCase();
 
-        const category = await Category.findByPk(id);
-        if (!category) return res.status(404).json({
+    if (!name?.trim()) {
+        return res.status(400).json({
             success: false,
-            message: 'Kategori tidak ditemukan'
+            message: 'Nama tidak boleh kosong'
         });
+    }
 
-        category.name = name;
+    if (!cleanedPrefix || !/^[A-Z]{2,5}$/.test(cleanedPrefix)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Prefix harus 2-5 huruf kapital'
+        });
+    }
+
+    try {
+        const category = await Category.findByPk(id);
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                message: 'Kategori tidak ditemukan'
+            });
+        }
+
+        category.name = name.trim();
+        category.prefix = cleanedPrefix;
         await category.save();
 
         res.json({
@@ -120,7 +147,7 @@ exports.update = async (req, res) => {
             category
         });
     } catch (err) {
-        console.error(err);
+        console.error('Gagal mengupdate kategori:', err);
         res.status(500).json({
             success: false,
             message: 'Gagal mengupdate kategori'
@@ -130,15 +157,18 @@ exports.update = async (req, res) => {
 
 // POST /categories/:id/delete
 exports.delete = async (req, res) => {
+    const {
+        id
+    } = req.params;
+
     try {
-        const {
-            id
-        } = req.params;
         const category = await Category.findByPk(id);
-        if (!category) return res.status(404).json({
-            success: false,
-            message: 'Kategori tidak ditemukan'
-        });
+        if (!category) {
+            return res.status(404).json({
+                success: false,
+                message: 'Kategori tidak ditemukan'
+            });
+        }
 
         await Product.update({
             categoryId: null
@@ -147,6 +177,7 @@ exports.delete = async (req, res) => {
                 categoryId: id
             }
         });
+
         await category.destroy();
 
         res.json({
@@ -154,7 +185,7 @@ exports.delete = async (req, res) => {
             message: 'Kategori berhasil dihapus'
         });
     } catch (err) {
-        console.error(err);
+        console.error('Gagal menghapus kategori:', err);
         res.status(500).json({
             success: false,
             message: 'Gagal menghapus kategori'
@@ -162,6 +193,7 @@ exports.delete = async (req, res) => {
     }
 };
 
+// GET /categories/json
 exports.getAllJson = async (req, res) => {
     try {
         const categories = await Category.findAll({
@@ -183,7 +215,7 @@ exports.getAllJson = async (req, res) => {
 
         res.json(categories);
     } catch (err) {
-        console.error(err);
+        console.error('Gagal memuat kategori (JSON):', err);
         res.status(500).json({
             message: 'Gagal memuat kategori'
         });
@@ -215,7 +247,49 @@ exports.getPartial = async (req, res) => {
             layout: false
         });
     } catch (err) {
-        console.error(err);
+        console.error('Gagal memuat kategori partial:', err);
         res.status(500).send('Gagal memuat kategori');
+    }
+};
+
+// GET /categories/search?search=...
+exports.searchAjax = async (req, res) => {
+    const {
+        search
+    } = req.query;
+    const where = search ?
+        {
+            name: {
+                [Op.like]: `%${search}%`
+            }
+        } :
+        {};
+
+    try {
+        const categories = await Category.findAll({
+            where,
+            attributes: {
+                include: [
+                    [fn('COUNT', col('products.id')), 'productCount']
+                ]
+            },
+            include: {
+                model: Product,
+                as: 'products',
+                attributes: []
+            },
+            group: ['Category.id'],
+            order: [
+                ['name', 'ASC']
+            ]
+        });
+
+        res.render('categories/_tbody', {
+            categories,
+            layout: false
+        });
+    } catch (err) {
+        console.error('Gagal mencari kategori:', err);
+        res.status(500).send('Gagal mencari kategori');
     }
 };

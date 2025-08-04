@@ -1,0 +1,68 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+.barcode-fullpage {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.barcode-header {
+    height: 56px;
+    flex-shrink: 0;
+}
+
+.barcode-body {
+    flex: 1;
+    overflow: hidden;
+}
+
+.barcode-form-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.barcode-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden; /* ini kunci agar tidak scroll horizontal */
+  min-height: 0;
+  max-height: 85vh;
+  padding-right: 8px;
+  box-sizing: border-box;
+}
+
+.barcode-scroll input,
+.barcode-scroll select,
+.barcode-scroll textarea,
+.barcode-scroll .form-control {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.select2-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.select2-dropdown {
+  z-index: 9999;
+}
+
+.print-area {
+    min-height: 100%;
+}
+
+.barcode-page {
+  position: relative;
+}
+.label {
+  position: absolute;
+}

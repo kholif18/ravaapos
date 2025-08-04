@@ -32,10 +32,12 @@ async function loadMoreProducts() {
 
     const params = new URLSearchParams(window.location.search);
     const category = params.get('category') || '';
+    const supplierId = params.get('supplierId') || '';
+    const type = params.get('type') || '';
     const search = currentSearch || '';
 
     try {
-        const res = await fetch(`/products/json?offset=${offset}&limit=${limit}&category=${category}&q=${search}`);
+        const res = await fetch(`/products/json?offset=${offset}&limit=${limit}&category=${category}&supplierId=${supplierId}&type=${type}&q=${search}`);
         const {
             products,
             total
@@ -61,6 +63,7 @@ async function loadMoreProducts() {
           <td data-column="cost" data-value="${product.cost}">Rp ${Number(product.cost).toLocaleString('id-ID')}</td>
           <td data-column="salePrice" data-value="${product.salePrice}">Rp ${Number(product.salePrice).toLocaleString('id-ID')}</td>
           <td data-column="unit">${product.unit}</td>
+          <td data-column="supplier">${product.supplier?.name || '-'}</td>
           <td>
             <button class="btn btn-sm btn-warning btn-edit" data-bs-toggle="modal" data-bs-target="#modalEdit"><i class="bx bx-edit"></i></button>
             <button class="btn btn-sm btn-danger btn-delete"><i class="bx bx-trash"></i></button>
@@ -88,6 +91,15 @@ document.getElementById('searchProduct')?.addEventListener('input', async e => {
     done = false;
     tbody.innerHTML = '';
     await loadMoreProducts();
+});
+
+document.getElementById('btnGenerateBarcode')?.addEventListener('click', () => {
+    const length = 12;
+    let barcode = '';
+    for (let i = 0; i < length; i++) {
+        barcode += Math.floor(Math.random() * 10); // angka 0–9
+    }
+    document.getElementById('inputBarcode').value = barcode;
 });
 
 const inputCost = document.getElementById('inputCost');
@@ -131,6 +143,16 @@ inputSalePrice?.addEventListener('input', () => {
 
 document.getElementById('enableLowStockWarning').addEventListener('change', function () {
     document.getElementById('lowStockWarning').disabled = !this.checked;
+});
+
+document.getElementById('enableInputTax').addEventListener('change', function () {
+    const input = document.getElementById('tax');
+    if (this.checked) {
+        input.disabled = false;
+    } else {
+        input.disabled = true;
+        input.value = ''; // kosongkan agar tidak terkirim
+    }
 });
 
 checkboxService?.addEventListener('change', () => {
@@ -230,6 +252,9 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
 
 modalCreate.addEventListener('shown.bs.modal', () => {
     modalCreate.querySelector('[name="name"]')?.focus();
+
+    const categorySelect = document.getElementById('categorySelect');
+    categorySelect.dispatchEvent(new Event('change'));
 });
 
 function sortTableBy(column, ascending = true) {

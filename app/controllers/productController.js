@@ -18,6 +18,8 @@ exports.viewProducts = async (req, res) => {
   try {
     const {
       category,
+      supplierId,
+      type,
       q
     } = req.query;
     const categories = await Category.findAll({
@@ -32,6 +34,8 @@ exports.viewProducts = async (req, res) => {
     });
 
     const selectedCategory = category || '';
+    const selectedSupplier = supplierId || '';
+    const selectedType = type || '';
     const search = q || '';
 
     res.render('products/index', {
@@ -40,6 +44,8 @@ exports.viewProducts = async (req, res) => {
       suppliers,
       activePage: 'products',
       selectedCategory,
+      selectedSupplier,
+      selectedType,
       search
     });
   } catch (err) {
@@ -105,17 +111,17 @@ exports.createProduct = async (req, res) => {
   try {
     const {
       name,
+      categoryId,
       code,
       barcode,
       unit,
-      categoryId,
+      supplierId,
       defaultQty,
       service,
       cost,
       markup,
       salePrice,
       priceChangeAllowed,
-      supplierId,
       reorderPoint,
       preferredQty,
       lowStockWarning,
@@ -233,11 +239,22 @@ exports.createProduct = async (req, res) => {
 exports.getProductJson = async (req, res) => {
   try {
     const {
-      offset = 0, limit = 25, category, q
+      offset = 0, limit = 25, category, supplierId, type, q
     } = req.query;
 
     const where = {};
+    // Filter category
     if (category) where.categoryId = category;
+
+    // Filter supplier
+    if (supplierId) where.supplierId = supplierId;
+
+    // Filter tipe produk (produk fisik / jasa)
+    if (type === 'product') {
+      where.service = false;
+    } else if (type === 'service') {
+      where.service = true;
+    }
 
     if (q) {
       where[Op.or] = [{
@@ -266,6 +283,9 @@ exports.getProductJson = async (req, res) => {
       include: [{
         model: Category,
         as: 'category'
+      }, {
+        model: Supplier,
+        as: 'supplier'
       }],
       offset: parseInt(offset),
       limit: parseInt(limit),

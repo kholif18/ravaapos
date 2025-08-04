@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+    <head>
+        <meta charset="utf-8" />
+        <title><%= typeof title !== 'undefined' ? title + ' | RavaaPOS' : 'RavaaPOS' %></title>
+
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico" />
+
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+        href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+        rel="stylesheet"
+        />
+
+        <!-- Icons. Uncomment required icon fonts -->
+        <link rel="stylesheet" href="/assets/vendor/fonts/boxicons.css" />
+
+        <!-- Core CSS -->
+        <link rel="stylesheet" href="/assets/vendor/css/core.css" class="template-customizer-core-css" />
+        <link rel="stylesheet" href="/assets/vendor/css/theme-default.css" class="template-customizer-theme-css" />
+        <link rel="stylesheet" href="/assets/css/ravaapos.css" />
+
+        <!-- Vendors CSS -->
+        <link rel="stylesheet" href="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+
+        <link rel="stylesheet" href="/assets/vendor/libs/apex-charts/apex-charts.css" />
+
+        <!-- Page CSS -->
+
+        <!-- Helpers -->
+        <script src="/assets/vendor/js/helpers.js"></script>
+        <script src="/assets/js/config.js"></script>
+    </head>
+    <body>
+    <div class="container-fluid py-3">
+        <h4 class="mb-3">Cetak Barcode Produk</h4>
+        <div class="row">
+        <!-- Sisi Kiri: Panel Pengaturan -->
+            <div class="col-md-4">
+                <form id="formPrintBarcode">
+                <div class="mb-3">
+                    <label for="barcodeProductSelect" class="form-label">Pilih Produk</label>
+                    <select multiple class="form-select" id="barcodeProductSelect">
+                    <% products.forEach(p => { %>
+                        <option value="<%= p.id %>" data-name="<%= p.name %>" data-barcode="<%= p.barcode %>" data-price="<%= p.salePrice %>" data-code="<%= p.code %>">
+                        <%= p.name %>
+                        </option>
+                    <% }) %>
+                    </select>
+                    <small class="text-muted">Gunakan Ctrl/Shift untuk multi-select</small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="copiesPerProduct" class="form-label">Salinan / Produk</label>
+                    <input type="number" id="copiesPerProduct" class="form-control" value="3" min="1">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Opsi Tampilan</label>
+                    <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optName" checked>
+                    <label class="form-check-label" for="optName">Nama Produk</label>
+                    </div>
+                    <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optPrice" checked>
+                    <label class="form-check-label" for="optPrice">Harga</label>
+                    </div>
+                    <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optCode" checked>
+                    <label class="form-check-label" for="optCode">Kode Produk</label>
+                    </div>
+                    <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optBorder">
+                    <label class="form-check-label" for="optBorder">Border Label</label>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" id="btnGenerateBarcodePreview">Generate</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+                </div>
+                </form>
+            </div>
+
+            <!-- Sisi Kanan: Preview Barcode -->
+            <div class="col-md-8">
+                <div id="barcodePreviewArea" class="p-3 border rounded print-area" style="min-height: 400px;">
+                <div class="d-flex flex-wrap gap-2" id="barcodeLabels"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core JS -->
+    <!-- build:js assets/vendor/js/core.js -->
+    <script src="/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="/assets/vendor/libs/popper/popper.js"></script>
+    <script src="/assets/vendor/js/bootstrap.js"></script>
+    <script src="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+
+    <script src="/assets/vendor/js/menu.js"></script>
+    <!-- endbuild -->
+
+    <!-- Vendors JS -->
+    <script src="/assets/vendor/libs/apex-charts/apexcharts.js"></script>
+
+    <!-- Main JS -->
+    <script src="/assets/js/main.js"></script>
+
+    <!-- Place this tag in your head or just before your close body tag. -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="/assets/js/pages/barcode.js"></script>
+    </body>
+</html>

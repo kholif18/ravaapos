@@ -6,6 +6,7 @@ const upload = multer({
     storage
 });
 const productController = require('../controllers/productController');
+const barcodeController = require('../controllers/barcodeController');
 
 // Tampilkan halaman utama (EJS)
 router.get('/', productController.viewProducts);
@@ -20,5 +21,7 @@ router.get('/json', productController.getProductJson);
 // Update & Delete (AJAX)
 router.post('/:id/update', productController.updateProduct);
 router.post('/:id/delete', productController.destroy);
+
+router.get('/barcode', barcodeController.index);
 
 module.exports = router;

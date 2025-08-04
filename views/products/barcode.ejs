@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <title><%= typeof title !== 'undefined' ? title + ' | RavaaPOS' : 'RavaaPOS' %></title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="/assets/vendor/fonts/boxicons.css" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/assets/vendor/css/core.css" />
+    <link rel="stylesheet" href="/assets/vendor/css/theme-default.css" />
+    <link rel="stylesheet" href="/assets/css/ravaapos.css" />
+    <link rel="stylesheet" href="/assets/css/barcode.css" />
+    <link rel="stylesheet" href="/assets/css/select2.min.css" />
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+  </head>
+  <body>
+    <div class="layout-wrapper layout-content-navbar">
+      <div class="layout-container">
+        <div class="layout-page">
+          <div class="content-wrapper">
+            <div class="container-fluid barcode-fullpage">
+              <div class="d-flex mb-3 justify-content-between align-items-center barcode-header">
+                <h5 class="card-title mb-0">Cetak Barcode Produk</h5>
+                <a class="btn btn-secondary" href="/products">
+                  <i class="bx bx-arrow-back"></i> Back to Product
+                </a>
+              </div>
+              <div class="row barcode-body">
+                <!-- Panel Kiri -->
+                <div class="col-md-4">
+                  <form id="formPrintBarcode" class="barcode-form-wrapper">
+                    <div class="barcode-scroll">
+                      <!-- Ukuran Kertas -->
+                        <div class="mb-3">
+                            <label for="paperSize" class="form-label">Ukuran Kertas</label>
+                            <select id="paperSize" class="form-select">
+                            <option value="A4">A4 (210mm x 297mm)</option>
+                            <option value="Letter">Letter (216mm x 279mm)</option>
+                            <option value="Custom">Custom</option>
+                            </select>
+                        </div>
+                        <div id="customPaperSize" class="row g-2 mb-3 d-none">
+                            <div class="col-6">
+                                <label for="paperWidth" class="form-label">Lebar (mm)</label>
+                                <input type="number" id="paperWidth" class="form-control" min="1" placeholder="mis. 210">
+                            </div>
+                            <div class="col-6">
+                                <label for="paperHeight" class="form-label">Tinggi (mm)</label>
+                                <input type="number" id="paperHeight" class="form-control" min="1" placeholder="mis. 297">
+                            </div>
+                        </div>
+
+                        <!-- Margin & Spasi -->
+                        <div class="row mb-3">
+                            <label class="form-label text-center">Margin (mm)</label>
+                            <div class="col-12">
+                                <label for="marginTop" class="form-label">Margin Atas</label>
+                                <input type="number" id="marginTop" class="form-control" placeholder="Atas" value="5">
+                            </div>
+                            <div class="col-6">
+                                <label for="marginLeft" class="form-label">Margin Kiri</label>
+                                <input type="number" id="marginLeft" class="form-control" placeholder="Kiri" value="5">
+                            </div>
+                            <div class="col-6">
+                                <label for="marginRight" class="form-label">Margin Kanan</label>
+                                <input type="number" id="marginRight" class="form-control" placeholder="Kanan" value="5">
+                            </div>
+                            <div class="col-12">
+                                <label for="marginBottom" class="form-label">Margin Bawah</label>
+                                <input type="number" id="marginBottom" class="form-control" placeholder="Bawah" value="5">
+                            </div>
+                        </div>
+
+                        <!-- Ukuran Label & Kolom -->
+                        <div class="row mb-3">
+                            <div class="col">
+                            <label class="form-label">Lebar Label (mm)</label>
+                            <input type="number" id="labelWidth" class="form-control" value="63">
+                            </div>
+                            <div class="col">
+                            <label class="form-label">Tinggi Label (mm)</label>
+                            <input type="number" id="labelHeight" class="form-control" value="40">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                                <label class="form-label">Spasi Antar Label (mm)</label>
+                                <div class="col-6">
+                                    <label for="rowSpacing" class="form-label">Spasi baris (mm)</label>
+                                    <input type="number" id="rowSpacing" class="form-control" placeholder="Spasi Baris" value="2">
+                                </div>
+                                <div class="col-6">
+                                    <label for="colSpacing" class="form-label">Spasi kolom (mm)</label>
+                                    <input type="number" id="colSpacing" class="form-control" placeholder="Spasi Kolom" value="2">
+                                </div>
+                            </div>
+
+                        <div class="mb-3">
+                            <label for="columns" class="form-label">Jumlah Kolom</label>
+                            <input type="number" id="columns" class="form-control" value="3" min="1">
+                        </div>
+
+                        <!-- Ukuran Teks -->
+                        <li class="menu-header small text-uppercase">
+                            <span class="menu-header-text">Ukuran Tesk</span>
+                        </li>
+                        <div class="row mb-3">
+                            <div class="mb-1">
+                                <label for="nameFontSize" class="form-label">Product Name</label>
+                                <input type="range" id="nameFontSize" class="form-range" min="6" max="36" value="12" step="1"/>
+                            </div>
+                            <div class="mb-1">
+                                <label for="priceFontSize" class="form-label">Sale Price</label>
+                                <input type="range" id="priceFontSize" class="form-range" min="6" max="36" value="20" step="1"/>
+                            </div>
+                            <div class="mb-1">
+                                <label for="barcodeHeight" class="form-label">Barcode</label>
+                                <input type="range" id="barcodeHeight" class="form-range" min="6" max="60" value="30" step="1"/>
+                            </div>
+                        </div>
+
+                        <!-- Tipe Barcode -->
+                        <div class="mb-3">
+                            <label for="barcodeType" class="form-label">Tipe Barcode</label>
+                            <select id="barcodeType" class="form-select">
+                            <option value="CODE128">CODE128</option>
+                            <option value="EAN13">EAN13</option>
+                            <option value="UPC">UPC</option>
+                            </select>
+                        </div>
+
+                        <!-- Elemen yang Ditampilkan -->
+                        <div class="mb-3">
+                            <label class="form-label">Elemen yang Ditampilkan</label>
+                            <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="optName" checked>
+                            <label class="form-check-label" for="optName">Nama Produk</label>
+                            </div>
+                            <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="optCode" checked>
+                            <label class="form-check-label" for="optCode">SKU / Kode</label>
+                            </div>
+                            <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="optPrice" checked>
+                            <label class="form-check-label" for="optPrice">Harga Jual</label>
+                            </div>
+                            <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="optTax">
+                            <label class="form-check-label" for="optTax">Pajak</label>
+                            </div>
+                            <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="optBorder">
+                            <label class="form-check-label" for="optBorder">Tampilkan Border</label>
+                            </div>
+                        </div>
+
+                        <!-- Pilih Produk dengan Select2 -->
+                        <div class="mb-3">
+                            <label for="productSelect2" class="form-label">Produk</label>
+                            <select id="productSelect2" class="form-select" multiple></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="copiesPerProduct" class="form-label">Jumlah Salinan / Produk</label>
+                            <input type="number" id="copiesPerProduct" class="form-control" value="3" min="1">
+                        </div>
+                    </div>
+                    <div class="mt-2 d-flex gap-2">
+                      <button type="button" class="btn btn-primary w-100" id="btnGenerateBarcodePreview">Preview</button>
+                      <button type="button" class="btn btn-outline-secondary w-100" onclick="window.print()">Print</button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Panel Kanan -->
+                <div class="col-md-8 barcode-scroll">
+                  <div id="barcodePreviewArea" class="p-3 border rounded print-area">
+                    <div class="d-flex flex-wrap gap-2" id="barcodeLabels"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="/assets/js/JsBarcode.all.min.js"></script>
+    <script src="/assets/js/select2.min.js"></script>
+    <script>
+      window.allProducts = <%- JSON.stringify(products) %>;
+    </script>
+    <script src="/assets/js/pages/barcode.js"></script>
+  </body>
+</html>

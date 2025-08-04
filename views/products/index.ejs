@@ -10,49 +10,107 @@
   </div>
 </div>
 
-  <div class="card">
-    <div class="card-header">
-      <form method="GET" action="/products" class="d-flex flex-grow-1 gap-2">
-        <input type="text" id="searchProduct" class="form-control flex-grow-1" placeholder="Search name, code, or barcode..."/>
-        
-        <select name="category" class="form-select" onchange="this.form.submit()">
-          <option value="">All Categories</option>
-          <% categories.forEach(cat => { %>
-            <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>><%= cat.name %></option>
-          <% }) %>
-        </select>
-  
-        <a href="/products" class="btn btn-outline-secondary flex-shrink-0 px-3">
-          <i class="bx bx-sync"></i> Reset
-        </a>
-      </form>
+<div class="card">
+  <div class="card-header">
+    <!-- Baris 1: Tombol Aksi Ekspor-Impor -->
+    <div class="d-flex flex-wrap justify-content-end gap-2">
+      <a href="/products/barcode" class="btn btn-outline-secondary" id="btnPrintBarcode">
+        <i class="bx bx-barcode"></i> Cetak Barcode
+      </a>
+      <button class="btn btn-outline-secondary" id="btnExportPDF"><i class="bx bx-file-pdf"></i> Export PDF</button>
+      <button class="btn btn-outline-secondary" id="btnExportCSV"><i class="bx bx-file"></i> Export CSV</button>
+      <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bx bx-printer"></i> Print</button>
+      <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
+      <a href="/products/template-csv" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
     </div>
-    <div class="card-body table-responsive text-nowrap">
-      <div id="tableScrollContainer" style="max-height: 63vh; overflow-y: auto;">
-        <table id="productTable" class="table table-bordered table-hover table-sm">
-          <thead>
-            <tr>
-              <th data-sort="code">Code <span class="sort-icon bx"></span></th>
-              <th data-sort="name">Name <span class="sort-icon bx"></span></th>
-              <th data-sort="category">Category <span class="sort-icon bx"></span></th>
-              <th data-sort="barcode">Barcode <span class="sort-icon bx"></span></th>
-              <th data-sort="cost">Cost <span class="sort-icon bx"></span></th>
-              <th data-sort="salePrice">Sale Price <span class="sort-icon bx"></span></th>
-              <th data-sort="unit">Unit <span class="sort-icon bx"></span></th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="productTableBody" class="table-border-bottom-0"></tbody>
-        </table>
-        <div id="loadingIndicator" class="text-center text-muted py-3">Loading...</div>
-      </div>
-      <!-- Total Produk -->
-      <div class="mt-2">
-        <strong>Total Produk:</strong> <span id="totalProductCount">0</span>
+
+    <!-- Baris 2: Search & Filter -->
+    <form method="GET" action="/products" class="row g-2 mb-2 align-items-end">
+      <!-- Search -->
+      <div class="col-md-4">
+        <label for="searchProduct" class="form-label">Cari Produk</label>
+        <input
+          type="text"
+          name="search"
+          id="searchProduct"
+          class="form-control"
+          placeholder="Nama, kode, atau barcode..."
+          value="<%= search %>"
+        />
       </div>
 
+      <!-- Kategori -->
+      <div class="col-md-2">
+        <label class="form-label">Kategori</label>
+        <select name="category" class="form-select" onchange="this.form.submit()">
+          <option value="">Semua</option>
+          <% categories.forEach(cat => { %>
+            <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>>
+              <%= cat.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- Supplier -->
+      <div class="col-md-2">
+        <label class="form-label">Supplier</label>
+        <select name="supplierId" class="form-select" onchange="this.form.submit()">
+          <option value="">Semua</option>
+          <% suppliers.forEach(s => { %>
+            <option value="<%= s.id %>" <%= selectedSupplier == s.id ? 'selected' : '' %>>
+              <%= s.name %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <!-- Tipe Produk -->
+      <div class="col-md-2">
+        <label class="form-label">Tipe</label>
+        <select name="type" class="form-select" onchange="this.form.submit()">
+          <option value="">Semua</option>
+          <option value="product" <%= selectedType === 'product' ? 'selected' : '' %>>Produk Fisik</option>
+          <option value="service" <%= selectedType === 'service' ? 'selected' : '' %>>Jasa</option>
+        </select>
+      </div>
+
+      <!-- Reset -->
+      <div class="col-md-2 d-grid">
+        <label class="form-label invisible">Reset</label>
+        <a href="/products" class="btn btn-outline-secondary">
+          <i class="bx bx-sync"></i> Reset
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card-body table-responsive text-nowrap">
+    <div id="tableScrollContainer" style="max-height: 63vh; overflow-y: auto;">
+      <table id="productTable" class="table table-bordered table-hover table-sm">
+        <thead>
+          <tr>
+            <th data-sort="code">Code <span class="sort-icon bx"></span></th>
+            <th data-sort="name">Name <span class="sort-icon bx"></span></th>
+            <th data-sort="category">Category <span class="sort-icon bx"></span></th>
+            <th data-sort="barcode">Barcode <span class="sort-icon bx"></span></th>
+            <th data-sort="cost">Cost <span class="sort-icon bx"></span></th>
+            <th data-sort="salePrice">Sale Price <span class="sort-icon bx"></span></th>
+            <th data-sort="unit">Unit <span class="sort-icon bx"></span></th>
+            <th data-sort="supplier">Supplier <span class="sort-icon bx"></span></th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="productTableBody" class="table-border-bottom-0"></tbody>
+      </table>
+      <div id="loadingIndicator" class="text-center text-muted py-3">Loading...</div>
+    </div>
+    <!-- Total Produk -->
+    <div class="mt-2">
+      <strong>Total Produk:</strong> <span id="totalProductCount">0</span>
     </div>
   </div>
+</div>
 
 <!-- Modal Tambah Product -->
 <div class="modal fade" id="modalCreate" tabindex="-1" aria-labelledby="modalCreateLabel" aria-hidden="true">
@@ -92,7 +150,6 @@
               </button>
             </div>
           </div>
-
 
           <!-- Unit -->
           <div class="col-md-6 mb-3">
@@ -166,12 +223,17 @@
               <label class="form-check-label" for="enableLowStockWarning">Aktifkan peringatan stok rendah</label>
             </div>
             <div class="mb-3">
-              <input type="number" name="lowStockWarning" id="lowStockWarning" min="0" class="form-control" placeholder="Jumlah minimal sebelum peringatan" disabled>
+              <input type="number" name="lowStockThreshold" id="lowStockWarning" min="0" class="form-control" placeholder="Jumlah minimal sebelum peringatan" disabled>
             </div>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="mb-2" for="inputTax">Pajak (%) <i>Opsional</i></label>
-            <input type="number" name="tax" id="inputTax" class="form-control" placeholder="Misal: 10" min="0" max="100" step="0.01">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="enableInputTax" name="enableInputTax">
+              <label class="form-check-label" for="enableInputTax">Produk menggunakan Pajak (%)</label>
+            </div>
+            <div class="mb-3">
+              <input type="number" name="tax" step="0.01" id="tax" min="0" class="form-control" placeholder="10%" disabled>
+            </div>
           </div>
         </div>
 
@@ -190,6 +252,25 @@
 
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Import CSV -->
+<div class="modal fade" id="modalImportCSV" tabindex="-1" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form action="/products/import-csv" method="POST" enctype="multipart/form-data" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalImportCSVLabel">Import Produk dari CSV</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" name="csvFile" accept=".csv" class="form-control" required>
+        <div class="form-text mt-2">Pastikan file sesuai format template CSV.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success">Import</button>
       </div>
     </form>
   </div>

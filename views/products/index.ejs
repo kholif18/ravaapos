@@ -1,27 +1,24 @@
 <!-- views/products/index.ejs -->
-<div class="d-flex mb-3 justify-content-between align-items-center">
-  <h5 class="card-title mb-0">Product Lists</h5>
-  
-  <div class="d-flex align-items-center gap-2">
-    <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
-    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate" title="Add Product (Alt+N)">
-      + Add Product
-    </button>
-  </div>
-</div>
-
 <div class="card">
   <div class="card-header">
     <!-- Baris 1: Tombol Aksi Ekspor-Impor -->
-    <div class="d-flex flex-wrap justify-content-end gap-2">
-      <a href="/products/barcode" class="btn btn-outline-secondary" id="btnPrintBarcode">
-        <i class="bx bx-barcode"></i> Cetak Barcode
-      </a>
-      <button class="btn btn-outline-secondary" id="btnExportPDF"><i class="bx bx-file-pdf"></i> Export PDF</button>
-      <button class="btn btn-outline-secondary" id="btnExportCSV"><i class="bx bx-file"></i> Export CSV</button>
-      <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bx bx-printer"></i> Print</button>
-      <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
-      <a href="/products/template-csv" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
+    <div class="d-flex flex-wrap justify-content-between">
+      <div class="gap-2">
+        <a href="/products/barcode" class="btn btn-outline-secondary" id="btnPrintBarcode" title="Cetak Barcode">
+          <i class="bx bx-barcode"></i>
+        </a>
+        <button class="btn btn-outline-secondary" id="btnExportPDF"><i class="bx bxs-file-pdf" title="Export PDF"></i></button>
+        <button class="btn btn-outline-secondary" id="btnExportCSV"><i class="bx bx-file" title="Export CSV"></i></button>
+        <button class="btn btn-outline-secondary" onclick="window.print()" title="Cetak"><i class="bx bx-printer"></i></button>
+        <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
+        <a href="/products/template-csv" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
+      </div>
+      <div class="gap-2">
+        <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+        <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate" title="Add Product (Alt+N)">
+          + Add Product
+        </button>
+      </div>
     </div>
 
     <!-- Baris 2: Search & Filter -->

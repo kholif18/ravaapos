@@ -1,45 +1,48 @@
-<!-- Customer Table View -->
-<div class="d-flex mb-3 justify-content-between align-items-center">
-  <h5 class="card-title mb-0">Daftar Customer</h5>
-
-  <div class="d-flex align-items-center gap-2">
-    <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
-    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCustomer" title="Add Customer (Alt+N)">
-      + Tambah Customer
-    </button>
-  </div>
-</div>
-
-<!-- Table -->
 <div class="card">
-  
-  <div class="card-body ">
-    <!-- Filter -->
-    <div class="row mb-3">
+  <div class="card-header">
+    <div class="d-flex flex-wrap justify-content-between mb-3">
+      <div class="gap-2">
+        <button class="btn btn-outline-secondary" id="btnExportCSV"><i class="bx bx-file" title="Export CSV"></i> Export CSV</button>
+        <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
+        <a href="#" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
+      </div>
+      <div class="gap-2">
+        <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+        <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCustomer" title="Add Customer (Alt+N)">
+          + Tambah Customer
+        </button>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Filter -->
       <div class="col-md-6">
-        <input type="text" id="searchInput" class="form-control" placeholder="Cari nama, email, atau no HP...">
+        <input type="text" id="searchInput" class="form-control flex-grow-1" placeholder="Cari nama, email, atau no HP...">
       </div>
       <div class="col-md-2">
-        <select id="filterType" class="form-select">
+        <select id="filterType" class="form-select" style="width: 150px;">
           <option value="">Semua Jenis</option>
           <option value="umum">Umum</option>
           <option value="member">Member</option>
         </select>
       </div>
       <div class="col-md-2">
-        <select id="filterStatus" class="form-select">
+        <select id="filterStatus" class="form-select" style="width: 150px;">
           <option value="">Semua Status</option>
           <option value="active">Aktif</option>
           <option value="inactive">Nonaktif</option>
         </select>
       </div>
-      <div class="col-md-2">
-        <button class="btn btn-outline-secondary w-100" id="btnResetFilter">
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-secondary" id="btnResetFilter">
           <i class="bx bx-refresh"></i> Reset
         </button>
       </div>
     </div>
-
+  </div>
+  
+  <div class="card-body ">
+    
     <!-- Data tabel -->
       <div class="table-responsive">
       <table class="table table-hover mb-0" id="customerTable">
@@ -91,7 +94,7 @@
         <h5 class="modal-title" id="modalCustomerLabel">Tambah Customer</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
       </div>
-      <div class="modal-body row g-3">
+      <div class="modal-body row g-2">
         <div class="col-md-6">
           <label class="form-label">Nama Lengkap</label>
           <input type="text" name="name" class="form-control" required />

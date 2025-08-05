@@ -1,22 +1,21 @@
-<div class="d-flex mb-3 justify-content-between align-items-center">
-  <h5 class="card-title mb-0">Categories</h5>
-
-  <div class="d-flex align-items-center gap-2">
-    <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
-    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate" title="Add Category (Alt+N)">
-      + Add Category
-    </button>
-  </div>
-</div>
-
 <div class="card">
-  <div class="card-body">
-    <div class="d-flex mb-3">
-      <div class="me-2">
-        <input type="text" id="searchCategory" class="form-control" placeholder="Cari Kategori...">
+  <div class="card-header">
+    <div class="d-flex flex-wrap justify-content-between mb-3">
+      <div class="d-flex gap-2">
+        <div class="me-2">
+          <input type="text" id="searchCategory" class="form-control" placeholder="Cari Kategori...">
+        </div>
+        <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
       </div>
-      <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
+      <div class="gap-2">
+        <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+        <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate" title="Add Category (Alt+N)">
+          + Add Category
+        </button>
+      </div>
     </div>
+  </div>
+  <div class="card-body">
     <table class="table table-hover">
       <thead>
         <tr>
@@ -98,7 +97,7 @@
 
       <!-- Info kanan -->
       <p class="mb-0 text-nowrap" style="min-width: 200px;">
-        Halaman <%= pagination.page %> dari <%= pagination.totalPages %> — Total <%= pagination.totalItems %> data
+        Halaman <%= pagination.page %> dari <%= pagination.totalPages %> — Total <%= pagination.totalProduct %> data
       </p>
     </div>
 

@@ -33,7 +33,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden; /* ini kunci agar tidak scroll horizontal */
   min-height: 0;
-  max-height: 85vh;
+  max-height: 80vh;
   padding-right: 8px;
   box-sizing: border-box;
 }

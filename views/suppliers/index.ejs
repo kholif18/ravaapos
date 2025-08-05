@@ -1,24 +1,29 @@
-<div class="d-flex mb-3 justify-content-between align-items-center">
-  <h5 class="card-title mb-0">Daftar Supplier</h5>
-
-  <div class="d-flex align-items-center gap-2">
-    <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
-    <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate" title="Add Supplier (Alt+N)">
-      + Tambah Supplier
-    </button>
-  </div>
-</div>
-
-
-<!-- Tabel Supplier -->
 <div class="card">
-  <div class="card-body">
-    <div class="d-flex mb-3">
-      <div class="me-2">
+  <div class="card-header">
+    <div class="d-flex flex-wrap justify-content-between mb-3">
+      <div class="gap-2">
+        <button class="btn btn-outline-secondary" id="btnExportCSV"><i class="bx bx-file" title="Export CSV"></i> Export CSV</button>
+        <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
+        <a href="#" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
+      </div>
+      <div class="gap-2">
+        <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+        <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate" title="Add Supplier (Alt+N)">
+          + Tambah Supplier
+        </button>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-10">
         <input type="text" id="searchSupplier" class="form-control" placeholder="Cari nama supplier...">
       </div>
-      <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
+      </div>
     </div>
+  </div>
+  <!-- Tabel Supplier -->
+  <div class="card-body">
 
     <div class="table-responsive">
       <table class="table table-hover" id="tableSupplier">

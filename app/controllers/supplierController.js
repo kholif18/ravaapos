@@ -197,7 +197,7 @@ exports.getPartial = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
-    const search = req.query.search || '';
+    const search = req.query.search?.trim() || '';
 
     try {
         const where = search ?
@@ -209,6 +209,7 @@ exports.getPartial = async (req, res) => {
             {};
 
         const {
+            count,
             rows
         } = await Supplier.findAndCountAll({
             where,
@@ -216,15 +217,24 @@ exports.getPartial = async (req, res) => {
                 ['name', 'ASC']
             ],
             limit,
-            offset
+            offset,
         });
 
-        res.render('suppliers/_tbody', {
+        const totalPages = Math.ceil(count / limit);
+
+        res.render('suppliers/_partial', {
             layout: false,
-            suppliers: rows
+            suppliers: rows,
+            pagination: {
+                page,
+                limit,
+                totalPages,
+                totalItems: count,
+                search
+            }
         });
     } catch (err) {
-        console.error(err);
+        console.error('Gagal memuat partial supplier:', err);
         res.status(500).send('Gagal memuat data');
     }
 };

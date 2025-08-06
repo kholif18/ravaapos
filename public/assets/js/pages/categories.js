@@ -13,8 +13,6 @@ import {
 
 const modalCreate = document.getElementById('modalCreate');
 const modalEdit = document.getElementById('modalEdit');
-const tbody = document.getElementById('categoryTbody');
-const paginationWrapper = document.getElementById('categoryPaginationWrapper');
 const formCreate = document.getElementById('formCreateCategory');
 const formEdit = document.getElementById('formEditCategory');
 const inputPrefix = document.getElementById('categoryPrefix');
@@ -39,7 +37,7 @@ function debounce(fn, delay) {
 }
 
 function updateSortIcon() {
-    const iconSort = thNama?.querySelector('i');
+    const iconSort = document.getElementById('thNama')?.querySelector('i');
     if (!iconSort) return;
 
     iconSort.className = !hasSorted ?
@@ -50,7 +48,17 @@ function updateSortIcon() {
 }
 
 // === Fetch & Render ===
-async function fetchCategories() {
+async function fetchCategories({
+    reset = false
+} = {}) {
+    if (reset) {
+        currentPage = 1;
+        currentSearch = '';
+        hasSorted = false;
+        currentSort = 'name';
+        currentOrder = 'asc';
+    }
+
     const query = new URLSearchParams({
         page: currentPage,
         limit: currentLimit,
@@ -63,51 +71,66 @@ async function fetchCategories() {
         const res = await fetch(`/categories/partial?${query}`);
         const html = await res.text();
 
-        // Parsing HTML hasil partial (tbody + pagination)
-        const tempEl = document.createElement('div');
-        tempEl.innerHTML = html;
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
 
-        const newTbody = tempEl.querySelector('#categoryTbody');
-        const newPagination = tempEl.querySelector('#categoryPaginationWrapper');
+        const newWrapper = temp.querySelector('#categoryWrapper');
+        const oldWrapper = document.getElementById('categoryWrapper');
 
-        // Replace DOM kalau elemen ditemukan
-        if (newTbody) {
-            const oldTbody = document.getElementById('categoryTbody');
-            oldTbody?.replaceWith(newTbody); // pakai optional chaining
+        if (newWrapper && oldWrapper) {
+            oldWrapper.innerHTML = newWrapper.innerHTML;
+            rebindAfterRender(); // <== ini kunci penting!
         }
 
-        if (newPagination) {
-            const oldPagination = document.getElementById('categoryPaginationWrapper');
-            oldPagination?.replaceWith(newPagination);
-        }
-
-        // Inisialisasi ulang
         initEditButtons();
         initDeleteButtons();
-        updateSortIcon();
         rebindPagination();
+        updateSortIcon();
+
+        initPagination({
+            onPageChange: (page) => {
+                currentPage = page;
+                fetchCategories();
+            },
+            onLimitChange: (limit) => {
+                currentLimit = limit;
+                currentPage = 1;
+                fetchCategories();
+            }
+        });
+        
     } catch (err) {
-        console.error('fetchCategories error:', err);
         showToast({
             type: 'danger',
             title: 'Error',
-            message: 'Gagal memuat data kategori',
+            message: 'Gagal memuat data kategori'
         });
     }
 }
 
 function rebindPagination() {
-    initPagination({
-        onPageChange: page => {
-            currentPage = page;
-            fetchCategories();
-        },
-        onLimitChange: limit => {
-            currentLimit = limit;
-            currentPage = 1;
-            fetchCategories();
-        },
+    document.querySelectorAll('[data-page]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            const page = parseInt(btn.dataset.page);
+            if (!isNaN(page)) {
+                currentPage = page;
+                fetchCategories();
+            }
+        });
     });
+
+    const limitSelect = document.querySelector('#limitSelect');
+    if (limitSelect) {
+        limitSelect.addEventListener('change', () => {
+            const limit = parseInt(limitSelect.value);
+            if (!isNaN(limit)) {
+                currentLimit = limit;
+                currentPage = 1;
+                fetchCategories();
+            }
+        });
+    }
 }
 
 // === Events ===
@@ -279,6 +302,38 @@ function initDeleteButtons() {
                 });
             }
         });
+    });
+}
+
+function rebindAfterRender() {
+    // Re-attach sort listener
+    const newThNama = document.getElementById('thNama');
+    newThNama?.addEventListener('click', () => {
+        hasSorted = true;
+        if (currentSort === 'name') {
+            currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort = 'name';
+            currentOrder = 'asc';
+        }
+        currentPage = 1;
+        fetchCategories();
+    });
+
+    // Re-update sort icon (karena <thead> direplace)
+    updateSortIcon();
+
+    // Re-attach pagination & limit
+    initPagination({
+        onPageChange: (page) => {
+            currentPage = page;
+            fetchCategories();
+        },
+        onLimitChange: (limit) => {
+            currentLimit = limit;
+            currentPage = 1;
+            fetchCategories();
+        }
     });
 }
 

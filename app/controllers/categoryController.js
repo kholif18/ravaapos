@@ -48,7 +48,7 @@ exports.getAll = async (req, res) => {
             pagination: {
                 page,
                 limit,
-                totalProduct: totalItems,
+                totalItems,
                 totalPages,
             },
         });
@@ -245,10 +245,10 @@ exports.getPartial = async (req, res) => {
             pagination: {
                 page,
                 limit,
-                totalProduct: totalItems,
+                totalItems,
                 totalPages,
                 sort,
-                order
+                order,
             },
             layout: false
         });

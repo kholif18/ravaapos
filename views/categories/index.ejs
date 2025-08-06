@@ -16,21 +16,7 @@
     </div>
   </div>
   <div class="card-body">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>No</th>
-          <th id="thNama" style="cursor:pointer" title="Urutkan berdasarkan nama">Nama <i id="iconSortNama" class="bx bx-sort-alt-2"></i></th>
-          <th>Prefix</th>
-          <th>Jumlah Product</th>
-          <th>Aksi</th>
-        </tr>
-      </thead>
-      <%- include('_tbody', { categories }) %>
-    </table>
-    <div id="categoryPaginationWrapper">
-      <%- include('../partials/pagination', { pagination }) %>
-    </div>
+    <%- include('_partial', { categories, pagination }) %>
   </div>
 </div>
 

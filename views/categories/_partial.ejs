@@ -1,6 +1,49 @@
-<%- include('_tbody', { categories }) %>
+<div id="categoryWrapper">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th id="thNama" style="cursor:pointer">Nama <i class="bx bx-sort-alt-2"></i></th>
+        <th>Prefix</th>
+        <th>Jumlah Product</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="categoryTbody">
+      <% if (categories.length === 0) { %>
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">Tidak ada data kategori ditemukan.</td>
+        </tr>
+      <% } else { 
+        const startNumber = (pagination.page - 1) * pagination.limit + 1;
+        for (let i = 0; i < categories.length; i++) {
+          const category = categories[i]; %>
+          <tr>
+            <td><%= startNumber + i %></td>
+            <td><%= category.name %></td>
+            <td><%= category.prefix %></td>
+            <td>
+              <span class="badge bg-label-info me-1"><strong><%= category.get('productCount') || 0 %></strong></span> Produk
+            </td>
+            <td>
+              <button class="btn btn-sm btn-warning"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalEdit"
+                      data-id="<%= category.id %>"
+                      data-name="<%= category.name %>"
+                      data-prefix="<%= category.prefix %>">
+                <i class="bx bx-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-danger btn-delete" data-id="<%= category.id %>">
+                <i class="bx bx-trash"></i>
+              </button>
+            </td>
+          </tr>
+      <% } } %>
+    </tbody>
+  </table>
 
-<!-- separator -->
-<div id="categoryPaginationWrapper">
-  <%- include('../partials/pagination', { pagination }) %>
+  <div id="categoryPaginationWrapper">
+    <%- include('../partials/pagination', { pagination }) %>
+  </div>
 </div>

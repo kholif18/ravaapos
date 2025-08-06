@@ -11,32 +11,22 @@ import {
 
 let currentPage = 1;
 let currentLimit = 10;
-let maxPage = 1;
 let currentSearch = '';
 
 async function loadSuppliers(page = 1, limit = 10, search = '') {
-    page = Math.max(1, page);
-    currentSearch = search;
-
     try {
-        // 1. Fetch partial HTML untuk tbody
-        const tbodyRes = await fetch(`/suppliers/partial?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
-        const html = await tbodyRes.text();
-        document.querySelector('#tableSupplier tbody').innerHTML = html;
+        const htmlRes = await fetch(`/suppliers/partial?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+        const html = await htmlRes.text();
 
-        // 2. Fetch JSON pagination
-        const jsonRes = await fetch(`/suppliers/json?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
-        const {
-            pagination
-        } = await jsonRes.json();
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const newWrapper = temp.querySelector('#supplierWrapper');
+        const oldWrapper = document.querySelector('#supplierWrapper');
 
-        currentPage = pagination.page;
-        currentLimit = pagination.limit;
-        maxPage = pagination.totalPages;
-
-        renderPagination(pagination);
-        initEditButtons();
-        initDeleteButtons();
+        if (newWrapper && oldWrapper) {
+            oldWrapper.replaceWith(newWrapper);
+            bindEvents();
+        }
     } catch (err) {
         showToast({
             type: 'danger',
@@ -46,85 +36,7 @@ async function loadSuppliers(page = 1, limit = 10, search = '') {
     }
 }
 
-
-document.getElementById('searchSupplier').addEventListener('input', e => {
-    const keyword = e.target.value.trim();
-    loadSuppliers(1, currentLimit, keyword);
-});
-
-document.getElementById('resetFilter').addEventListener('click', () => {
-    document.getElementById('searchSupplier').value = '';
-    loadSuppliers(1, currentLimit, '');
-});
-
-function renderPagination(pagination) {
-    const {
-        page,
-        totalPages,
-        limit,
-        totalItems
-    } = pagination;
-    const container = document.querySelector('#paginationContainer');
-    const paginationEl = container.querySelector('ul.pagination');
-    const infoEl = container.querySelector('.info');
-
-    const buildBtn = (p, content, isActive = false, isDisabled = false) => `
-    <li class="page-item ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}">
-    <a href="#" class="page-link btn-page" data-page="${p}">${content}</a>
-    </li>
-`;
-
-    let html = '';
-
-    // First and Prev
-    html += buildBtn(1, '<<', false, page === 1);
-    html += buildBtn(page - 1, '<', false, page === 1);
-
-    // Ellipsis before
-    if (page > 3) {
-        html += buildBtn(1, '1');
-        html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-    }
-
-    // Page numbers around current page
-    for (let i = Math.max(page - 2, 1); i <= Math.min(page + 2, totalPages); i++) {
-        html += buildBtn(i, `${i}`, i === page);
-    }
-
-    // Ellipsis after
-    if (page < totalPages - 2) {
-        html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-        html += buildBtn(totalPages, `${totalPages}`);
-    }
-
-    // Next and Last
-    html += buildBtn(page + 1, '>', false, page === totalPages);
-    html += buildBtn(totalPages, '>>', false, page === totalPages);
-
-    paginationEl.innerHTML = html;
-    infoEl.textContent = `Halaman ${page} dari ${totalPages} — Total ${totalItems} data`;
-}
-
-
-document.querySelector('#paginationContainer').addEventListener('click', (e) => {
-    const link = e.target.closest('.btn-page');
-    if (!link || link.closest('.page-item').classList.contains('disabled')) return;
-
-    e.preventDefault(); // penting agar href="#" tidak scroll ke atas
-
-    const page = parseInt(link.dataset.page);
-    if (!isNaN(page)) {
-        loadSuppliers(page, currentLimit, currentSearch);
-    }
-});
-
-
-document.getElementById('limitSelect').addEventListener('change', e => {
-    const newLimit = parseInt(e.target.value);
-    loadSuppliers(1, newLimit, currentSearch);
-});
-
-function initEditButtons() {
+function bindEvents() {
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', () => {
             const form = document.getElementById('formEditSupplier');
@@ -136,9 +48,7 @@ function initEditButtons() {
             form.querySelector('[name="note"]').value = btn.dataset.note;
         });
     });
-}
 
-function initDeleteButtons() {
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', async () => {
             const id = btn.dataset.id;
@@ -157,7 +67,7 @@ function initDeleteButtons() {
                         title: 'Dihapus',
                         message: result.message
                     });
-                    loadSuppliers(currentPage, currentLimit);
+                    loadSuppliers(currentPage, currentLimit, currentSearch);
                 } else {
                     showToast({
                         type: 'danger',
@@ -174,9 +84,52 @@ function initDeleteButtons() {
             }
         });
     });
+
+    document.querySelectorAll('.btn-page').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const page = parseInt(link.dataset.page);
+            if (!isNaN(page)) {
+                currentPage = page;
+                loadSuppliers(currentPage, currentLimit, currentSearch);
+            }
+        });
+    });
+
+    const limitSelect = document.getElementById('limitSelect');
+    if (limitSelect) {
+        limitSelect.addEventListener('change', e => {
+            const newLimit = parseInt(e.target.value);
+            if (!isNaN(newLimit)) {
+                currentLimit = newLimit;
+                currentPage = 1;
+                loadSuppliers(currentPage, currentLimit, currentSearch);
+            }
+        });
+    }
 }
 
-document.getElementById('formCreateSupplier').addEventListener('submit', async function (e) {
+// Event: Search
+const searchInput = document.getElementById('searchSupplier');
+if (searchInput) {
+    searchInput.addEventListener('input', e => {
+        currentSearch = e.target.value.trim();
+        currentPage = 1;
+        loadSuppliers(currentPage, currentLimit, currentSearch);
+    });
+}
+
+document.getElementById('resetFilter')?.addEventListener('click', () => {
+    const input = document.getElementById('searchSupplier');
+    input.value = '';
+    currentSearch = '';
+    currentPage = 1;
+    loadSuppliers(currentPage, currentLimit, currentSearch);
+});
+
+// Create Supplier
+const formCreate = document.getElementById('formCreateSupplier');
+formCreate?.addEventListener('submit', async function (e) {
     e.preventDefault();
     const formData = Object.fromEntries(new FormData(this).entries());
 
@@ -188,8 +141,8 @@ document.getElementById('formCreateSupplier').addEventListener('submit', async f
             },
             body: JSON.stringify(formData)
         });
-
         const result = await res.json();
+
         if (res.ok && result.success) {
             bootstrap.Modal.getInstance(document.getElementById('modalCreate')).hide();
             showToast({
@@ -198,7 +151,7 @@ document.getElementById('formCreateSupplier').addEventListener('submit', async f
                 message: result.message
             });
             resetModalForm(document.getElementById('modalCreate'));
-            loadSuppliers(currentPage, currentLimit);
+            loadSuppliers(currentPage, currentLimit, currentSearch);
         } else {
             showToast({
                 type: 'danger',
@@ -206,7 +159,7 @@ document.getElementById('formCreateSupplier').addEventListener('submit', async f
                 message: result.message
             });
         }
-    } catch (err) {
+    } catch {
         showToast({
             type: 'danger',
             title: 'Error',
@@ -215,7 +168,9 @@ document.getElementById('formCreateSupplier').addEventListener('submit', async f
     }
 });
 
-document.getElementById('formEditSupplier').addEventListener('submit', async function (e) {
+// Update Supplier
+const formEdit = document.getElementById('formEditSupplier');
+formEdit?.addEventListener('submit', async function (e) {
     e.preventDefault();
     const id = this.dataset.id;
     const formData = Object.fromEntries(new FormData(this).entries());
@@ -228,8 +183,8 @@ document.getElementById('formEditSupplier').addEventListener('submit', async fun
             },
             body: JSON.stringify(formData)
         });
-
         const result = await res.json();
+
         if (res.ok && result.success) {
             bootstrap.Modal.getInstance(document.getElementById('modalEdit')).hide();
             showToast({
@@ -238,7 +193,7 @@ document.getElementById('formEditSupplier').addEventListener('submit', async fun
                 message: result.message
             });
             resetModalForm(document.getElementById('modalEdit'));
-            loadSuppliers(currentPage, currentLimit);
+            loadSuppliers(currentPage, currentLimit, currentSearch);
         } else {
             showToast({
                 type: 'danger',
@@ -246,7 +201,7 @@ document.getElementById('formEditSupplier').addEventListener('submit', async fun
                 message: result.message
             });
         }
-    } catch (err) {
+    } catch {
         showToast({
             type: 'danger',
             title: 'Error',
@@ -255,21 +210,12 @@ document.getElementById('formEditSupplier').addEventListener('submit', async fun
     }
 });
 
-document.getElementById('modalCreate').addEventListener('shown.bs.modal', () => {
-    document.querySelector('#modalCreate input[name="name"]').focus();
+// Modal reset & focus
+['modalCreate', 'modalEdit'].forEach(id => {
+    const modal = document.getElementById(id);
+    modal?.addEventListener('shown.bs.modal', () => modal.querySelector('input[name="name"]').focus());
+    modal?.addEventListener('hidden.bs.modal', () => resetModalForm(modal));
 });
 
-document.getElementById('modalCreate').addEventListener('hidden.bs.modal', () => {
-    resetModalForm(document.getElementById('modalCreate'));
-});
-
-document.getElementById('modalEdit').addEventListener('shown.bs.modal', () => {
-    document.querySelector('#modalEdit input[name="name"]').focus();
-});
-
-document.getElementById('modalEdit').addEventListener('hidden.bs.modal', () => {
-    resetModalForm(document.getElementById('modalEdit'));
-});
-
-// Initial load
+// Init
 loadSuppliers();

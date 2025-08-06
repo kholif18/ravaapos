@@ -1,0 +1,23 @@
+<div id="supplierWrapper">
+    <div class="table-responsive">
+        <table class="table table-hover">
+        <thead>
+            <tr>
+            <th>Nama</th>
+            <th>Kontak</th>
+            <th>Email</th>
+            <th>Alamat</th>
+            <th>Catatan</th>
+            <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="supplierTbody">
+            <%- include('_tbody', { suppliers }) %>
+        </tbody>
+        </table>
+    </div>
+
+    <div id="supplierPaginationWrapper">
+        <%- include('../partials/pagination', { pagination }) %>
+    </div>
+</div>

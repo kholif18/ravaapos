@@ -1,86 +1,30 @@
-<!-- TBody Kategori -->
-<table class="table table-hover mb-0">
-  <tbody id="categoryTbody">
+<tbody id="categoryTbody">
     <% if (categories.length === 0) { %>
-      <tr>
-        <td colspan="4" class="text-center text-muted py-4">Tidak ada data kategori ditemukan.</td>
-      </tr>
-    <% } else { %>
-      <% categories.forEach(category => { %>
         <tr>
-          <td><%= category.name %></td>
-          <td><%= category.prefix %></td>
-          <td><%= category.totalProducts %></td>
-          <td>
-            <button
-              class="btn btn-sm btn-warning"
-              data-bs-toggle="modal"
-              data-bs-target="#modalEdit"
-              data-id="<%= category.id %>"
-              data-name="<%= category.name %>"
-              data-prefix="<%= category.prefix %>">
-              <i class="bx bx-edit"></i>
-            </button>
-            <button
-              class="btn btn-sm btn-danger btn-delete"
-              data-id="<%= category.id %>">
-              <i class="bx bx-trash"></i>
-            </button>
-          </td>
+        <td colspan="5" class="text-center text-muted py-4">Tidak ada data kategori ditemukan.</td>
         </tr>
-      <% }) %>
-    <% } %>
-  </tbody>
-</table>
-
-<!-- Pagination + Limit + Info -->
-<div class="d-flex mt-3 gap-3 align-items-center justify-content-between flex-wrap">
-  <!-- Limit Select -->
-  <div class="d-flex align-items-center" style="min-width: 180px;">
-    <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
-    <select id="limitSelect" class="form-select form-select-sm" style="width: auto;">
-      <% [10, 25, 50].forEach(val => { %>
-        <option value="<%= val %>" <%= pagination.limit === val ? 'selected' : '' %>><%= val %></option>
-      <% }) %>
-    </select>
-  </div>
-
-  <!-- Pagination -->
-  <nav class="flex-grow-1 d-flex justify-content-center">
-    <ul class="pagination mb-0">
-      <% const current = pagination.page;
-         const total = pagination.totalPages;
-         const createPage = (n) => `
-           <li class="page-item ${n === current ? 'active' : ''}">
-             <a class="page-link" href="#" data-page="${n}">${n}</a>
-           </li>`; %>
-
-      <li class="page-item <%= current === 1 ? 'disabled' : '' %>">
-        <a class="page-link" href="#" data-page="<%= current - 1 %>"><i class="bx bx-chevron-left"></i></a>
-      </li>
-
-      <% if (current > 3) { %>
-        <%- createPage(1) %>
-        <li class="page-item disabled"><span class="page-link">...</span></li>
-      <% } %>
-
-      <% for (let i = Math.max(current - 2, 1); i <= Math.min(current + 2, total); i++) { %>
-        <%- createPage(i) %>
-      <% } %>
-
-      <% if (current < total - 2) { %>
-        <li class="page-item disabled"><span class="page-link">...</span></li>
-        <%- createPage(total) %>
-      <% } %>
-
-      <li class="page-item <%= current === total ? 'disabled' : '' %>">
-        <a class="page-link" href="#" data-page="<%= current + 1 %>"><i class="bx bx-chevron-right"></i></a>
-      </li>
-    </ul>
-  </nav>
-
-  <!-- Info kanan -->
-  <p id="paginationInfo" class="mb-0 text-nowrap" style="min-width: 200px;">
-    Halaman <%= pagination.page %> dari <%= pagination.totalPages %> — Total <%= pagination.totalProduct %> data
-  </p>
-</div>
+    <% } else {
+        categories.forEach((category, index) => { %>
+        <tr>
+            <td><%= index + 1 %></td>
+            <td><%= category.name %></td>
+            <td><%= category.prefix %></td>
+            <td>
+            <span class="badge bg-label-info me-1"><%= category.get('productCount') || 0 %></span> Produk
+            </td>
+            <td>
+            <button class="btn btn-sm btn-warning"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalEdit"
+                    data-id="<%= category.id %>"
+                    data-name="<%= category.name %>"
+                    data-prefix="<%= category.prefix %>">
+                <i class="bx bx-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-danger btn-delete" data-id="<%= category.id %>">
+                <i class="bx bx-trash"></i>
+            </button>
+            </td>
+        </tr>
+    <% }) } %>
+</tbody>

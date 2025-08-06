@@ -1,0 +1,67 @@
+<% const current = pagination.page;
+    const total = pagination.totalPages;
+    const limit = pagination.limit;
+    const totalData = pagination.totalProduct;
+
+    const createPage = (n) => `
+        <li class="page-item ${n === current ? 'active' : ''}">
+        <a class="page-link" href="javascript:void(0);" data-page="${n}">${n}</a>
+        </li>`; %>
+
+<div class="d-flex mt-3 gap-3 align-items-center justify-content-between flex-wrap">
+    <!-- Limit Select -->
+    <div class="d-flex align-items-center" style="min-width: 180px;">
+        <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
+        <select id="limitSelect" class="form-select form-select-sm" style="width: auto;">
+        <% [10, 25, 50].forEach(val => { %>
+            <option value="<%= val %>" <%= limit === val ? 'selected' : '' %>><%= val %></option>
+        <% }) %>
+        </select>
+    </div>
+
+    <!-- Pagination -->
+    <nav aria-label="Page navigation" class="flex-grow-1 d-flex justify-content-center">
+        <ul class="pagination mb-0">
+        <li class="page-item first <%= current === 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="javascript:void(0);" data-page="1">
+            <i class="tf-icon bx bx-chevrons-left"></i>
+            </a>
+        </li>
+        <li class="page-item prev <%= current === 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="javascript:void(0);" data-page="<%= current - 1 %>">
+            <i class="tf-icon bx bx-chevron-left"></i>
+            </a>
+        </li>
+
+        <% if (current > 3) { %>
+            <%- createPage(1) %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+        <% } %>
+
+        <% for (let i = Math.max(current - 2, 1); i <= Math.min(current + 2, total); i++) { %>
+            <%- createPage(i) %>
+        <% } %>
+
+        <% if (current < total - 2) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            <%- createPage(total) %>
+        <% } %>
+
+        <li class="page-item next <%= current === total ? 'disabled' : '' %>">
+            <a class="page-link" href="javascript:void(0);" data-page="<%= current + 1 %>">
+            <i class="tf-icon bx bx-chevron-right"></i>
+            </a>
+        </li>
+        <li class="page-item last <%= current === total ? 'disabled' : '' %>">
+            <a class="page-link" href="javascript:void(0);" data-page="<%= total %>">
+            <i class="tf-icon bx bx-chevrons-right"></i>
+            </a>
+        </li>
+        </ul>
+    </nav>
+
+    <!-- Info -->
+    <p class="mb-0 text-nowrap" style="min-width: 200px;">
+        Halaman <%= current %> dari <%= total %> — Total <%= totalData %> data
+    </p>
+</div>

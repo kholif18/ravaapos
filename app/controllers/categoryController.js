@@ -211,10 +211,13 @@ exports.getPartial = async (req, res) => {
             } :
             {};
 
-        const {
-            count,
-            rows
-        } = await Category.findAndCountAll({
+        // Hitung total count secara terpisah
+        const totalItems = await Category.count({
+            where
+        });
+
+        // Ambil rows dengan join dan grouping
+        const rows = await Category.findAll({
             where,
             attributes: {
                 include: [
@@ -228,26 +231,24 @@ exports.getPartial = async (req, res) => {
             },
             group: ['Category.id'],
             order: [
-                ['name', 'ASC']
+                [sort, order]
             ],
             limit,
             offset,
-            order: [
-                [sort, order]
-            ],
-            subQuery: false,
+            subQuery: false
         });
 
-        const totalItems = Array.isArray(count) ? count.length : count;
         const totalPages = Math.ceil(totalItems / limit);
 
-        res.render('categories/_tbody', {
+        res.render('categories/_partial', {
             categories: rows,
             pagination: {
                 page,
                 limit,
                 totalProduct: totalItems,
                 totalPages,
+                sort,
+                order
             },
             layout: false
         });

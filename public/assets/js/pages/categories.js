@@ -1,5 +1,3 @@
-// public/assets/js/pages/categories.js - Refactored with AJAX pagination & sort icon update
-
 import {
     showToast
 } from '/assets/js/utils/toast.js';
@@ -9,26 +7,29 @@ import {
 import {
     confirmDelete
 } from '/assets/js/utils/confirm.js';
+import {
+    initPagination
+} from '/assets/js/utils/initPagination.js';
 
 const modalCreate = document.getElementById('modalCreate');
 const modalEdit = document.getElementById('modalEdit');
-const tableWrapper = document.getElementById('categoryTableWrapper');
+const tbody = document.getElementById('categoryTbody');
+const paginationWrapper = document.getElementById('categoryPaginationWrapper');
 const formCreate = document.getElementById('formCreateCategory');
 const formEdit = document.getElementById('formEditCategory');
 const inputPrefix = document.getElementById('categoryPrefix');
 const prefixError = document.getElementById('prefixError');
-const limitSelect = document.getElementById('limitSelect');
 const searchInput = document.getElementById('searchCategory');
 const thNama = document.getElementById('thNama');
 
 let currentPage = 1;
-let currentLimit = parseInt(limitSelect?.value || 10);
+let currentLimit = 10;
 let currentSearch = '';
 let currentSort = 'name';
 let currentOrder = 'asc';
 let hasSorted = false;
 
-
+// === Helpers ===
 function debounce(fn, delay) {
     let timeout;
     return (...args) => {
@@ -37,6 +38,18 @@ function debounce(fn, delay) {
     };
 }
 
+function updateSortIcon() {
+    const iconSort = thNama?.querySelector('i');
+    if (!iconSort) return;
+
+    iconSort.className = !hasSorted ?
+        'bx bx-sort-alt-2' :
+        currentOrder === 'asc' ?
+        'bx bx-up-arrow-alt' :
+        'bx bx-down-arrow-alt';
+}
+
+// === Fetch & Render ===
 async function fetchCategories() {
     const query = new URLSearchParams({
         page: currentPage,
@@ -44,57 +57,72 @@ async function fetchCategories() {
         search: currentSearch,
         sort: currentSort,
         order: currentOrder,
-    }).toString();
+    });
 
     try {
         const res = await fetch(`/categories/partial?${query}`);
         const html = await res.text();
-        tableWrapper.innerHTML = html;
-        initEditButtons();  
+
+        // Parsing HTML hasil partial (tbody + pagination)
+        const tempEl = document.createElement('div');
+        tempEl.innerHTML = html;
+
+        const newTbody = tempEl.querySelector('#categoryTbody');
+        const newPagination = tempEl.querySelector('#categoryPaginationWrapper');
+
+        // Replace DOM kalau elemen ditemukan
+        if (newTbody) {
+            const oldTbody = document.getElementById('categoryTbody');
+            oldTbody?.replaceWith(newTbody); // pakai optional chaining
+        }
+
+        if (newPagination) {
+            const oldPagination = document.getElementById('categoryPaginationWrapper');
+            oldPagination?.replaceWith(newPagination);
+        }
+
+        // Inisialisasi ulang
+        initEditButtons();
         initDeleteButtons();
-        initPaginationLinks();
         updateSortIcon();
+        rebindPagination();
     } catch (err) {
+        console.error('fetchCategories error:', err);
         showToast({
             type: 'danger',
             title: 'Error',
-            message: 'Gagal memuat data kategori'
+            message: 'Gagal memuat data kategori',
         });
     }
 }
 
-function updateSortIcon() {
-    const iconSort = thNama?.querySelector('i');
-    if (!iconSort) return;
-
-    if (!hasSorted) {
-        iconSort.className = 'bx bx-sort-alt-2';
-        return;
-    }
-
-    if (currentSort === 'name') {
-        iconSort.className = currentOrder === 'asc' ? 'bx bx-up-arrow-alt' : 'bx bx-down-arrow-alt';
-    } else {
-        iconSort.className = 'bx bx-sort-alt-2';
-    }
+function rebindPagination() {
+    initPagination({
+        onPageChange: page => {
+            currentPage = page;
+            fetchCategories();
+        },
+        onLimitChange: limit => {
+            currentLimit = limit;
+            currentPage = 1;
+            fetchCategories();
+        },
+    });
 }
 
-
-searchInput?.addEventListener('input', debounce(e => {
-    currentSearch = e.target.value.trim();
-    currentPage = 1;
-    fetchCategories();
-}, 300));
+// === Events ===
+searchInput?.addEventListener(
+    'input',
+    debounce(e => {
+        currentSearch = e.target.value.trim();
+        currentPage = 1;
+        fetchCategories();
+    }, 300)
+);
 
 document.getElementById('resetFilter')?.addEventListener('click', () => {
     searchInput.value = '';
     currentSearch = '';
-    currentPage = 1;
-    fetchCategories();
-});
-
-limitSelect?.addEventListener('change', () => {
-    currentLimit = parseInt(limitSelect.value);
     currentPage = 1;
     fetchCategories();
 });
@@ -111,22 +139,11 @@ thNama?.addEventListener('click', () => {
     fetchCategories();
 });
 
-function initPaginationLinks() {
-    document.querySelectorAll('.page-link[data-page]').forEach(link => {
-        link.addEventListener('click', e => {
-            e.preventDefault();
-            const page = parseInt(link.dataset.page);
-            if (!isNaN(page)) {
-                currentPage = page;
-                fetchCategories();
-            }
-        });
-    });
-}
-
+// === Form Handlers ===
 formCreate?.addEventListener('submit', async e => {
     e.preventDefault();
     const prefix = inputPrefix.value.trim();
+
     if (!/^[A-Z]{2,5}$/.test(prefix)) {
         inputPrefix.classList.add('is-invalid');
         prefixError.style.display = 'block';
@@ -147,6 +164,7 @@ formCreate?.addEventListener('submit', async e => {
             body: JSON.stringify(data),
         });
         const result = await res.json();
+
         if (res.ok && result.success) {
             bootstrap.Modal.getInstance(modalCreate).hide();
             showToast({
@@ -179,6 +197,7 @@ formEdit?.addEventListener('submit', async e => {
         name: document.getElementById('editName').value,
         prefix: document.getElementById('editPrefix').value,
     };
+
     try {
         const res = await fetch(`/categories/${id}/update`, {
             method: 'POST',
@@ -188,6 +207,7 @@ formEdit?.addEventListener('submit', async e => {
             body: JSON.stringify(data),
         });
         const result = await res.json();
+
         if (res.ok && result.success) {
             bootstrap.Modal.getInstance(modalEdit).hide();
             showToast({
@@ -213,6 +233,7 @@ formEdit?.addEventListener('submit', async e => {
     }
 });
 
+// === Button Initializers ===
 function initEditButtons() {
     document.querySelectorAll('button[data-bs-target="#modalEdit"]').forEach(button => {
         button.addEventListener('click', () => {
@@ -229,11 +250,13 @@ function initDeleteButtons() {
             const id = button.dataset.id;
             const confirmed = await confirmDelete('Kategori ini akan dihapus dan tidak bisa dikembalikan.');
             if (!confirmed) return;
+
             try {
                 const res = await fetch(`/categories/${id}/delete`, {
                     method: 'POST'
                 });
                 const result = await res.json();
+
                 if (res.ok && result.success) {
                     showToast({
                         type: 'success',
@@ -259,10 +282,19 @@ function initDeleteButtons() {
     });
 }
 
-modalCreate.addEventListener('shown.bs.modal', () => modalCreate.querySelector('input[name="name"]').focus());
-modalEdit.addEventListener('shown.bs.modal', () => document.getElementById('editName').focus());
-modalCreate.addEventListener('hidden.bs.modal', () => resetModalForm(modalCreate));
-modalEdit.addEventListener('hidden.bs.modal', () => resetModalForm(modalEdit));
+// === Modal Focus & Reset ===
+modalCreate.addEventListener('shown.bs.modal', () =>
+    modalCreate.querySelector('input[name="name"]').focus()
+);
+modalEdit.addEventListener('shown.bs.modal', () =>
+    document.getElementById('editName').focus()
+);
+modalCreate.addEventListener('hidden.bs.modal', () =>
+    resetModalForm(modalCreate)
+);
+modalEdit.addEventListener('hidden.bs.modal', () =>
+    resetModalForm(modalEdit)
+);
 
-// Init awal
+// Init
 fetchCategories();

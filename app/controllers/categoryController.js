@@ -193,39 +193,29 @@ exports.delete = async (req, res) => {
     }
 };
 
-// GET /categories/json
-exports.getAllJson = async (req, res) => {
-    try {
-        const categories = await Category.findAll({
-            attributes: {
-                include: [
-                    [fn('COUNT', col('products.id')), 'productCount']
-                ]
-            },
-            include: {
-                model: Product,
-                as: 'products',
-                attributes: []
-            },
-            group: ['Category.id'],
-            order: [
-                ['name', 'ASC']
-            ]
-        });
-
-        res.json(categories);
-    } catch (err) {
-        console.error('Gagal memuat kategori (JSON):', err);
-        res.status(500).json({
-            message: 'Gagal memuat kategori'
-        });
-    }
-};
-
 // GET /categories/partial
 exports.getPartial = async (req, res) => {
     try {
-        const categories = await Category.findAll({
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+        const search = req.query.search?.trim();
+        const sort = req.query.sort || 'name';
+        const order = req.query.order === 'desc' ? 'DESC' : 'ASC';
+
+        const where = search ?
+            {
+                name: {
+                    [Op.like]: `%${search}%`
+                }
+            } :
+            {};
+
+        const {
+            count,
+            rows
+        } = await Category.findAndCountAll({
+            where,
             attributes: {
                 include: [
                     [fn('COUNT', col('products.id')), 'productCount']
@@ -239,11 +229,26 @@ exports.getPartial = async (req, res) => {
             group: ['Category.id'],
             order: [
                 ['name', 'ASC']
-            ]
+            ],
+            limit,
+            offset,
+            order: [
+                [sort, order]
+            ],
+            subQuery: false,
         });
 
+        const totalItems = Array.isArray(count) ? count.length : count;
+        const totalPages = Math.ceil(totalItems / limit);
+
         res.render('categories/_tbody', {
-            categories,
+            categories: rows,
+            pagination: {
+                page,
+                limit,
+                totalProduct: totalItems,
+                totalPages,
+            },
             layout: false
         });
     } catch (err) {

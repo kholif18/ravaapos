@@ -9,20 +9,50 @@ const {
 const {Op} = require('sequelize');
 
 exports.getAll = async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    const where = search ? {
+        name: {
+            [Op.like]: `%${search}%`
+        }
+    } : {};
+
     try {
-        const suppliers = await Supplier.findAll({
+        const {
+            count,
+            rows
+        } = await Supplier.findAndCountAll({
+            where,
             order: [
                 ['name', 'ASC']
-            ]
+            ],
+            limit,
+            offset,
         });
+
+        const totalPages = Math.ceil(count / limit);
+
         res.render('suppliers/index', {
             title: 'Suppliers',
-            suppliers,
-            activePage: 'suppliers'
+            activePage: 'suppliers',
+            suppliers: rows,
+            pagination: {
+                page,
+                limit,
+                totalItems: count,
+                totalPages,
+                search
+            }
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server error');
+        console.error('Gagal memuat data supplier:', err);
+        res.status(500).render('error', {
+            message: 'Gagal memuat supplier',
+            error: err
+        });
     }
 };
 
@@ -160,5 +190,41 @@ exports.delete = async (req, res) => {
             success: false,
             message: 'Gagal menghapus supplier'
         });
+    }
+};
+
+exports.getPartial = async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+    const search = req.query.search || '';
+
+    try {
+        const where = search ?
+            {
+                name: {
+                    [Op.like]: `%${search}%`
+                }
+            } :
+            {};
+
+        const {
+            rows
+        } = await Supplier.findAndCountAll({
+            where,
+            order: [
+                ['name', 'ASC']
+            ],
+            limit,
+            offset
+        });
+
+        res.render('suppliers/_tbody', {
+            layout: false,
+            suppliers: rows
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Gagal memuat data');
     }
 };

@@ -1,0 +1,30 @@
+<% if (suppliers.length === 0) { %>
+  <tr>
+    <td colspan="6" class="text-center text-muted">Tidak ada data supplier</td>
+  </tr>
+<% } else { %>
+  <% suppliers.forEach(supplier => { %>
+  <tr>
+    <td><%= supplier.name %></td>
+    <td><%= supplier.phone || '-' %></td>
+    <td><%= supplier.email || '-' %></td>
+    <td><%= supplier.address || '-' %></td>
+    <td><%= supplier.note || '-' %></td>
+    <td>
+      <button class="btn btn-sm btn-warning btn-edit"
+        data-id="<%= supplier.id %>"
+        data-name="<%= supplier.name %>"
+        data-phone="<%= supplier.phone || '' %>"
+        data-email="<%= supplier.email || '' %>"
+        data-address="<%= supplier.address || '' %>"
+        data-note="<%= supplier.note || '' %>"
+        data-bs-toggle="modal" data-bs-target="#modalEdit">
+        <i class="bx bx-edit"></i>
+      </button>
+      <button class="btn btn-sm btn-danger btn-delete" data-id="<%= supplier.id %>">
+        <i class="bx bx-trash"></i>
+      </button>
+    </td>
+  </tr>
+  <% }) %>
+<% } %>

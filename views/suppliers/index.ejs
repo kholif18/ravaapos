@@ -13,14 +13,14 @@
         </button>
       </div>
     </div>
-    <div class="row">
+    <form method="GET" class="row g-2 mb-3">
       <div class="col-md-10">
-        <input type="text" id="searchSupplier" class="form-control" placeholder="Cari nama supplier...">
+        <input type="text" class="form-control" name="search" value="<%= pagination.search || '' %>" placeholder="Cari nama supplier...">
       </div>
       <div class="col-md-2 d-grid">
-        <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
+        <button class="btn btn-outline-secondary" type="submit"><i class="bx bx-search"></i> Cari</button>
       </div>
-    </div>
+    </form>
   </div>
   <!-- Tabel Supplier -->
   <div class="card-body">
@@ -37,22 +37,65 @@
             <th>Aksi</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+          <%- include('_tbody', { suppliers }) %>
+        </tbody>
+
       </table>
     </div>
 
     <div class="d-flex mt-3 gap-3 align-items-center justify-content-between flex-wrap" id="paginationContainer">
-      <div class="d-flex align-items-center" style="min-width: 180px;">
+      <form method="GET" class="d-flex align-items-center mb-3" style="min-width: 180px;">
+        <input type="hidden" name="search" value="<%= pagination.search %>">
         <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
-        <select id="limitSelect" class="form-select form-select-sm" style="width: auto;">
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50</option>
+        <select id="limitSelect" class="form-select form-select-sm" name="limit" onchange="this.form.submit()">
+          <% [10, 25, 50].forEach(val => { %>
+            <option value="<%= val %>" <%= pagination.limit == val ? 'selected' : '' %>><%= val %></option>
+          <% }) %>
         </select>
-      </div>
+      </form>
 
-      <nav class="flex-grow-1 d-flex justify-content-center">
-        <ul class="pagination mb-0"></ul>
+      <!-- Pagination Bawah -->
+      <nav>
+        <ul class="pagination">
+          <% const current = pagination.page;
+            const total = pagination.totalPages;
+            const limit = pagination.limit;
+            const search = pagination.search;
+            const buildHref = (page) => `?page=${page}&limit=${limit}&search=${search}`;
+            const createPage = (n) => `
+              <li class="page-item ${n === current ? 'active' : ''}">
+                <a class="page-link" href="${buildHref(n)}">${n}</a>
+              </li>`; %>
+
+          <li class="page-item <%= current === 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= buildHref(1) %>">«</a>
+          </li>
+          <li class="page-item <%= current === 1 ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= buildHref(current - 1) %>">‹</a>
+          </li>
+
+          <% if (current > 3) { %>
+            <%- createPage(1) %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+          <% } %>
+
+          <% for (let i = Math.max(current - 2, 1); i <= Math.min(current + 2, total); i++) { %>
+            <%- createPage(i) %>
+          <% } %>
+
+          <% if (current < total - 2) { %>
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            <%- createPage(total) %>
+          <% } %>
+
+          <li class="page-item <%= current === total ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= buildHref(current + 1) %>">›</a>
+          </li>
+          <li class="page-item <%= current === total ? 'disabled' : '' %>">
+            <a class="page-link" href="<%= buildHref(total) %>">»</a>
+          </li>
+        </ul>
       </nav>
 
       <p class="mb-0 text-nowrap info" style="min-width: 200px;"></p>

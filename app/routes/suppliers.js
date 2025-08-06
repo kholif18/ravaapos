@@ -10,6 +10,7 @@ router.get('/json', supplierController.getAllJSON);
 
 // POST tambah supplier
 router.post('/', supplierController.create);
+router.get('/partial', supplierController.getPartial);
 
 // POST update supplier
 router.post('/:id/update', supplierController.update);

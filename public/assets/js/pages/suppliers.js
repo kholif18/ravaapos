@@ -15,53 +15,28 @@ let maxPage = 1;
 let currentSearch = '';
 
 async function loadSuppliers(page = 1, limit = 10, search = '') {
-    page = Math.max(1, Math.min(page, maxPage));
+    page = Math.max(1, page);
     currentSearch = search;
 
     try {
-        const res = await fetch(`/suppliers/json?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+        // 1. Fetch partial HTML untuk tbody
+        const tbodyRes = await fetch(`/suppliers/partial?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+        const html = await tbodyRes.text();
+        document.querySelector('#tableSupplier tbody').innerHTML = html;
+
+        // 2. Fetch JSON pagination
+        const jsonRes = await fetch(`/suppliers/json?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
         const {
-            data,
             pagination
-        } = await res.json();
+        } = await jsonRes.json();
 
         currentPage = pagination.page;
         currentLimit = pagination.limit;
         maxPage = pagination.totalPages;
 
-        const tbody = document.querySelector('#tableSupplier tbody');
-        tbody.innerHTML = '';
-
-        data.forEach(supplier => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-        <td>${supplier.name}</td>
-        <td>${supplier.phone || '-'}</td>
-        <td>${supplier.email || '-'}</td>
-        <td>${supplier.address || '-'}</td>
-        <td>${supplier.note || '-'}</td>
-        <td>
-        <button class="btn btn-sm btn-warning btn-edit" 
-            data-id="${supplier.id}"
-            data-name="${supplier.name}"
-            data-phone="${supplier.phone || ''}"
-            data-email="${supplier.email || ''}"
-            data-address="${supplier.address || ''}"
-            data-note="${supplier.note || ''}"
-            data-bs-toggle="modal" data-bs-target="#modalEdit">
-            <i class="bx bx-edit"></i>
-        </button>
-        <button class="btn btn-sm btn-danger btn-delete" data-id="${supplier.id}">
-            <i class="bx bx-trash"></i>
-        </button>
-        </td>
-    `;
-            tbody.appendChild(row);
-        });
-
+        renderPagination(pagination);
         initEditButtons();
         initDeleteButtons();
-        renderPagination(pagination);
     } catch (err) {
         showToast({
             type: 'danger',
@@ -70,6 +45,7 @@ async function loadSuppliers(page = 1, limit = 10, search = '') {
         });
     }
 }
+
 
 document.getElementById('searchSupplier').addEventListener('input', e => {
     const keyword = e.target.value.trim();

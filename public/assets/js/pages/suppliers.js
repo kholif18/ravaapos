@@ -81,6 +81,40 @@ function bindEvents() {
         });
     });
 
+    // Detail
+    document.querySelectorAll('.btn-detail').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+
+            try {
+                const res = await fetch(`/suppliers/${id}/json`);
+                const result = await res.json();
+                if (!res.ok || !result.success) throw new Error(result.message || 'Gagal mengambil data.');
+
+                const s = result.data;
+
+                document.getElementById('detailCode').textContent = s.code || '-';
+                document.getElementById('detailName').textContent = s.name || '-';
+                document.getElementById('detailPhone').textContent = s.phone || '-';
+                document.getElementById('detailEmail').innerHTML = s.email ? `<a href="mailto:${s.email}">${s.email}</a>` : '-';
+                document.getElementById('detailAddress').textContent = s.address || '-';
+                document.getElementById('detailCity').textContent = s.city || '-';
+                document.getElementById('detailPostalCode').textContent = s.postalCode || '-';
+                document.getElementById('detailCountry').textContent = s.country || '-';
+                document.getElementById('detailNote').textContent = s.note || '-';
+
+                const modal = new bootstrap.Modal(document.getElementById('modalDetailSupplier'));
+                modal.show();
+            } catch (err) {
+                showToast({
+                    type: 'danger',
+                    title: 'Error',
+                    message: err.message || 'Gagal menampilkan detail supplier.'
+                });
+            }
+        });
+    });
+    
     // Delete
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -256,6 +290,50 @@ formEdit?.addEventListener('submit', async function (e) {
             message: 'Gagal mengubah supplier.'
         });
     }
+});
+
+document.getElementById('btnExportCSV')?.addEventListener('click', () => {
+    window.location.href = '/suppliers/export-csv';
+});
+
+document.getElementById('formImportCSV')?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    try {
+        const res = await fetch('/suppliers/import-csv', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalImportCSV')).hide();
+            showToast({
+                type: 'success',
+                title: 'Berhasil',
+                message: result.message
+            });
+            loadSuppliers(); // Reload data
+        } else {
+            showToast({
+                type: 'danger',
+                title: 'Gagal',
+                message: result.message
+            });
+        }
+    } catch (err) {
+        showToast({
+            type: 'danger',
+            title: 'Error',
+            message: 'Gagal import CSV'
+        });
+    }
+});
+
+document.querySelector('.btn-outline-info')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = '/suppliers/template-csv';
 });
 
 // Modal reset & focus

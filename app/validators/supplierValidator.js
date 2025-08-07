@@ -4,6 +4,10 @@ const {
 const {
     Supplier
 } = require('../models');
+const {
+    Op
+} = require('sequelize');
+
 
 exports.validateCreateSupplier = [
     body('code')

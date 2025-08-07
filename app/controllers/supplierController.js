@@ -10,6 +10,11 @@ const {Op} = require('sequelize');
 const {
     getPaginationParams
 } = require('../helpers/pagination');
+const {
+    Parser
+} = require('json2csv');
+const fs = require('fs');
+const csvParser = require('csv-parser');
 
 exports.getAll = async (req, res) => {
     const search = req.query.search || '';
@@ -132,7 +137,7 @@ exports.generateSupplierCode = async (req, res) => {
         let newCode;
         let exists = true;
         do {
-            newCode = `SUP${String(nextNumber).padStart(4, '0')}`;
+            newCode = `SUP${String(nextNumber).padStart(3, '0')}`;
             const dup = await Supplier.findOne({
                 where: {
                     code: newCode
@@ -373,4 +378,74 @@ exports.getDetail = async (req, res) => {
             error: err
         });
     }
+};
+
+exports.exportCSV = async (req, res) => {
+    try {
+        const suppliers = await Supplier.findAll();
+        const fields = ['code', 'name', 'phone', 'email', 'address', 'city', 'postalCode', 'country', 'note'];
+        const json2csv = new Parser({
+            fields
+        });
+        const csv = json2csv.parse(suppliers.map(s => s.toJSON()));
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment('suppliers.csv');
+        return res.send(csv);
+    } catch (err) {
+        console.error('Gagal export CSV:', err);
+        res.status(500).send('Gagal export data supplier.');
+    }
+};
+
+exports.importCSV = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({
+            success: false,
+            message: 'File CSV tidak ditemukan'
+        });
+    }
+
+    const suppliers = [];
+
+    fs.createReadStream(req.file.path)
+        .pipe(csvParser())
+        .on('data', row => {
+            suppliers.push({
+                code: row.code,
+                name: row.name,
+                phone: row.phone,
+                email: row.email,
+                address: row.address,
+                city: row.city,
+                postalCode: row.postalCode,
+                country: row.country,
+                note: row.note
+            });
+        })
+        .on('end', async () => {
+            try {
+                await Supplier.bulkCreate(suppliers, {
+                    ignoreDuplicates: true
+                });
+                fs.unlinkSync(req.file.path); // Hapus file sementara
+                res.json({
+                    success: true,
+                    message: `${suppliers.length} supplier berhasil diimport`
+                });
+            } catch (err) {
+                console.error('Gagal import:', err);
+                res.status(500).json({
+                    success: false,
+                    message: 'Gagal mengimport CSV'
+                });
+            }
+        });
+};
+
+exports.downloadTemplate = (req, res) => {
+    const headers = 'code,name,phone,email,address,city,postalCode,country,note\n';
+    res.header('Content-Type', 'text/csv');
+    res.attachment('template_supplier.csv');
+    res.send(headers);
 };

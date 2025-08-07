@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const supplierController = require('../controllers/supplierController');
+const multer = require('multer');
+const upload = multer({
+    dest: 'uploads/'
+});
 
 const {
     validateCreateSupplier,
@@ -51,5 +55,9 @@ router.get('/:id/json', supplierController.getByIdJSON);
 router.post('/:id/delete', supplierController.delete);
 
 router.get('/:id/detail', supplierController.getDetail);
+router.get('/export-csv', supplierController.exportCSV);
+
+router.post('/import-csv', upload.single('csv'), supplierController.importCSV);
+router.get('/template-csv', supplierController.downloadTemplate);
 
 module.exports = router;

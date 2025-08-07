@@ -5,6 +5,7 @@
 <% } else { %>
   <% suppliers.forEach(supplier => { %>
   <tr>
+    <td><%= supplier.code %></td>
     <td><%= supplier.name %></td>
     <td><%= supplier.phone || '-' %></td>
     <td><a href="mailto:<%= supplier.email || '-' %>"><%= supplier.email || '-' %></a></td>
@@ -13,9 +14,9 @@
       <button class="btn btn-sm btn-warning btn-edit" data-id="<%= supplier.id %>">
         <i class="bx bx-edit"></i>
       </button>
-      <a href="/suppliers/<%= supplier.id %>/detail" class="btn btn-sm btn-info">
+      <button class="btn btn-sm btn-info btn-detail" data-id="<%= supplier.id %>">
         <i class="bx bx-search-alt"></i>
-      </a>
+      </button>
       <button class="btn btn-sm btn-danger btn-delete" data-id="<%= supplier.id %>">
         <i class="bx bx-trash"></i>
       </button>

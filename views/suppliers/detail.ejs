@@ -24,7 +24,14 @@
             </div>
             <div class="col-md-6 mb-3">
             <i class="bx bx-envelope me-2 text-primary"></i>
-            <strong>Email:</strong> <span class="text-muted"><%= supplier.email || '-' %></span>
+            <strong>Email:</strong>
+                <% if (supplier.email) { %>
+                <a href="mailto:<%= supplier.email %>" class="text-primary">
+                    <%= supplier.email %>
+                </a>
+                <% } else { %>
+                <span class="text-muted">-</span>
+                <% } %>
             </div>
 
             <div class="col-md-6 mb-3">

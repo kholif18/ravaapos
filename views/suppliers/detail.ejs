@@ -1,0 +1,56 @@
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="gap-2">
+        <h5 class="mb-0">Detail Supplier</h5>
+    </div>
+    <div class="gap-2">
+        <a href="/suppliers" class="btn btn-secondary">Kembali</a>
+    </div>
+</div>
+<div class="card">
+    <div class="card-body">
+        <div class="row mb-2">
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-barcode me-2 text-primary"></i>
+            <strong>Kode:</strong> <span class="text-muted"><%= supplier.code %></span>
+            </div>
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-user me-2 text-primary"></i>
+            <strong>Nama:</strong> <span class="text-muted"><%= supplier.name %></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-phone me-2 text-primary"></i>
+            <strong>Telepon:</strong> <span class="text-muted"><%= supplier.phone || '-' %></span>
+            </div>
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-envelope me-2 text-primary"></i>
+            <strong>Email:</strong> <span class="text-muted"><%= supplier.email || '-' %></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-map me-2 text-primary"></i>
+            <strong>Alamat:</strong> <span class="text-muted"><%= supplier.address || '-' %></span>
+            </div>
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-buildings me-2 text-primary"></i>
+            <strong>Kota:</strong> <span class="text-muted"><%= supplier.city || '-' %></span>
+            </div>
+
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-mail-send me-2 text-primary"></i>
+            <strong>Kode Pos:</strong> <span class="text-muted"><%= supplier.postalCode || '-' %></span>
+            </div>
+            <div class="col-md-6 mb-3">
+            <i class="bx bx-flag me-2 text-primary"></i>
+            <strong>Negara:</strong> <span class="text-muted"><%= supplier.country || '-' %></span>
+            </div>
+
+            <div class="col-12">
+            <i class="bx bx-note me-2 text-primary"></i>
+            <strong>Catatan:</strong>
+            <div class="text-muted ms-4 mt-1"><%= supplier.note || '-' %></div>
+            </div>
+        </div>
+        </div>
+
+</div>

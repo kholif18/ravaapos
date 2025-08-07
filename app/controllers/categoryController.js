@@ -7,18 +7,24 @@ const {
     col,
     Op
 } = require('sequelize');
+const {
+    getPaginationParams
+} = require('../helpers/pagination');
 
 // GET /categories
 exports.getAll = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const offset = (page - 1) * limit;
+        const totalItems = await Category.count();
 
         const {
-            count,
-            rows
-        } = await Category.findAndCountAll({
+            page,
+            limit,
+            offset,
+            totalPages
+        } = getPaginationParams(req.query.page, req.query.limit, totalItems);
+
+        // Ambil data kategori (dengan grouping produk)
+        const rows = await Category.findAll({
             attributes: {
                 include: [
                     [fn('COUNT', col('products.id')), 'productCount']
@@ -37,9 +43,6 @@ exports.getAll = async (req, res) => {
             offset,
             subQuery: false
         });
-
-        const totalItems = Array.isArray(count) ? count.length : count;
-        const totalPages = Math.ceil(totalItems / limit);
 
         res.render('categories/index', {
             title: 'Categories',
@@ -196,9 +199,6 @@ exports.delete = async (req, res) => {
 // GET /categories/partial
 exports.getPartial = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const offset = (page - 1) * limit;
         const search = req.query.search?.trim();
         const sort = req.query.sort || 'name';
         const order = req.query.order === 'desc' ? 'DESC' : 'ASC';
@@ -211,12 +211,19 @@ exports.getPartial = async (req, res) => {
             } :
             {};
 
-        // Hitung total count secara terpisah
+        // Hitung total item
         const totalItems = await Category.count({
             where
         });
 
-        // Ambil rows dengan join dan grouping
+        const {
+            page,
+            limit,
+            offset,
+            totalPages
+        } = getPaginationParams(req.query.page, req.query.limit, totalItems);
+
+        // Ambil data kategori dengan join + group
         const rows = await Category.findAll({
             where,
             attributes: {
@@ -237,8 +244,6 @@ exports.getPartial = async (req, res) => {
             offset,
             subQuery: false
         });
-
-        const totalPages = Math.ceil(totalItems / limit);
 
         res.render('categories/_partial', {
             categories: rows,

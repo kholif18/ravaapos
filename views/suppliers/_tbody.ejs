@@ -7,20 +7,15 @@
   <tr>
     <td><%= supplier.name %></td>
     <td><%= supplier.phone || '-' %></td>
-    <td><%= supplier.email || '-' %></td>
+    <td><a href="mailto:<%= supplier.email || '-' %>"><%= supplier.email || '-' %></a></td>
     <td><%= supplier.address || '-' %></td>
-    <td><%= supplier.note || '-' %></td>
     <td>
-      <button class="btn btn-sm btn-warning btn-edit"
-        data-id="<%= supplier.id %>"
-        data-name="<%= supplier.name %>"
-        data-phone="<%= supplier.phone || '' %>"
-        data-email="<%= supplier.email || '' %>"
-        data-address="<%= supplier.address || '' %>"
-        data-note="<%= supplier.note || '' %>"
-        data-bs-toggle="modal" data-bs-target="#modalEdit">
+      <button class="btn btn-sm btn-warning btn-edit" data-id="<%= supplier.id %>">
         <i class="bx bx-edit"></i>
       </button>
+      <a href="/suppliers/<%= supplier.id %>/detail" class="btn btn-sm btn-info">
+        <i class="bx bx-search-alt"></i>
+      </a>
       <button class="btn btn-sm btn-danger btn-delete" data-id="<%= supplier.id %>">
         <i class="bx bx-trash"></i>
       </button>

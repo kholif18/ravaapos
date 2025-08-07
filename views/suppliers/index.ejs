@@ -37,26 +37,61 @@
       </div>
 
       <div class="modal-body">
+        <!-- Kode Supplier -->
+        <div class="mb-3">
+          <label class="form-label">Kode Supplier</label>
+          <input type="text" name="code" id="inputSupplierCode" class="form-control" required>
+          <div class="invalid-feedback" id="codeError">Kode sudah digunakan, silakan ganti.</div>
+        </div>
+
+        <!-- Nama -->
         <div class="mb-3">
           <label class="form-label">Nama</label>
-          <input type="text" name="name" class="form-control" required autofocus>
+          <input type="text" name="name" class="form-control" required>
         </div>
+
+        <!-- Kontak -->
         <div class="mb-3">
-          <label class="form-label">Kontak</label>
+          <label class="form-label">Phone</label>
           <input type="text" name="phone" class="form-control">
         </div>
+
+        <!-- Email -->
         <div class="mb-3">
           <label class="form-label">Email</label>
           <input type="email" name="email" class="form-control">
         </div>
+
+        <!-- Alamat -->
         <div class="mb-3">
           <label class="form-label">Alamat</label>
           <input type="text" name="address" class="form-control">
         </div>
+
+        <!-- Kota -->
+        <div class="mb-3">
+          <label class="form-label">Kota</label>
+          <input type="text" name="city" class="form-control">
+        </div>
+
+        <!-- Kode Pos -->
+        <div class="mb-3">
+          <label class="form-label">Kode Pos</label>
+          <input type="text" name="postalCode" class="form-control">
+        </div>
+
+        <!-- Negara -->
+        <div class="mb-3">
+          <label class="form-label">Negara</label>
+          <input type="text" name="country" class="form-control">
+        </div>
+
+        <!-- Catatan -->
         <div class="mb-3">
           <label class="form-label">Catatan</label>
-          <input type="text" name="note" class="form-control">
+          <textarea name="note" class="form-control" rows="3" placeholder="Tulis catatan tambahan..."></textarea>
         </div>
+
       </div>
 
       <div class="modal-footer">
@@ -75,25 +110,50 @@
       </div>
 
       <div class="modal-body">
+        <!-- Kode Supplier (readonly) -->
+        <div class="mb-3">
+          <label class="form-label">Kode</label>
+          <input type="text" name="code" class="form-control" id="editSupplierCode" readonly>
+        </div>
+
         <div class="mb-3">
           <label class="form-label">Nama</label>
           <input type="text" name="name" class="form-control" required>
         </div>
+
         <div class="mb-3">
           <label class="form-label">Kontak</label>
           <input type="text" name="phone" class="form-control">
         </div>
+
         <div class="mb-3">
           <label class="form-label">Email</label>
           <input type="email" name="email" class="form-control">
         </div>
+
         <div class="mb-3">
           <label class="form-label">Alamat</label>
           <input type="text" name="address" class="form-control">
         </div>
+
+        <div class="mb-3">
+          <label class="form-label">Kota</label>
+          <input type="text" name="city" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Kode Pos</label>
+          <input type="text" name="postalCode" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Negara</label>
+          <input type="text" name="country" class="form-control">
+        </div>
+
         <div class="mb-3">
           <label class="form-label">Catatan</label>
-          <input type="text" name="note" class="form-control">
+          <textarea name="note" class="form-control" rows="3"></textarea>
         </div>
       </div>
 

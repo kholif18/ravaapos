@@ -7,13 +7,12 @@ const {
     validationResult
 } = require('express-validator');
 const {Op} = require('sequelize');
+const {
+    getPaginationParams
+} = require('../helpers/pagination');
 
 exports.getAll = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
     const search = req.query.search || '';
-
     const where = search ? {
         name: {
             [Op.like]: `%${search}%`
@@ -21,10 +20,18 @@ exports.getAll = async (req, res) => {
     } : {};
 
     try {
+        const totalItems = await Supplier.count({
+            where
+        });
+
         const {
-            count,
-            rows
-        } = await Supplier.findAndCountAll({
+            page,
+            limit,
+            offset,
+            totalPages
+        } = getPaginationParams(req.query.page, req.query.limit, totalItems);
+
+        const rows = await Supplier.findAll({
             where,
             order: [
                 ['name', 'ASC']
@@ -33,8 +40,6 @@ exports.getAll = async (req, res) => {
             offset,
         });
 
-        const totalPages = Math.ceil(count / limit);
-
         res.render('suppliers/index', {
             title: 'Suppliers',
             activePage: 'suppliers',
@@ -42,7 +47,7 @@ exports.getAll = async (req, res) => {
             pagination: {
                 page,
                 limit,
-                totalItems: count,
+                totalItems,
                 totalPages,
                 search
             }
@@ -50,6 +55,8 @@ exports.getAll = async (req, res) => {
     } catch (err) {
         console.error('Gagal memuat data supplier:', err);
         res.status(500).render('error', {
+            title: 'Error',
+            activePage: 'suppliers',
             message: 'Gagal memuat supplier',
             error: err
         });
@@ -57,24 +64,26 @@ exports.getAll = async (req, res) => {
 };
 
 exports.getAllJSON = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
     const search = req.query.search || '';
+    const where = search ? {
+        name: {
+            [Op.like]: `%${search}%`
+        }
+    } : {};
 
     try {
-        const where = search ?
-            {
-                name: {
-                    [Op.like]: `%${search}%`
-                }
-            } :
-            {};
-
+        const totalItems = await Supplier.count({
+            where
+        });
+        
         const {
-            count,
-            rows
-        } = await Supplier.findAndCountAll({
+            page,
+            limit,
+            offset,
+            totalPages
+        } = getPaginationParams(req.query.page, req.query.limit, totalItems);
+
+        const rows = await Supplier.findAll({
             where,
             order: [
                 ['name', 'ASC']
@@ -83,14 +92,12 @@ exports.getAllJSON = async (req, res) => {
             offset
         });
 
-        const totalPages = Math.ceil(count / limit);
-
         res.json({
             data: rows,
             pagination: {
                 page,
                 limit,
-                totalItems: count,
+                totalItems,
                 totalPages
             }
         });
@@ -103,20 +110,92 @@ exports.getAllJSON = async (req, res) => {
     }
 };
 
+exports.generateSupplierCode = async (req, res) => {
+    try {
+        const last = await Supplier.findOne({
+            where: {
+                code: {
+                    [Op.like]: 'SUP%'
+                }
+            },
+            order: [
+                ['createdAt', 'DESC']
+            ],
+        });
+
+        let nextNumber = 1;
+        if (last?.code?.startsWith('SUP')) {
+            const num = parseInt(last.code.slice(3));
+            if (!isNaN(num)) nextNumber = num + 1;
+        }
+
+        let newCode;
+        let exists = true;
+        do {
+            newCode = `SUP${String(nextNumber).padStart(4, '0')}`;
+            const dup = await Supplier.findOne({
+                where: {
+                    code: newCode
+                }
+            });
+            exists = !!dup;
+            nextNumber++;
+        } while (exists);
+
+        res.json({
+            code: newCode
+        });
+    } catch {
+        res.status(500).json({
+            error: 'Gagal generate kode'
+        });
+    }
+};
+
+exports.checkCode = async (req, res) => {
+    try {
+        const code = req.query.code?.trim();
+        if (!code) return res.json({
+            exists: false
+        });
+
+        const exists = await Supplier.findOne({
+            where: {
+                code
+            }
+        });
+        res.json({
+            exists: !!exists
+        });
+    } catch {
+        res.status(500).json({
+            error: 'Gagal memeriksa kode'
+        });
+    }
+};
+
 exports.create = async (req, res) => {
     const {
+        code,
         name,
         phone,
         email,
         address,
+        city,
+        postalCode,
+        country,
         note
     } = req.body;
     try {
         await Supplier.create({
+            code,
             name,
             phone,
             email,
             address,
+            city,
+            postalCode,
+            country,
             note
         });
         res.json({
@@ -135,10 +214,14 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     const id = req.params.id;
     const {
+        code,
         name,
         phone,
         email,
         address,
+        city,
+        postalCode,
+        country,
         note
     } = req.body;
 
@@ -150,10 +233,14 @@ exports.update = async (req, res) => {
         });
 
         await supplier.update({
+            code,
             name,
             phone,
             email,
             address,
+            city,
+            postalCode,
+            country,
             note
         });
         res.json({
@@ -166,6 +253,32 @@ exports.update = async (req, res) => {
             success: false,
             message: 'Gagal memperbarui supplier'
         });
+    }
+};
+
+exports.getByIdJSON = async (req, res) => {
+    try {
+        const supplier = await Supplier.findByPk(req.params.id);
+        if (!supplier) {
+            return res.status(404).json({
+                success: false,
+                message: 'Supplier tidak ditemukan'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: supplier
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).render('error', {
+            title: 'Error',
+            activePage: '', // atau 'suppliers' atau nilai lain yang aman
+            message: 'Gagal memuat supplier',
+            error: err
+        });
+
     }
 };
 
@@ -194,33 +307,32 @@ exports.delete = async (req, res) => {
 };
 
 exports.getPartial = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
     const search = req.query.search?.trim() || '';
+    const where = search ? {
+        name: {
+            [Op.like]: `%${search}%`
+        }
+    } : {};
 
     try {
-        const where = search ?
-            {
-                name: {
-                    [Op.like]: `%${search}%`
-                }
-            } :
-            {};
-
+        const totalItems = await Supplier.count({
+            where
+        });
         const {
-            count,
-            rows
-        } = await Supplier.findAndCountAll({
+            page,
+            limit,
+            offset,
+            totalPages
+        } = getPaginationParams(req.query.page, req.query.limit, totalItems);
+
+        const rows = await Supplier.findAll({
             where,
             order: [
                 ['name', 'ASC']
             ],
             limit,
-            offset,
+            offset
         });
-
-        const totalPages = Math.ceil(count / limit);
 
         res.render('suppliers/_partial', {
             layout: false,
@@ -229,12 +341,36 @@ exports.getPartial = async (req, res) => {
                 page,
                 limit,
                 totalPages,
-                totalItems: count,
+                totalItems,
                 search
             }
         });
     } catch (err) {
         console.error('Gagal memuat partial supplier:', err);
         res.status(500).send('Gagal memuat data');
+    }
+};
+
+exports.getDetail = async (req, res) => {
+    try {
+        const supplier = await Supplier.findByPk(req.params.id);
+        if (!supplier) {
+            return res.status(404).render('error', {
+                message: 'Supplier tidak ditemukan',
+                error: {}
+            });
+        }
+
+        res.render('suppliers/detail', {
+            title: `Detail Supplier - ${supplier.name}`,
+            supplier,
+            activePage: 'suppliers'
+        });
+    } catch (err) {
+        console.error('Gagal mengambil detail supplier:', err);
+        res.status(500).render('error', {
+            message: 'Terjadi kesalahan',
+            error: err
+        });
     }
 };

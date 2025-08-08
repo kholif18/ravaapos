@@ -1,0 +1,21 @@
+<div class="table-responsive">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th id="thNama" style="cursor:pointer">Nama <i class="bx bx-sort-alt-2"></i></th>
+                <th>Tipe</th>
+                <th>Email & Telepon</th>
+                <th>Pendaftaran</th>
+                <th>Status</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="customerTbody">
+            <%- include('_tbody', { customers, pagination }) %>
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+<%- include('../partials/pagination', { pagination, query }) %>

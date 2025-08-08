@@ -19,6 +19,7 @@ const typeSelect = form ? form.querySelector('[name="type"]') : null;
 const memberFields = ['#memberFields', '#memberFieldsDiskon', '#memberFieldsPoin']
     .map(id => document.querySelector(id))
     .filter(Boolean);
+const thNama = document.getElementById('thNama');
 
 let currentPage = 1;
 let currentLimit = 10;
@@ -26,7 +27,8 @@ let currentSearch = '';
 let currentType = '';
 let currentStatus = '';
 let currentSort = 'name';
-let currentOrder = 'ASC';
+let currentOrder = 'asc';
+let hasSorted = false;
 
 // helpers
 function debounce(fn, wait = 250) {
@@ -49,128 +51,15 @@ function safeParseCustomer(encoded) {
         return null;
     }
 }
+function updateSortIcon() {
+    const iconSort = document.getElementById('thNama')?.querySelector('i');
+    if (!iconSort) return;
 
-function escapeHtml(str = '') {
-    return String(str)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-}
-
-// render table rows from JSON data
-function renderCustomerTable(customers = []) {
-    // try several selectors to be tolerant with partials
-    const tbody = document.getElementById('customerTableBody') || document.querySelector('#customerWrapper tbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-
-    if (!customers || customers.length === 0) {
-        const cols = tbody.closest('table')?.querySelectorAll('thead th').length || 7;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="${cols}" class="text-center text-muted py-4">
-                        Tidak ada data customer.
-                    </td>`;
-        tbody.appendChild(tr);
-        return;
-    }
-
-    customers.forEach(c => {
-        const created = c.createdAt ? new Date(c.createdAt).toLocaleDateString('id-ID') : '-';
-        const memberSince = c.memberSince ? new Date(c.memberSince).toLocaleDateString('id-ID') : '-';
-        const statusBadge = c.status === 'active' ? 'success' : 'danger';
-        const typeHtml = (c.type === 'member') ?
-            `<span class="badge bg-primary">Member</span><br><small class="text-muted">Sejak ${memberSince}</small>` :
-            `<span class="badge bg-secondary">Umum</span>`;
-
-        const safeData = btoa(JSON.stringify(c));
-        const safeNameAttr = escapeHtml(c.name || '');
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-      <td>${escapeHtml(c.name || '-')}</td>
-      <td>${typeHtml}</td>
-      <td>${escapeHtml(c.email || '-')}<br><small>${escapeHtml(c.phone || '-')}</small></td>
-      <td>${created}</td>
-      <td><span class="badge bg-${statusBadge}">${c.status === 'active' ? 'Aktif' : 'Nonaktif'}</span></td>
-      <td class="text-center">
-        <button class="btn btn-sm btn-warning me-1 btn-edit" data-customer="${safeData}" title="Edit"><i class="bx bx-edit"></i></button>
-        <button class="btn btn-sm btn-danger btn-delete" data-id="${c.id}" data-name="${safeNameAttr}" title="Hapus"><i class="bx bx-trash"></i></button>
-      </td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-// bind edit/delete handlers (non-delegated helpers; we also use delegation below)
-function initEditButtons() {
-    document.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.onclick = () => {
-            const data = safeParseCustomer(btn.dataset.customer);
-            if (!data) return showToast({
-                title: 'Error',
-                message: 'Data customer rusak',
-                type: 'danger'
-            });
-
-            // set form action for update
-            if (form) {
-                form.action = `/customers/${data.id}/update`;
-                // fill inputs if exist
-                Object.keys(data).forEach(key => {
-                    const input = form.querySelector(`[name="${key}"]`);
-                    if (input) input.value = data[key]?? '';
-                });
-                toggleMemberFields(data.type === 'member');
-            }
-
-            if (modalEl) {
-                const title = modalEl.querySelector('.modal-title');
-                if (title) title.textContent = 'Edit Customer';
-                modal?.show();
-            }
-        };
-    });
-}
-
-function initDeleteButtons() {
-    document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.onclick = async () => {
-            const id = btn.dataset.id;
-            const name = btn.dataset.name;
-            const confirmed = await confirmDelete(`Hapus customer "${name}"?`);
-            if (!confirmed) return;
-
-            try {
-                const res = await fetch(`/customers/${id}/delete`, {
-                    method: 'POST'
-                });
-                const result = await res.json();
-                if (res.ok && result.success) {
-                    showToast({
-                        title: 'Berhasil',
-                        message: result.message,
-                        type: 'success'
-                    });
-                    loadCustomers(currentPage, currentLimit);
-                } else {
-                    showToast({
-                        title: 'Gagal',
-                        message: result.message || 'Gagal menghapus',
-                        type: 'danger'
-                    });
-                }
-            } catch (err) {
-                console.error(err);
-                showToast({
-                    title: 'Error',
-                    message: 'Gagal menghapus customer',
-                    type: 'danger'
-                });
-            }
-        };
-    });
+    iconSort.className = !hasSorted ?
+        'bx bx-sort-alt-2' :
+        currentOrder === 'asc' ?
+        'bx bx-up-arrow-alt' :
+        'bx bx-down-arrow-alt';
 }
 
 // main pagination binding using your util
@@ -192,6 +81,7 @@ function bindPaginationHandlers(pagination) {
 // load data from JSON endpoint
 async function loadCustomers(page = 1, limit = currentLimit) {
     currentPage = page;
+
     const params = new URLSearchParams({
         page,
         limit,
@@ -203,17 +93,28 @@ async function loadCustomers(page = 1, limit = currentLimit) {
     });
 
     try {
-        const res = await fetch(`/customers/list?${params}`);
+        const res = await fetch(`/customers/partial?${params}`);
         if (!res.ok) throw new Error('Jaringan bermasalah');
-        const json = await res.json();
-        const {
-            data = [], pagination = {}
-        } = json;
 
-        renderCustomerTable(data);
-        // render pagination partial server-side? if you render pagination with EJS partial, you would replace wrapper. 
-        // Here we call bindPaginationHandlers to wire up the buttons (initPagination expects data-page elements from EJS partial)
-        bindPaginationHandlers(pagination);
+        const html = await res.text();
+        const wrapper = document.getElementById('customerWrapper');
+        if (wrapper) {
+            wrapper.innerHTML = html;
+            rebindAfterRender();
+            updateSortIcon();
+        }
+
+        initPagination({
+            onPageChange: (page) => {
+                currentPage = page;
+                loadCustomers();
+            },
+            onLimitChange: (limit) => {
+                currentLimit = limit;
+                currentPage = 1;
+                loadCustomers();
+            }
+        });
     } catch (err) {
         console.error(err);
         showToast({
@@ -224,17 +125,128 @@ async function loadCustomers(page = 1, limit = currentLimit) {
     }
 }
 
-// Delegated events (safer when rows are re-rendered)
-document.addEventListener('click', (e) => {
+document.addEventListener('click', async (e) => {
     const editBtn = e.target.closest('.btn-edit');
     const delBtn = e.target.closest('.btn-delete');
 
     if (editBtn) {
-        editBtn.click(); // reuse non-delegated handler for simplicity (initEditButtons sets onclick)
-    } else if (delBtn) {
-        delBtn.click();
+        const data = safeParseCustomer(editBtn.dataset.customer);
+        if (!data) return showToast({
+            title: 'Error',
+            message: 'Data customer rusak',
+            type: 'danger'
+        });
+
+        if (form) {
+            form.action = `/customers/${data.id}/update`;
+            Object.keys(data).forEach(key => {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) input.value = data[key]?? '';
+            });
+            toggleMemberFields(data.type === 'member');
+        }
+
+        const title = modalEl?.querySelector('.modal-title');
+        if (title) title.textContent = 'Edit Customer';
+        modal?.show();
+    }
+
+    if (delBtn) {
+        const id = delBtn.dataset.id;
+        const name = delBtn.dataset.name;
+        const confirmed = await confirmDelete(`Hapus customer "${name}"?`);
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch(`/customers/${id}/delete`, {
+                method: 'POST'
+            });
+            const result = await res.json();
+
+            if (res.ok && result.success) {
+                showToast({
+                    title: 'Berhasil',
+                    message: result.message,
+                    type: 'success'
+                });
+                loadCustomers(currentPage, currentLimit);
+            } else {
+                showToast({
+                    title: 'Gagal',
+                    message: result.message,
+                    type: 'danger'
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            showToast({
+                title: 'Error',
+                message: 'Gagal menghapus customer',
+                type: 'danger'
+            });
+        }
     }
 });
+
+// View
+function showCustomerDetail(data) {
+    document.getElementById('detailName').textContent = data.name || '-';
+    document.getElementById('detailPhone').textContent = data.phone || '-';
+    document.getElementById('detailType').textContent = data.type || '-';
+    document.getElementById('detailStatus').textContent = data.status || '-';
+    document.getElementById('detailBirthdate').textContent = data.birthdate || '-';
+    document.getElementById('detailAddress').textContent = data.address || '-';
+    document.getElementById('detailNote').textContent = data.note || '-';
+
+    const emailEl = document.getElementById('detailEmail');
+    if (data.email) {
+        emailEl.textContent = data.email;
+        emailEl.href = `mailto:${data.email}`;
+    } else {
+        emailEl.textContent = '-';
+        emailEl.removeAttribute('href');
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('modalDetailCustomer'));
+    modal.show();
+}
+
+document.addEventListener('click', (e) => {
+    const viewBtn = e.target.closest('.btn-view');
+    if (viewBtn) {
+        const data = safeParseCustomer(viewBtn.dataset.customer);
+        if (!data) return showToast({
+            title: 'Error',
+            message: 'Data rusak',
+            type: 'danger'
+        });
+
+        showCustomerDetail(data);
+    }
+});
+
+// === Sorting Handler ===
+function rebindAfterRender() {
+    const newThNama = document.getElementById('thNama');
+    newThNama?.addEventListener('click', handleSortByName);
+    updateSortIcon();
+
+    bindPaginationHandlers(); // agar pagination tetap berfungsi
+}
+
+function handleSortByName() {
+    hasSorted = true;
+    if (currentSort === 'name') {
+        currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort = 'name';
+        currentOrder = 'asc';
+    }
+    currentPage = 1;
+    loadCustomers();
+}
+
+document.getElementById('thNama')?.addEventListener('click', handleSortByName);
 
 // Search inputs and filters
 const searchInput = document.getElementById('searchInput');
@@ -272,7 +284,7 @@ if (resetBtn) {
         currentType = '';
         currentStatus = '';
         currentSort = 'createdAt';
-        currentOrder = 'DESC';
+        currentOrder = 'desc';
 
         if (searchInput) searchInput.value = '';
         if (filterType) filterType.value = '';
@@ -375,5 +387,77 @@ if (typeSelect) {
     typeSelect.addEventListener('change', () => toggleMemberFields(typeSelect.value === 'member'));
 }
 
-// initial load
-loadCustomers(currentPage, currentLimit);
+document.getElementById('btnExportCSV')?.addEventListener('click', async () => {
+    try {
+        const params = new URLSearchParams({
+            search: currentSearch,
+            type: currentType,
+            status: currentStatus,
+            sort: currentSort,
+            order: currentOrder
+        });
+
+        const res = await fetch(`/customers/export?${params}`);
+        if (!res.ok) throw new Error('Gagal mengekspor CSV');
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `customers_${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error(err);
+        showToast({
+            type: 'danger',
+            title: 'Gagal',
+            message: 'Gagal mengekspor CSV.'
+        });
+    }
+});
+
+document.getElementById('btnTemplateCSV')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = '/customers/template-csv';
+});
+
+document.getElementById('formImportCSV')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    try {
+        const res = await fetch('/customers/import', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await res.json();
+        if (res.ok && result.success) {
+            showToast({
+                title: 'Sukses',
+                message: result.message,
+                type: 'success'
+            });
+            bootstrap.Modal.getInstance(document.getElementById('modalImportCSV')).hide();
+            loadCustomers();
+        } else {
+            showToast({
+                title: 'Gagal',
+                message: result.message,
+                type: 'danger'
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        showToast({
+            title: 'Error',
+            message: 'Terjadi kesalahan saat import',
+            type: 'danger'
+        });
+    }
+});
+
+
+// === Init ===
+loadCustomers();

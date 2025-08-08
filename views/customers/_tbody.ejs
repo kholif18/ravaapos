@@ -1,0 +1,46 @@
+<% if (customers.length === 0) { %>
+  <tr>
+    <td colspan="7" class="text-center text-muted py-4">Tidak ada data customer.</td>
+  </tr>
+<% } else {
+  const startNumber = (pagination.page - 1) * pagination.limit + 1;
+  customers.forEach((c, i) => {
+    const memberSince = c.memberSince ? new Date(c.memberSince).toLocaleDateString('id-ID') : '-';
+    const created = c.createdAt ? new Date(c.createdAt).toLocaleDateString('id-ID') : '-';
+    const statusBadge = c.status === 'active' ? 'primary' : 'danger';
+    const typeHtml = c.type === 'member'
+      ? '<span class="badge bg-primary">Member</span><br><small class="text-muted">Sejak ' + memberSince + '</small>'
+      : '<span class="badge bg-secondary">Umum</span>';
+  %>
+  <tr>
+    <td><%= startNumber + i %></td>
+    <td><%= c.name %></td>
+    <td>
+      <%- typeHtml %>
+    </td>
+    <td>
+        <% if (c.email) { %>
+            <a href="mailto:<%= c.email %>"><%= c.email %></a>
+        <% } else { %>
+            -
+        <% } %>
+        <br><small><%= c.phone || '-' %></small>
+    </td>
+    <td><%= created %></td>
+    <td><span class="badge bg-<%= statusBadge %>"><%= c.status === 'active' ? 'Aktif' : 'Nonaktif' %></span></td>
+    <td class="text-center">
+      <button class="btn btn-sm btn-info me-1 btn-view"
+        data-customer="<%= Buffer.from(JSON.stringify(c)).toString('base64') %>" title="Lihat">
+        <i class="bx bx-search-alt"></i>
+      </button>
+      <button class="btn btn-sm btn-warning me-1 btn-edit"
+        data-customer="<%= Buffer.from(JSON.stringify(c)).toString('base64') %>" title="Edit">
+        <i class="bx bx-edit"></i>
+      </button>
+      <button class="btn btn-sm btn-danger btn-delete"
+        data-id="<%= c.id %>" data-name="<%= c.name %>" title="Hapus">
+        <i class="bx bx-trash"></i>
+      </button>
+    </td>
+  </tr>
+<% }) } %>

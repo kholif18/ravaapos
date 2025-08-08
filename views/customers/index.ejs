@@ -4,7 +4,7 @@
       <div class="gap-2">
         <button class="btn btn-outline-secondary" id="btnExportCSV"><i class="bx bx-file" title="Export CSV"></i> Export CSV</button>
         <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
-        <a href="#" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
+        <a href="#" class="btn btn-outline-info"  id="btnTemplateCSV"><i class="bx bx-download"></i> Template CSV</a>
       </div>
       <div class="gap-2">
         <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
@@ -42,7 +42,7 @@
   </div>
   
   <div class="card-body" id="customerWrapper">
-    <%- include('_table', { customers, pagination, query }) %>
+    <%- include('_partial', { customers, pagination, query }) %>
   </div>
 </div>
 
@@ -122,6 +122,32 @@
     </form>
   </div>
 </div>
+
+<%- include('_detailModal') %>
+
+<!-- Modal Import CSV -->
+<div class="modal fade" id="modalImportCSV" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="formImportCSV" class="modal-content" method="POST" enctype="multipart/form-data" action="/customers/import">
+      <div class="modal-header">
+        <h5 class="modal-title">Import Customer dari CSV</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="csvFile" class="form-label">Pilih file CSV</label>
+          <input type="file" class="form-control" id="csvFile" name="csvFile" accept=".csv" required />
+        </div>
+        <p class="text-muted">Format kolom: <code>name,type,email,phone,birthdate,address,note,memberDiscount,point,status</code></p>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Import</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 
 <script type="module" src="/assets/js/pages/customers.js"></script>
 <script type="module" src="/assets/js/utils/shortcut.js"></script>

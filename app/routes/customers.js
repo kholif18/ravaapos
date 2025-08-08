@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const customerController = require('../controllers/customerController');
+const multer = require('multer');
+const upload = multer({
+    dest: 'tmp/'
+});
 
 // Halaman utama (render full page + modal)
 router.get('/', customerController.getAll);
@@ -16,5 +20,9 @@ router.get('/list', customerController.getListAJAX);
 router.post('/', customerController.create);
 router.post('/:id/update', customerController.update);
 router.post('/:id/delete', customerController.destroy);
+
+router.get('/template-csv', customerController.downloadTemplate);
+router.get('/export', customerController.exportCSV);
+router.post('/import', upload.single('csvFile'), customerController.importCSV);
 
 module.exports = router;

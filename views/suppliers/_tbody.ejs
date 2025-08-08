@@ -11,11 +11,11 @@
     <td><a href="mailto:<%= supplier.email || '-' %>"><%= supplier.email || '-' %></a></td>
     <td><%= supplier.address || '-' %></td>
     <td>
-      <button class="btn btn-sm btn-warning btn-edit" data-id="<%= supplier.id %>">
-        <i class="bx bx-edit"></i>
-      </button>
       <button class="btn btn-sm btn-info btn-detail" data-id="<%= supplier.id %>">
         <i class="bx bx-search-alt"></i>
+      </button>
+      <button class="btn btn-sm btn-warning btn-edit" data-id="<%= supplier.id %>">
+        <i class="bx bx-edit"></i>
       </button>
       <button class="btn btn-sm btn-danger btn-delete" data-id="<%= supplier.id %>">
         <i class="bx bx-trash"></i>

@@ -130,19 +130,42 @@ window.addEventListener('scroll', () => {
 
 // === QUICK ADD STOCK ===
 tbody.addEventListener('click', (e) => {
-    if (e.target.closest('.btn-add-stock')) {
-        const id = e.target.closest('button').dataset.id;
+    const btnAdd = e.target.closest('.btn-add-stock');
+    if (btnAdd) {
+        const id = btnAdd.dataset.id;
+        const name = btnAdd.dataset.name || 'Produk';
         const modal = document.getElementById('modalStockAdd');
 
-        // Reset form saat sebelum show
         resetModalForm(modal, {
-            title: 'Tambah Stok',
-            hideFields: [] // kalau ada yang perlu disembunyikan
+            hideFields: []
         });
+        modal.querySelector('.modal-title').textContent = `Tambah stock produk: ${name}`;
 
         document.getElementById('productIdStock').value = id;
 
         showModal('modalStockAdd');
+        return;
+    }
+
+    const btnAdjust = e.target.closest('.btn-adjust-stock');
+    if (btnAdjust) {
+        const id = btnAdjust.dataset.id;
+        const name = btnAdjust.dataset.name || 'Produk';
+        const currentQty = parseFloat(btnAdjust.dataset.stock) || 0;
+        const modal = document.getElementById('modalStockAdjust');
+
+        resetModalForm(modal, {
+            hideFields: []
+        });
+        modal.querySelector('.modal-title').textContent = `Stock Opname: ${name}`;
+
+        document.getElementById('productIdAdjust').value = id;
+        document.getElementById('currentQty').value = currentQty;
+        document.getElementById('adjustQty').value = '';
+        document.getElementById('qtyDiff').value = '';
+
+        showModal('modalStockAdjust');
+        return;
     }
 });
 
@@ -199,26 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
     loadProducts(); // initial load
-});
-
-tbody.addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-adjust-stock');
-    if (btn) {
-        const id = btn.dataset.id;
-        const currentQty = parseFloat(btn.dataset.stock) || 0;
-        const modal = document.getElementById('modalStockAdjust');
-
-        resetModalForm(modal, {
-            title: 'Stock Opname'
-        });
-
-        document.getElementById('productIdAdjust').value = id;
-        document.getElementById('currentQty').value = currentQty;
-        document.getElementById('adjustQty').value = '';
-        document.getElementById('qtyDiff').value = '';
-
-        showModal('modalStockAdjust');
-    }
 });
 
 // Kalkulasi selisih otomatis

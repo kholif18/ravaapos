@@ -116,3 +116,17 @@ let menu, animate;
   // Auto update menu collapsed/expanded based on the themeConfig
   window.Helpers.setCollapsed(true, false);
 })();
+
+
+const sidebar = document.getElementById('layout-menu');
+const toggleBtn = document.querySelector('.floating-menu-btn');
+
+toggleBtn.addEventListener('click', () => {
+  sidebar.classList.toggle('icon-only');
+  // Toggle locked state hanya bisa jika icon-only aktif
+  if (sidebar.classList.contains('icon-only')) {
+    sidebar.classList.toggle('locked');
+  } else {
+    sidebar.classList.remove('locked');
+  }
+});

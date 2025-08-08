@@ -58,6 +58,8 @@ body {
 
 .print-area {
     min-height: 100%;
+    height: 80vh;
+    overflow-x: auto;
 }
 
 .barcode-page {
@@ -65,4 +67,57 @@ body {
 }
 .label {
   position: absolute;
+}
+
+#pageNumbersContainer {
+  display: flex;
+  gap: 0.5rem;
+  padding-left: 0;
+  margin: 0 1rem; /* beri jarak kiri-kanan */
+  align-items: center;
+}
+
+#pageNumbersContainer .page-item {
+  margin: 0;
+}
+
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #barcodePreviewArea, #barcodePreviewArea * {
+    visibility: visible;
+  }
+  #barcodePreviewArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Hide pagination & buttons saat print */
+  #paginationControls,
+  #btnGenerateBarcodePreview,
+  button[onclick="window.print()"],
+  form.barcode-form-wrapper {
+    display: none !important;
+  }
+
+  /* Supaya halaman barcode tetap tampil full di print */
+  .barcode-page {
+    page-break-after: always;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  /* Hilangkan margin dan padding */
+  #barcodePreviewArea {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 }

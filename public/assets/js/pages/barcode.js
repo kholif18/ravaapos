@@ -41,7 +41,7 @@ document.getElementById('paperSize').addEventListener('change', function () {
 
 document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('btnGenerateBarcodePreview');
-    const container = document.getElementById('barcodeLabels');
+    const container = document.getElementById('barcodePages');
     const previewArea = document.getElementById('barcodePreviewArea');
 
     generateBtn.addEventListener('click', () => {
@@ -190,53 +190,101 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Pagination Control
-        let pagination = document.getElementById('paginationControls');
-        if (!pagination) {
-            pagination = document.createElement('div');
-            pagination.id = 'paginationControls';
-            pagination.className = 'text-center mt-2';
-            previewArea.appendChild(pagination);
-        }
-        pagination.innerHTML = '';
+        const pagination = document.getElementById('paginationControls');
+        const pageNumbersContainer = document.getElementById('pageNumbersContainer');
+        const pageInfo = document.getElementById('pageInfo');
 
         if (pages > 1) {
+            pagination.style.display = 'block';
+
             let currentPage = 1;
 
-            const updatePage = (toPage) => {
+            function renderPageNumbers() {
+                pageNumbersContainer.innerHTML = '';
+
+                // Limit pagination numbers to max 5 pages shown
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(pages, startPage + maxPagesToShow - 1);
+
+                // Adjust startPage if less than 1
+                if (endPage - startPage < maxPagesToShow - 1) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const li = document.createElement('li');
+                    li.className = 'page-item' + (i === currentPage ? ' active' : '');
+                    const a = document.createElement('a');
+                    a.className = 'page-link';
+                    a.href = 'javascript:void(0);';
+                    a.textContent = i;
+                    a.addEventListener('click', () => {
+                        updatePage(i);
+                    });
+                    li.appendChild(a);
+                    pageNumbersContainer.appendChild(li);
+                }
+            }
+
+            function updatePage(toPage) {
                 container.querySelectorAll('.barcode-page').forEach(pg => {
                     pg.style.display = pg.dataset.page == toPage ? 'flex' : 'none';
                 });
                 currentPage = toPage;
-                prevBtn.disabled = currentPage === 1;
-                nextBtn.disabled = currentPage === pages;
-            };
+                renderPageNumbers();
 
-            const prevBtn = document.createElement('button');
-            prevBtn.textContent = 'Sebelumnya';
-            prevBtn.className = 'btn btn-sm btn-outline-primary me-2';
-            prevBtn.disabled = true;
-            prevBtn.addEventListener('click', () => {
-                if (currentPage > 1) updatePage(--currentPage);
+                // Update disabled state
+                document.getElementById('prevPage').parentElement.classList.toggle('disabled', currentPage === 1);
+                document.getElementById('firstPage').parentElement.classList.toggle('disabled', currentPage === 1);
+                document.getElementById('nextPage').parentElement.classList.toggle('disabled', currentPage === pages);
+                document.getElementById('lastPage').parentElement.classList.toggle('disabled', currentPage === pages);
+
+                pageInfo.textContent = `Halaman ${currentPage} dari ${pages}`;
+            }
+
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) updatePage(currentPage - 1);
+            });
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (currentPage < pages) updatePage(currentPage + 1);
+            });
+            document.getElementById('firstPage').addEventListener('click', () => {
+                updatePage(1);
+            });
+            document.getElementById('lastPage').addEventListener('click', () => {
+                updatePage(pages);
             });
 
-            const nextBtn = document.createElement('button');
-            nextBtn.textContent = 'Berikutnya';
-            nextBtn.className = 'btn btn-sm btn-outline-primary';
-            nextBtn.disabled = pages <= 1;
-            nextBtn.addEventListener('click', () => {
-                if (currentPage < pages) updatePage(++currentPage);
+            document.getElementById('btnPrint').addEventListener('click', () => {
+                const pages = container.querySelectorAll('.barcode-page');
+                const currentVisiblePages = [];
+
+                // Simpan halaman yang terlihat sekarang, sembunyikan semua halaman lainnya supaya cetak semua
+                pages.forEach(page => {
+                    currentVisiblePages.push(page.style.display);
+                    page.style.display = 'block'; // tampilkan semua halaman untuk print
+                });
+
+                window.print();
+
+                // Setelah print selesai, kembalikan tampilan ke hanya halaman aktif
+                // print() tidak ada callback, jadi kita pakai event afterprint
+                window.onafterprint = () => {
+                    pages.forEach((page, i) => {
+                        page.style.display = currentVisiblePages[i];
+                    });
+                    window.onafterprint = null; // hapus listener biar gak nambah-nambah
+                };
             });
-
-            pagination.appendChild(prevBtn);
-            pagination.appendChild(nextBtn);
-
-            const pageInfo = document.createElement('div');
-            pageInfo.className = 'mt-2 text-muted small';
-            pageInfo.textContent = `Total halaman: ${pages}`;
-            pagination.appendChild(pageInfo);
-
+            
+            // Initialize pagination
+            updatePage(1);
+        } else {
+            pagination.style.display = 'none';
         }
 
         previewArea.style.display = 'block';
     });
 });
+

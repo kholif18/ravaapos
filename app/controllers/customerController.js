@@ -4,6 +4,12 @@ const {
 const {
     validationResult
 } = require('express-validator');
+const {
+    Op
+} = require('sequelize');
+const {
+    getPaginationParams
+} = require('../helpers/pagination');
 
 // Helper untuk kode member otomatis (misal: MBR-20250801-001)
 async function generateMemberCode() {
@@ -18,18 +24,65 @@ async function generateMemberCode() {
     return `MBR-${yyyymmdd}-${next}`;
 }
 
+// Helper untuk filter pencarian
+function buildSearchFilter(search) {
+    if (!search) return {};
+    return {
+        [Op.or]: [{
+                name: {
+                    [Op.like]: `%${search}%`
+                }
+            },
+            {
+                email: {
+                    [Op.like]: `%${search}%`
+                }
+            },
+            {
+                phone: {
+                    [Op.like]: `%${search}%`
+                }
+            }
+        ]
+    };
+}
+
 exports.getAll = async (req, res) => {
     try {
-        const customers = await Customer.findAll({
+        const where = buildSearchFilter(req.query.search);
+
+        const totalItems = await Customer.count({
+            where
+        });
+
+        const {
+            page,
+            limit,
+            offset,
+            totalPages
+        } =
+        getPaginationParams(req.query.page, req.query.limit, totalItems);
+
+        const rows = await Customer.findAll({
+            where,
+            limit,
+            offset,
             order: [
                 ['createdAt', 'DESC']
             ]
         });
+
         res.render('customers/index', {
             title: 'Customers',
-            customers,
             activePage: 'customers',
-            query: req.query,
+            customers: rows,
+            pagination: {
+                page,
+                limit,
+                totalItems,
+                totalPages
+            },
+            query: req.query
         });
     } catch (err) {
         console.error(err);
@@ -171,65 +224,21 @@ exports.destroy = async (req, res) => {
     }
 };
 
-exports.getJson = async (req, res) => {
-    try {
-        const customers = await Customer.findAll({
-            order: [
-                ['createdAt', 'DESC']
-            ]
-        });
-        res.json(customers);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({
-            message: 'Gagal mengambil data customer'
-        });
-    }
-};
-
 exports.getListAJAX = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const offset = (page - 1) * limit;
-        const search = req.query.search || '';
-        const type = req.query.type || '';
-        const status = req.query.status || '';
+        const {
+            page,
+            limit,
+            offset
+        } = getPaginationParams(req.query.page, req.query.limit);
+        const where = buildSearchFilter(req.query.search);
+
+        if (req.query.type) where.type = req.query.type;
+        if (req.query.status) where.status = req.query.status;
+
         const sort = req.query.sort || 'createdAt';
         const order = req.query.order === 'ASC' ? 'ASC' : 'DESC';
 
-        const where = {};
-
-        if (search) {
-            const {
-                Op
-            } = require('sequelize');
-            where[Op.or] = [{
-                    name: {
-                        [Op.like]: `%${search}%`
-                    }
-                },
-                {
-                    email: {
-                        [Op.like]: `%${search}%`
-                    }
-                },
-                {
-                    phone: {
-                        [Op.like]: `%${search}%`
-                    }
-                },
-            ];
-        }
-
-        if (type) {
-            where.type = type;
-        }
-
-        if (status) {
-            where.status = status;
-        }
-        
         const {
             count,
             rows
@@ -239,7 +248,7 @@ exports.getListAJAX = async (req, res) => {
             offset,
             order: [
                 [sort, order]
-            ],
+            ]
         });
 
         res.json({
@@ -248,8 +257,8 @@ exports.getListAJAX = async (req, res) => {
                 page,
                 totalPages: Math.ceil(count / limit),
                 limit,
-                totalItems: count,
-            },
+                totalItems: count
+            }
         });
     } catch (err) {
         console.error(err);
@@ -259,3 +268,41 @@ exports.getListAJAX = async (req, res) => {
     }
 };
 
+// === GET PARTIAL (untuk reload table via AJAX) ===
+exports.getPartial = async (req, res) => {
+    try {
+        const {
+            page,
+            limit,
+            offset
+        } = getPaginationParams(req.query.page, req.query.limit);
+        const where = buildSearchFilter(req.query.search);
+
+        const {
+            count,
+            rows
+        } = await Customer.findAndCountAll({
+            where,
+            limit,
+            offset,
+            order: [
+                ['createdAt', 'DESC']
+            ]
+        });
+
+        res.render('customers/partials/_table', {
+            customers: rows,
+            pagination: {
+                page,
+                limit,
+                totalPages: Math.ceil(count / limit),
+                totalItems: count
+            },
+            query: req.query,
+            layout: false
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Gagal memuat data customer');
+    }
+};

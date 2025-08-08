@@ -1,0 +1,58 @@
+<div class="table-responsive">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Telepon</th>
+                <th>Tipe</th>
+                <th>Status</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+        <% if (customers.length === 0) { %>
+            <tr>
+                <td colspan="<%= 7 %>" class="text-muted py-4 text-center">
+                    Tidak ada data customer.
+                </td>
+            </tr>
+        <% } else { 
+            const startNumber = (pagination.page - 1) * pagination.limit + 1;
+            customers.forEach((c, i) => { %>
+            <tr>
+                <td><%= startNumber + i %></td>
+                <td><%= c.name %></td>
+                <td><%= c.email || '-' %></td>
+                <td><%= c.phone || '-' %></td>
+                <td>
+                    <% if (c.type === 'member') { %>
+                    <span class="badge bg-success">Member</span>
+                    <% } else { %>
+                    <span class="badge bg-secondary">Regular</span>
+                    <% } %>
+                </td>
+                <td>
+                    <% if (c.status === 'active') { %>
+                    <span class="badge bg-primary">Aktif</span>
+                    <% } else { %>
+                    <span class="badge bg-danger">Nonaktif</span>
+                    <% } %>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-warning btnEditCustomer" data-id="<%= c.id %>">
+                    <i class="bx bx-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btnDeleteCustomer" data-id="<%= c.id %>">
+                    <i class="bx bx-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        <% }) } %>
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+<%- include('../partials/pagination', { pagination, query }) %>

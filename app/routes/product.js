@@ -21,6 +21,8 @@ router.get('/json', productController.getProductJson);
 // Update & Delete (AJAX)
 router.post('/:id/update', productController.updateProduct);
 router.post('/:id/delete', productController.destroy);
+router.get('/json/:id', productController.getProductById);
+router.put('/:id', upload.single('image'), productController.updateProduct);
 
 router.get('/barcode', barcodeController.index);
 

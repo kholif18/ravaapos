@@ -9,4 +9,8 @@ router.post('/:id/add-stock', stockController.addStock);
 router.post('/:id/adjust', stockController.adjustStock);
 router.get('/history/:id', stockController.historyPage);
 
+router.get('/export', stockController.exportCSV);
+router.get('/export/pdf', stockController.exportPDF);
+router.get('/print', stockController.printStockReport);
+
 module.exports = router;

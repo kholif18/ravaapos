@@ -264,3 +264,58 @@ document.getElementById('formStockAdjust').addEventListener('submit', async (e) 
         showToast('error', data.message);
     }
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+    // PRINT (gunakan layout sama dengan PDF)
+    document.getElementById("btnExportPrint").addEventListener("click", () => {
+        const params = new URLSearchParams({
+            category: categoryFilter.value || '',
+            search: searchInput.value || '',
+            filter: stockFilter || ''
+        });
+        // buka versi print view
+        window.open(`/stock/print?${params}`, "_blank");
+    });
+
+    // Export PDF
+    document.getElementById('btnExportPDF')?.addEventListener('click', () => {
+        const params = new URLSearchParams({
+            category: categoryFilter.value || '',
+            search: searchInput.value || '',
+            filter: stockFilter || ''
+        });
+        window.open(`/stock/export/pdf?${params}`, '_blank');
+    });
+
+    // Export CSV
+    document.getElementById('btnExportCSV')?.addEventListener('click', async () => {
+        try {
+            const params = new URLSearchParams({
+                category: categoryFilter.value || '',
+                search: searchInput.value || '',
+                filter: stockFilter || ''
+            });
+
+            const res = await fetch(`/stock/export?${params}`);
+            if (!res.ok) throw new Error('Gagal mengekspor CSV');
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stock_${Date.now()}.csv`;
+            a.click();
+
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error(err);
+            showToast({
+                type: 'danger',
+                title: 'Gagal',
+                message: 'Gagal mengekspor CSV.'
+            });
+        }
+    });
+});
+

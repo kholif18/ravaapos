@@ -15,6 +15,7 @@ const {
 const {
     recordStockHistory
 } = require('../helpers/recordStockHistory');
+const PDFDocument = require('pdfkit-table');
 
 // Util untuk membangun query filter
 function buildProductFilters({
@@ -344,5 +345,383 @@ exports.historyPage = async (req, res) => {
             message: 'Gagal memuat riwayat stok',
             activePage: 'stock'
         });
+    }
+};
+
+exports.exportCSV = async (req, res) => {
+    try {
+        const {
+            category,
+            search,
+            filter
+        } = req.query;
+        const where = {};
+
+        if (search) {
+            where[Op.or] = [{
+                    code: {
+                        [Op.like]: `%${search}%`
+                    }
+                },
+                {
+                    name: {
+                        [Op.like]: `%${search}%`
+                    }
+                }
+            ];
+        }
+        if (category) where.categoryId = category;
+
+        let products = await Product.findAll({
+            where,
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['name']
+            }],
+            order: [
+                ['name', 'ASC']
+            ]
+        });
+
+        if (filter === 'negative') products = products.filter(p => !p.service && p.stock < 0);
+        if (filter === 'zero') products = products.filter(p => p.service || p.stock === 0);
+        if (filter === 'nonzero') products = products.filter(p => p.service || p.stock !== 0);
+
+        let csv = 'code,name,category,qty,unit,cost,salePrice,value\n';
+        for (const p of products) {
+            const qtyCalc = p.service ? 1 : (p.stock ?? 0); // perhitungan value
+            const qtyDisplay = p.service ? 0 : (p.stock ?? 0); // ditampilkan di file
+            const cost = p.cost ?? 0;
+            const salePrice = p.salePrice ?? 0;
+            const value = qtyCalc * salePrice;
+
+            const line = [
+                p.code,
+                p.name,
+                p.category?.name || '',
+                qtyDisplay,
+                p.unit || '',
+                cost,
+                salePrice,
+                value
+            ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+
+            csv += line + '\n';
+        }
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment('stock_export.csv');
+        res.send(csv);
+    } catch (err) {
+        console.error('Gagal ekspor CSV:', err);
+        res.status(500).send('Gagal mengekspor CSV');
+    }
+};
+
+exports.exportPDF = async (req, res) => {
+    try {
+        const {
+            category,
+            search,
+            filter
+        } = req.query;
+
+        const where = {};
+        if (search) {
+            where[Op.or] = [{
+                    code: {
+                        [Op.like]: `%${search}%`
+                    }
+                },
+                {
+                    name: {
+                        [Op.like]: `%${search}%`
+                    }
+                }
+            ];
+        }
+        if (category) where.categoryId = category;
+
+        if (filter === 'negative') {
+            where.stock = {
+                [Op.lt]: 0
+            };
+        } else if (filter === 'zero') {
+            where.stock = 0;
+        } else if (filter === 'nonzero') {
+            where.stock = {
+                [Op.ne]: 0
+            };
+        }
+
+        let products = await Product.findAll({
+            where,
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['name']
+            }],
+            order: [
+                ['name', 'ASC']
+            ]
+        });
+
+        // Filter
+        if (filter === 'negative') products = products.filter(p => !p.service && p.stock < 0);
+        if (filter === 'zero') products = products.filter(p => p.service || p.stock === 0);
+        if (filter === 'nonzero') products = products.filter(p => p.service || p.stock !== 0);
+
+        // Data & total
+        let totalCostPrice = 0;
+        let totalCost = 0;
+        const tableData = products.map((p, idx) => {
+            const qty = p.service ? 0 : (p.stock ?? 0);
+            const cost = p.cost ?? 0;
+            const total = qty * cost;
+            totalCostPrice += cost;
+            totalCost += total;
+            return [
+                (idx + 1).toString(),
+                p.code || '',
+                p.name || '',
+                p.category?.name || '',
+                qty.toLocaleString('id-ID'),
+                p.unit || '',
+                cost.toLocaleString('id-ID', {
+                    minimumFractionDigits: 2
+                }),
+                total.toLocaleString('id-ID', {
+                    minimumFractionDigits: 2
+                })
+            ];
+        });
+
+        // PDF setup
+        const doc = new PDFDocument({
+            margin: 30,
+            size: 'A4',
+            layout: 'landscape'
+        });
+        res.setHeader('Content-Disposition', 'attachment; filename="stock_export.pdf"');
+        res.setHeader('Content-Type', 'application/pdf');
+        doc.pipe(res);
+
+        const colWidths = [30, 70, 200, 100, 50, 50, 100, 100];
+        const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+        const pageWidth = doc.page.width;
+        const startX = (pageWidth - tableWidth) / 2; // center horizontal
+
+        // Judul
+        doc.fontSize(16).font('Helvetica-Bold').text('Stock Report', {
+            align: 'center'
+        });
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica')
+            .text(`Tanggal: ${new Date().toLocaleString('id-ID')}`, startX, doc.y, {
+                width: tableWidth,
+                align: 'left'
+            });
+        doc.moveDown(1);
+
+        const startY = doc.y;
+
+        const drawRow = (row, y, isHeader = false, isStriped = false) => {
+            let x = startX;
+
+            // Background
+            if (isHeader) {
+                doc.save().fillColor('#d9d9d9').rect(startX, y, tableWidth, 20).fill().restore();
+                doc.strokeColor('#ccc').lineWidth(0.5)
+                    .moveTo(startX, y).lineTo(startX + tableWidth, y).stroke();
+            } else if (isStriped) {
+                doc.save().fillColor('#f0f0f0').rect(startX, y, tableWidth, 20).fill().restore();
+            }
+
+            // Isi cell
+            row.forEach((cell, i) => {
+                doc.font(isHeader ? 'Helvetica-Bold' : 'Helvetica')
+                    .fontSize(9)
+                    .fillColor('black')
+                    .text(cell, x + 3, y + 5, {
+                        width: colWidths[i] - 6,
+                        align: (i >= 4 && i !== 5) ? 'right' : 'left'
+                    });
+
+                doc.strokeColor('#ccc').lineWidth(0.5)
+                    .moveTo(x, y).lineTo(x, y + 20).stroke();
+
+                x += colWidths[i];
+            });
+
+            // Garis vertikal terakhir
+            doc.strokeColor('#ccc').lineWidth(0.5)
+                .moveTo(x, y).lineTo(x, y + 20).stroke();
+
+            // Garis horizontal bawah
+            doc.strokeColor('#ccc').lineWidth(0.5)
+                .moveTo(startX, y + 20).lineTo(startX + tableWidth, y + 20).stroke();
+        };
+
+        const drawTotalRow = (y, totalCostPrice, totalCost) => {
+            let x = startX;
+
+            doc.save().fillColor('#eee').rect(startX, y, tableWidth, 20).fill().restore();
+
+            const totalLabelWidth = colWidths.slice(0, 6).reduce((a, b) => a + b, 0);
+            doc.font('Helvetica-Bold').fontSize(9).fillColor('black')
+                .text('TOTAL', x + 3, y + 5, {
+                    width: totalLabelWidth - 6,
+                    align: 'right'
+                });
+
+            doc.strokeColor('#ccc').lineWidth(0.5)
+                .moveTo(x, y).lineTo(x, y + 20).stroke();
+            x += totalLabelWidth;
+
+            doc.text(totalCostPrice.toLocaleString('id-ID', {
+                minimumFractionDigits: 2
+            }), x + 3, y + 5, {
+                width: colWidths[6] - 6,
+                align: 'right'
+            });
+            doc.strokeColor('#ccc').lineWidth(0.5)
+                .moveTo(x, y).lineTo(x, y + 20).stroke();
+            x += colWidths[6];
+
+            doc.text(totalCost.toLocaleString('id-ID', {
+                minimumFractionDigits: 2
+            }), x + 3, y + 5, {
+                width: colWidths[7] - 6,
+                align: 'right'
+            });
+            doc.strokeColor('#ccc').lineWidth(0.5)
+                .moveTo(x, y).lineTo(x, y + 20).stroke();
+
+            doc.moveTo(startX + tableWidth, y).lineTo(startX + tableWidth, y + 20).stroke();
+            doc.moveTo(startX, y + 20).lineTo(startX + tableWidth, y + 20).stroke();
+        };
+
+        // Gunakan startX dan startY saat menggambar tabel
+        drawRow(['#', 'Code', 'Product', 'Category', 'Qty', 'UOM', 'Cost Price', 'Total Cost'], startY, true);
+        let y = startY + 20;
+
+        tableData.forEach((row, idx) => {
+            drawRow(row, y, false, idx % 2 === 0);
+            y += 20;
+            if (y > doc.page.height - 80) {
+                doc.addPage({
+                    size: 'A4',
+                    layout: 'landscape'
+                });
+                y = doc.y;
+                drawRow(['#', 'Code', 'Product', 'Category', 'Qty', 'UOM', 'Cost Price', 'Total Cost'], y, true);
+                y += 20;
+            }
+        });
+
+        drawTotalRow(y, totalCostPrice, totalCost);
+
+        doc.end();
+    } catch (err) {
+        console.error('Gagal export PDF:', err);
+        res.status(500).send('Gagal export PDF');
+    }
+};
+
+exports.printStockReport = async (req, res) => {
+    try {
+        const {
+            category,
+            search,
+            filter
+        } = req.query;
+
+        const where = {};
+        if (search) {
+            where[Op.or] = [{
+                    code: {
+                        [Op.like]: `%${search}%`
+                    }
+                },
+                {
+                    name: {
+                        [Op.like]: `%${search}%`
+                    }
+                }
+            ];
+        }
+        if (category) where.categoryId = category;
+
+        if (filter === 'negative') {
+            where.stock = {
+                [Op.lt]: 0
+            };
+        } else if (filter === 'zero') {
+            where.stock = 0;
+        } else if (filter === 'nonzero') {
+            where.stock = {
+                [Op.ne]: 0
+            };
+        }
+
+        let products = await Product.findAll({
+            where,
+            include: [{
+                model: Category,
+                as: 'category',
+                attributes: ['name']
+            }],
+            order: [
+                ['name', 'ASC']
+            ]
+        });
+
+        // Filter qty sesuai jenis produk
+        if (filter === 'negative') products = products.filter(p => !p.service && p.stock < 0);
+        if (filter === 'zero') products = products.filter(p => p.service || p.stock === 0);
+        if (filter === 'nonzero') products = products.filter(p => p.service || p.stock !== 0);
+
+        // Hitung total
+        let totalCostPrice = 0;
+        let totalCost = 0;
+        const tableData = products.map((p, idx) => {
+            const qty = p.service ? 0 : (p.stock  ?? 0);
+            const cost = p.cost  ?? 0;
+            const total = qty * cost;
+            totalCostPrice += cost;
+            totalCost += total;
+
+            return {
+                no: idx + 1,
+                code: p.code || '',
+                name: p.name || '',
+                category: p.category?.name || '',
+                qty: qty.toLocaleString('id-ID'),
+                uom: p.unit || '',
+                costPrice: cost.toLocaleString('id-ID', {
+                    minimumFractionDigits: 2
+                }),
+                totalCost: total.toLocaleString('id-ID', {
+                    minimumFractionDigits: 2
+                })
+            };
+        });
+
+        res.render('stock/stock_print', {
+            date: new Date().toLocaleString('id-ID'),
+            tableData,
+            layout: false,
+            totalCostPrice: totalCostPrice.toLocaleString('id-ID', {
+                minimumFractionDigits: 2
+            }),
+            totalCost: totalCost.toLocaleString('id-ID', {
+                minimumFractionDigits: 2
+            })
+        });
+
+    } catch (err) {
+        console.error('Gagal generate print view:', err);
+        res.status(500).send('Gagal generate print view');
     }
 };

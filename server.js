@@ -6,6 +6,7 @@ const flash = require('connect-flash');
 const expressLayouts = require('express-ejs-layouts');
 const db = require('./app/models');
 const index = require('./app/routes/index');
+const methodOverride = require('method-override');
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.urlencoded({
   extended: false
 }));
 app.use(express.static('public'));
+app.use(methodOverride('_method'));
 
 // ===== View engine setup =====
 app.set('view engine', 'ejs');

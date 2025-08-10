@@ -323,26 +323,142 @@ exports.getAllProducts = async (req, res) => {
 
 // Update (AJAX)
 exports.updateProduct = async (req, res) => {
-  const {
-    name,
-    price,
-    categoryId
-  } = req.body;
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({
+      success: false,
       message: 'Product tidak ditemukan'
     });
 
+    // Ambil semua field form
+    const {
+      name,
+      categoryId,
+      code,
+      barcode,
+      unit,
+      supplierId,
+      defaultQty,
+      isService,
+      cost,
+      markup,
+      salePrice,
+      priceChangeAllowed,
+      reorderPoint,
+      preferredQty,
+      enableLowStockWarning,
+      lowStockThreshold,
+      enableInputTax,
+      tax,
+      enableAltDesc
+    } = req.body;
+
+    // Parsing & konversi boolean
+    const boolDefaultQty = toBoolean(defaultQty);
+    const boolIsService = toBoolean(isService);
+    const boolPriceChangeAllowed = toBoolean(priceChangeAllowed);
+    const boolLowStockWarning = toBoolean(enableLowStockWarning);
+    const boolEnableInputTax = toBoolean(enableInputTax);
+    const boolEnableAltDesc = toBoolean(enableAltDesc);
+
+    // Parsing number
+    const parsedCost = parseFloat(cost);
+    const parsedMarkup = parseFloat(markup);
+    const parsedSalePrice = parseFloat(salePrice);
+    const parsedReorderPoint = parseInt(reorderPoint);
+    const parsedPreferredQty = parseInt(preferredQty);
+    const parsedLowStockThreshold = parseInt(lowStockThreshold);
+    const parsedTax = parseFloat(tax);
+
+    // Validasi sederhana
+    const errors = {};
+    if (!name?.trim()) errors.name = 'Nama harus diisi';
+    if (!code?.trim()) errors.code = 'Kode harus diisi';
+    if (req.body.tax && (isNaN(parsedTax) || parsedTax < 0 || parsedTax > 100)) {
+      errors.tax = 'Pajak harus antara 0 - 100';
+    }
+    if (!boolIsService && (isNaN(parsedCost) || parsedCost <= 0)) {
+      errors.cost = 'Harga modal harus lebih dari 0';
+    }
+    if (boolIsService && isNaN(parsedCost)) {
+      // untuk service cost bisa 0
+    }
+    if (!boolIsService && isNaN(parsedMarkup)) {
+      errors.markup = 'Markup tidak valid';
+    }
+    if (isNaN(parsedSalePrice)) {
+      errors.salePrice = 'Harga jual tidak valid';
+    }
+    if (boolLowStockWarning && (isNaN(parsedLowStockThreshold) || parsedLowStockThreshold < 0)) {
+      errors.lowStockThreshold = 'Batas stok rendah tidak valid';
+    }
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        errors
+      });
+    }
+
+    // Handle gambar baru (jika ada)
+    if (req.file) {
+      // Hapus gambar lama jika ada
+      if (product.image) {
+        const oldImagePath = path.join(__dirname, '../public', product.image);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      // Simpan gambar baru
+      const ext = path.extname(req.file.originalname);
+      const fileName = `product-${Date.now()}${ext}`;
+      const targetPath = path.join(__dirname, '../public/uploads/products', fileName);
+      fs.writeFileSync(targetPath, req.file.buffer);
+      product.image = `/uploads/products/${fileName}`;
+    }
+
+    // Update semua field ke product
     product.name = name;
-    product.price = price;
+    product.code = code;
+    product.barcode = barcode?.trim() || null;
+    product.unit = unit;
     product.categoryId = categoryId || null;
+    product.defaultQty = boolDefaultQty;
+    product.service = boolIsService;
+    product.cost = boolIsService ? 0 : parsedCost || 0;
+    product.markup = boolIsService ? 0 : parsedMarkup || 0;
+    product.salePrice = parsedSalePrice || 0;
+    product.priceChangeAllowed = boolPriceChangeAllowed;
+    product.supplierId = supplierId || null;
+    product.reorderPoint = parsedReorderPoint || 0;
+    product.preferredQty = parsedPreferredQty || 0;
+    product.lowStockWarning = boolLowStockWarning;
+    product.lowStockThreshold = boolLowStockWarning ? parsedLowStockThreshold : null;
+    product.enableInputTax = boolEnableInputTax;
+    product.tax = boolEnableInputTax && !isNaN(parsedTax) ? parsedTax : null;
+    product.enableAltDesc = boolEnableAltDesc;
+
     await product.save();
-    res.json(product);
+
+    return res.json({
+      success: true,
+      product
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      message: 'Gagal mengupdate product'
+    if (err instanceof Sequelize.UniqueConstraintError) {
+      const errors = {};
+      for (const e of err.errors) {
+        errors[e.path] = `${e.path} sudah digunakan`;
+      }
+      return res.status(400).json({
+        success: false,
+        errors
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      message: 'Gagal mengupdate produk'
     });
   }
 };
@@ -370,6 +486,35 @@ exports.destroy = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Gagal menghapus product'
+    });
+  }
+};
+
+exports.getProductById = async (req, res) => {
+  try {
+    const product = await Product.findByPk(req.params.id, {
+      include: [{
+          model: Category,
+          as: 'category'
+        },
+        {
+          model: Supplier,
+          as: 'supplier'
+        }
+      ]
+    });
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Produk tidak ditemukan'
+      });
+    }
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: 'Gagal mengambil data produk'
     });
   }
 };

@@ -17,6 +17,8 @@ const modalCreate = document.getElementById('modalCreate');
 const formCreate = document.getElementById('formCreateProduct');
 const tbody = document.getElementById('productTableBody');
 const scrollContainer = document.getElementById('tableScrollContainer');
+const modalEdit = document.getElementById('modalEdit');
+const formEdit = document.getElementById('formEditProduct');
 
 let currentSearch = '';
 let offset = 0;
@@ -85,6 +87,124 @@ async function loadMoreProducts() {
     }
 }
 
+tbody.addEventListener('click', async (e) => {
+    if (e.target.closest('.btn-edit')) {
+        const row = e.target.closest('tr');
+        const productId = row.dataset.id;
+        if (!productId) return;
+
+        try {
+            // Ambil data product via API JSON, misal endpoint: /products/json/:id
+            const res = await fetch(`/products/json/${productId}`);
+            if (!res.ok) throw new Error('Failed to fetch product data');
+            const product = await res.json();
+
+            // Isi form edit dengan data product
+            formEdit.action = `/products/${productId}`;
+            formEdit.reset();
+
+            document.getElementById('editInputName').value = product.name || '';
+            document.getElementById('editCategorySelect').value = product.categoryId || '';
+            document.getElementById('editProductCode').value = product.code || '';
+            document.getElementById('editInputBarcode').value = product.barcode || '';
+            document.getElementById('editUnit').value = product.unit || '';
+            document.getElementById('editSupplierSelect').value = product.supplierId || '';
+            document.getElementById('editDefaultQty').checked = !!product.defaultQty;
+            document.getElementById('editIsService').checked = !!product.service;
+            document.getElementById('editInputCost').value = (typeof product.cost === 'number') ? product.cost : '';
+            document.getElementById('editInputMarkup').value = (typeof product.markup === 'number') ? product.markup : '';
+            document.getElementById('editInputSalePrice').value = product.salePrice || '';
+            document.getElementById('editPriceChangeAllowed').checked = !!product.priceChangeAllowed;
+            document.getElementById('editReorderPoint').value = product.reorderPoint || '';
+            document.getElementById('editPreferredQty').value = product.preferredQty || '';
+            document.getElementById('editEnableLowStockWarning').checked = !!product.enableLowStockWarning;
+            document.getElementById('editLowStockWarning').value = product.lowStockThreshold || '';
+            document.getElementById('editLowStockWarning').disabled = !product.enableLowStockWarning;
+            document.getElementById('editEnableInputTax').checked = !!product.enableInputTax;
+            document.getElementById('editTax').value = product.tax || '';
+            document.getElementById('editTax').disabled = !product.enableInputTax;
+            document.getElementById('editEnableAltDesc').checked = !!product.enableAltDesc;
+
+            // Tampilkan modal edit
+            const bsModalEdit = bootstrap.Modal.getOrCreateInstance(modalEdit);
+            bsModalEdit.show();
+        } catch (err) {
+            console.error(err);
+            showToast({
+                type: 'danger',
+                title: 'Error',
+                message: 'Gagal mengambil data produk'
+            });
+        }
+    }
+});
+
+formEdit.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    resetInputErrors(formEdit);
+
+    const formData = new FormData(formEdit);
+    const data = Object.fromEntries(formData.entries());
+
+    // Konversi boolean untuk checkbox
+    data.defaultQty = formData.get('defaultQty') === 'on';
+    data.isService = formData.get('isService') === 'on'; // sesuaikan key sesuai input name
+    data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
+    data.enableLowStockWarning = formData.get('enableLowStockWarning') === 'on';
+    data.enableInputTax = formData.get('enableInputTax') === 'on';
+    data.enableAltDesc = formData.get('enableAltDesc') === 'on';
+
+    // Ambil id dari form action (url /products/:id)
+    const url = new URL(formEdit.action, window.location.origin);
+
+    try {
+        const res = await fetch(url.pathname, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+            // Berhasil update
+            showToast({
+                type: 'success',
+                title: 'Berhasil',
+                message: 'Produk berhasil diupdate'
+            });
+            bootstrap.Modal.getInstance(modalEdit).hide();
+
+            // Refresh list / reload produk
+            offset = 0;
+            done = false;
+            tbody.innerHTML = '';
+            await loadMoreProducts();
+        } else {
+            // Tampilkan error validasi jika ada
+            if (result.errors) {
+                showInputErrors(result.errors, formEdit);
+            } else {
+                showToast({
+                    type: 'danger',
+                    title: 'Gagal',
+                    message: result.message || 'Gagal mengupdate produk'
+                });
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        showToast({
+            type: 'danger',
+            title: 'Error',
+            message: 'Gagal mengirim data ke server'
+        });
+    }
+});
+
 document.getElementById('searchProduct')?.addEventListener('input', async e => {
     currentSearch = e.target.value.trim();
     offset = 0;
@@ -100,6 +220,23 @@ document.getElementById('btnGenerateBarcode')?.addEventListener('click', () => {
         barcode += Math.floor(Math.random() * 10); // angka 0–9
     }
     document.getElementById('inputBarcode').value = barcode;
+});
+
+// Enable/disable input dependent on switches in edit modal:
+document.getElementById('editEnableLowStockWarning').addEventListener('change', e => {
+    document.getElementById('editLowStockWarning').disabled = !e.target.checked;
+});
+document.getElementById('editEnableInputTax').addEventListener('change', e => {
+    document.getElementById('editTax').disabled = !e.target.checked;
+});
+
+// (Opsional) Handler generate barcode di modal edit:
+document.getElementById('btnGenerateEditBarcode').addEventListener('click', () => {
+    // logika generate barcode sesuai prefix kategori (contoh sederhana)
+    const categorySelect = document.getElementById('editCategorySelect');
+    const prefix = categorySelect.options[categorySelect.selectedIndex].dataset.prefix || '';
+    const randomNumber = Math.floor(100000 + Math.random() * 900000);
+    document.getElementById('editInputBarcode').value = prefix + randomNumber;
 });
 
 const inputCost = document.getElementById('inputCost');

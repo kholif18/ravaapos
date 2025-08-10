@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Stock Report</title>
+    <style>
+        @page { 
+          size: A4 landscape; 
+          margin: 20mm; 
+        }
+
+        body { 
+          font-family: Arial, sans-serif; 
+          font-size: 10pt; 
+        }
+
+        h2 { 
+          text-align: center; 
+          margin-bottom: 5px; 
+        }
+
+        .date { 
+          text-align: left; 
+          margin-bottom: 10px; 
+        }
+
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+        }
+        
+        table tr:nth-child(even) {
+          background-color: #f5f5f5 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        th, td { 
+          border: 1px solid #ccc; 
+          padding: 4px 6px; 
+        }
+
+        th { 
+          background: #d9d9d9 !important; 
+          font-weight: bold; 
+          text-align: left;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        td:nth-child(5), td:nth-child(7), td:nth-child(8),
+        th:nth-child(5), th:nth-child(7), th:nth-child(8) {
+            text-align: right;
+        }
+        tr:nth-child(even) { 
+          background: #f5f5f5; 
+        }
+
+        tfoot td { 
+          font-weight: bold; 
+          background: #eee !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+    </style>
+</head>
+<body>
+    <h2>Stock Report</h2>
+    <div class="date">Tanggal: <%= date %></div>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Code</th>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Qty</th>
+                <th>UOM</th>
+                <th>Cost Price</th>
+                <th>Total Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% tableData.forEach(row => { %>
+                <tr>
+                    <td><%= row.no %></td>
+                    <td><%= row.code %></td>
+                    <td><%= row.name %></td>
+                    <td><%= row.category %></td>
+                    <td><%= row.qty %></td>
+                    <td style="text-align:left"><%= row.uom %></td>
+                    <td><%= row.costPrice %></td>
+                    <td><%= row.totalCost %></td>
+                </tr>
+            <% }) %>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" style="text-align:right">TOTAL</td>
+                <td style="text-align:right"><%= totalCostPrice %></td>
+                <td style="text-align:right"><%= totalCost %></td>
+            </tr>
+        </tfoot>
+    </table>
+    <script>
+        window.print();
+    </script>
+</body>
+</html>

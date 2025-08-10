@@ -12,6 +12,12 @@ const {
   Op,
   Sequelize
 } = require('sequelize');
+const iconv = require('iconv-lite');
+const csvParser = require('csv-parser');
+const {
+  Readable
+} = require('stream');
+const PDFDocument = require('pdfkit-table');
 
 // GET view
 exports.viewProducts = async (req, res) => {
@@ -516,5 +522,515 @@ exports.getProductById = async (req, res) => {
       success: false,
       message: 'Gagal mengambil data produk'
     });
+  }
+};
+
+exports.downloadTemplateCSV = (req, res) => {
+  const headers = [
+    'name',
+    'categoryId',
+    'code',
+    'barcode',
+    'unit',
+    'supplierId',
+    'defaultQty',
+    'service',
+    'cost',
+    'markup',
+    'salePrice',
+    'priceChangeAllowed',
+    'reorderPoint',
+    'preferredQty',
+    'lowStockWarning',
+    'lowStockThreshold',
+    'enableAltDesc'
+  ];
+
+  // Contoh data satu baris, isi contoh yang valid
+  const exampleRow = [
+    'Produk Contoh',
+    '1',
+    'PRD001',
+    '1234567890123',
+    'pcs',
+    '2',
+    'true',
+    'false',
+    '10000',
+    '20',
+    '12000',
+    'true',
+    '10',
+    '5',
+    'true',
+    '2',
+    'false'
+  ];
+
+  const csvContent = headers.join(',') + '\n' + exampleRow.join(',');
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="product_import_template.csv"');
+  res.send(csvContent);
+};
+
+function detectDelimiter(csvString) {
+  // Ambil 1-3 baris pertama (atau lebih) untuk analisa delimiter
+  const lines = csvString.split(/\r?\n/).filter(l => l.trim().length > 0).slice(0, 3);
+  const delimiters = [',', ';'];
+
+  // Hitung kemunculan delimiter di tiap baris dan jumlahnya dijumlahkan
+  const scores = delimiters.map(d => {
+    return lines.reduce((sum, line) => sum + (line.split(d).length - 1), 0);
+  });
+
+  // Pilih delimiter dengan jumlah kemunculan paling banyak
+  const maxScore = Math.max(...scores);
+  const maxIndex = scores.indexOf(maxScore);
+
+  return delimiters[maxIndex];
+}
+
+exports.importCSV = async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: 'File CSV tidak ditemukan'
+    });
+  }
+
+  // Decode buffer ke UTF-8 string (ubah 'utf-8' sesuai encoding file jika perlu)
+  const csvString = iconv.decode(req.file.buffer, 'utf-8');
+
+  // Deteksi delimiter otomatis
+  const delimiter = detectDelimiter(csvString);
+
+  const results = [];
+  const errors = [];
+  let createdCount = 0;
+
+  const stream = Readable.from(csvString);
+
+  stream
+    .pipe(csvParser({
+      separator: delimiter,
+      skipLines: 0,
+      strict: true,
+      mapHeaders: ({
+        header
+      }) => header.trim()
+    }))
+    .on('data', (row) => {
+      // Trim semua nilai supaya bersih
+      for (const key in row) {
+        if (typeof row[key] === 'string') {
+          row[key] = row[key].trim();
+        }
+      }
+      results.push(row);
+    })
+    .on('end', async () => {
+      for (let [index, row] of results.entries()) {
+        const {
+          name,
+          categoryId,
+          code,
+          barcode,
+          unit,
+          supplierId,
+          defaultQty,
+          service,
+          cost,
+          markup,
+          salePrice,
+          priceChangeAllowed,
+          reorderPoint,
+          preferredQty,
+          lowStockWarning,
+          lowStockThreshold,
+          enableAltDesc
+        } = row;
+
+        if (!name || !code) {
+          errors.push({
+            row: index + 2,
+            message: 'Kolom name dan code wajib diisi'
+          });
+          continue;
+        }
+
+        const parsedDefaultQty = toBoolean(defaultQty);
+        const parsedService = toBoolean(service);
+        const parsedCost = parseFloat(cost) || 0;
+        const parsedMarkup = parseFloat(markup) || 0;
+        const parsedSalePrice = parseFloat(salePrice) || 0;
+        const parsedPriceChangeAllowed = toBoolean(priceChangeAllowed);
+        const parsedReorderPoint = parseInt(reorderPoint) || 0;
+        const parsedPreferredQty = parseInt(preferredQty) || 0;
+        const parsedLowStockWarning = toBoolean(lowStockWarning);
+        const parsedLowStockThreshold = parsedLowStockWarning ? (parseInt(lowStockThreshold) || 0) : null;
+        const parsedEnableAltDesc = toBoolean(enableAltDesc);
+
+        try {
+          await Product.create({
+            name,
+            categoryId: categoryId || null,
+            code,
+            barcode: barcode || null,
+            unit,
+            supplierId: supplierId || null,
+            defaultQty: parsedDefaultQty,
+            service: parsedService,
+            cost: parsedCost,
+            markup: parsedMarkup,
+            salePrice: parsedSalePrice,
+            priceChangeAllowed: parsedPriceChangeAllowed,
+            reorderPoint: parsedReorderPoint,
+            preferredQty: parsedPreferredQty,
+            lowStockWarning: parsedLowStockWarning,
+            lowStockThreshold: parsedLowStockThreshold,
+            enableAltDesc: parsedEnableAltDesc
+          });
+          createdCount++;
+        } catch (err) {
+          errors.push({
+            row: index + 2,
+            message: err.message
+          });
+        }
+      }
+
+      if (errors.length) {
+        return res.status(400).json({
+          success: false,
+          message: `Beberapa baris gagal diimport`,
+          errors
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `${createdCount} produk berhasil diimport`
+      });
+    })
+    .on('error', (err) => {
+      console.error('CSV parsing error:', err);
+      res.status(500).json({
+        success: false,
+        message: 'Gagal memproses file CSV'
+      });
+    });
+};
+
+// Export CSV produk
+exports.exportCSV = async (req, res) => {
+  try {
+    const {
+      category,
+      supplierId,
+      type,
+      q
+    } = req.query;
+    const where = {};
+
+    if (q) {
+      where[Op.or] = [{
+          code: {
+            [Op.like]: `%${q}%`
+          }
+        },
+        {
+          name: {
+            [Op.like]: `%${q}%`
+          }
+        },
+        {
+          barcode: {
+            [Op.like]: `%${q}%`
+          }
+        },
+      ];
+    }
+
+    if (category) where.categoryId = category;
+    if (supplierId) where.supplierId = supplierId;
+
+    if (type === 'product') where.service = false;
+    else if (type === 'service') where.service = true;
+
+    const products = await Product.findAll({
+      where,
+      order: [
+        ['name', 'ASC']
+      ],
+    });
+
+    // Header CSV disesuaikan dengan fields import
+    const header = [
+      'name',
+      'categoryId',
+      'code',
+      'barcode',
+      'unit',
+      'supplierId',
+      'defaultQty',
+      'service',
+      'cost',
+      'markup',
+      'salePrice',
+      'priceChangeAllowed',
+      'reorderPoint',
+      'preferredQty',
+      'lowStockWarning',
+      'lowStockThreshold',
+      'enableAltDesc',
+      'tax',
+    ];
+
+    let csv = header.join(',') + '\n';
+
+    products.forEach(p => {
+      const row = [
+        p.name || '',
+        p.categoryId || '',
+        p.code || '',
+        p.barcode || '',
+        p.unit || '',
+        p.supplierId || '',
+        p.defaultQty ? 'true' : 'false',
+        p.service ? 'true' : 'false',
+        p.cost?.toFixed(2) || '0.00',
+        p.markup?.toFixed(2) || '0.00',
+        p.salePrice?.toFixed(2) || '0.00',
+        p.priceChangeAllowed ? 'true' : 'false',
+        p.reorderPoint || '0',
+        p.preferredQty || '0',
+        p.lowStockWarning ? 'true' : 'false',
+        p.lowStockThreshold || '0',
+        p.enableAltDesc ? 'true' : 'false',
+        p.tax != null ? p.tax : '',
+      ];
+
+      const line = row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+      csv += line + '\n';
+    });
+
+    res.header('Content-Type', 'text/csv');
+    res.attachment('products_backup.csv');
+    res.send(csv);
+  } catch (err) {
+    console.error('Gagal ekspor CSV produk:', err);
+    res.status(500).send('Gagal mengekspor CSV produk');
+  }
+};
+
+// Export PDF produk (pakai pdfmake)
+exports.exportPDF = async (req, res) => {
+  try {
+    const {
+      category,
+      search,
+      supplierId,
+      type
+    } = req.query;
+
+    // Build filter where clause
+    const where = {};
+    if (search) {
+      where[Op.or] = [{
+          code: {
+            [Op.like]: `%${search}%`
+          }
+        },
+        {
+          name: {
+            [Op.like]: `%${search}%`
+          }
+        }
+      ];
+    }
+    if (category) where.categoryId = category;
+    if (supplierId) where.supplierId = supplierId;
+    if (type) where.service = type === 'service';
+
+    // Fetch products with supplier and category associations
+    const products = await Product.findAll({
+      where,
+      include: [{
+          association: 'category',
+          attributes: ['name']
+        },
+        {
+          association: 'supplier',
+          attributes: ['name']
+        }
+      ],
+      order: [
+        ['name', 'ASC']
+      ]
+    });
+
+    // Siapkan data tabel sesuai kolom html mu
+    const tableData = products.map((p, i) => ({
+      no: (i + 1).toString(),
+      code: p.code || '',
+      name: p.name || '',
+      unit: p.unit || '',
+      cost: p.cost != null ? p.cost.toLocaleString('id-ID', {
+        minimumFractionDigits: 2
+      }) : '-',
+      salePrice: p.salePrice != null ? p.salePrice.toLocaleString('id-ID', {
+        minimumFractionDigits: 2
+      }) : '-',
+      tax: p.tax != null ? p.tax.toString() : '-'
+    }));
+
+    // Setup PDF
+    const doc = new PDFDocument({
+      margin: 20,
+      size: 'A4',
+      layout: 'portrait'
+    });
+    res.setHeader('Content-Disposition', 'attachment; filename="product_report.pdf"');
+    res.setHeader('Content-Type', 'application/pdf');
+    doc.pipe(res);
+
+    // Title & date
+    doc.font('Helvetica-Bold').fontSize(16).text('Product Report', {
+      align: 'center'
+    });
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fontSize(10).text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, {
+      align: 'left'
+    });
+    doc.moveDown(1);
+
+    // Definisi header & kolom dengan style mirip tabel HTML mu
+    const table = {
+      headers: [{
+          label: '#',
+          property: 'no',
+          width: 30,
+          headerColor: '#d9d9d9',
+          align: 'center',
+          headerAlign: 'center',
+          border: true
+        },
+        {
+          label: 'Code',
+          property: 'code',
+          width: 70,
+          headerColor: '#d9d9d9',
+          align: 'left',
+          border: true
+        },
+        {
+          label: 'Product Name',
+          property: 'name',
+          width: 200,
+          headerColor: '#d9d9d9',
+          align: 'left',
+          border: true
+        },
+        {
+          label: 'UOM',
+          property: 'unit',
+          width: 50,
+          headerColor: '#d9d9d9',
+          align: 'center',
+          border: true
+        },
+        {
+          label: 'Cost',
+          property: 'cost',
+          width: 80,
+          headerColor: '#d9d9d9',
+          align: 'right',
+          border: true
+        },
+        {
+          label: 'Unit Price',
+          property: 'salePrice',
+          width: 80,
+          headerColor: '#d9d9d9',
+          align: 'right',
+          border: true
+        },
+        {
+          label: 'Tax (%)',
+          property: 'tax',
+          width: 50,
+          headerColor: '#d9d9d9',
+          align: 'right',
+          border: true
+        }
+      ],
+      datas: tableData,
+      options: {
+        width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+        prepareHeader: () => {
+          doc.font('Helvetica-Bold').fontSize(9).fillColor('black');
+        },
+        prepareRow: (row, i) => {
+          doc.font('Helvetica').fontSize(9).fillColor('black');
+          // Background striping: baris genap diberi warna background
+          if (i % 2 === 0) {
+            const y = doc.y - 3;
+            doc.save()
+              .rect(doc.x, y, doc.page.width - doc.page.margins.left - doc.page.margins.right, 20)
+              .fill('#f5f5f5')
+              .restore();
+          }
+        },
+        padding: 4,
+        columnSpacing: 4,
+        border: {
+          top: '#ccc',
+          left: '#ccc',
+          bottom: '#ccc',
+          right: '#ccc',
+          horizontal: '#ccc',
+          vertical: '#ccc'
+        }
+      }
+    };
+
+    // Render tabel
+    await doc.table(table);
+
+    // Otomatis close stream ke response
+    doc.end();
+
+  } catch (err) {
+    console.error('Gagal export PDF:', err);
+    res.status(500).send('Gagal export PDF');
+  }
+};
+
+// Print view produk (HTML tabel striped)
+exports.printProducts = async (req, res) => {
+  try {
+    const products = await Product.findAll({
+      order: [
+        ['name', 'ASC']
+      ],
+      attributes: ['code', 'name', 'unit', 'cost', 'salePrice', 'tax']
+    });
+
+    res.render('products/print', {
+      date: new Date().toLocaleDateString('id-ID'),
+      layout: false,
+      tableData: products.map(p => ({
+        code: p.code,
+        name: p.name,
+        unit: p.unit,
+        cost: p.cost,
+        salePrice: p.salePrice,
+        tax: p.tax
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Gagal menampilkan halaman print');
   }
 };

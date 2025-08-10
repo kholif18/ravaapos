@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Product Report</title>
+  <style>
+    @page { 
+      size: A4 portrait; 
+      margin: 20mm; 
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+
+    .date {
+      text-align: left;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    table tr:nth-child(even) {
+      background-color: #f5f5f5 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    th, td {
+  border: 1px solid #ccc;
+  padding: 4px 6px;
+}
+
+/* header rata kiri */
+th {
+  background: #d9d9d9 !important;
+  font-weight: bold;
+  text-align: center;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* isi kolom nomor, UOM rata tengah */
+td:nth-child(1) {
+  text-align: center;
+}
+
+/* isi kolom Cost, Unit Price, Tax (%) rata kanan */
+td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7) {
+  text-align: right;
+}
+
+  </style>
+</head>
+<body>
+  <h2>Product Report</h2>
+  <div class="date">Tanggal: <%= date %></div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Code</th>
+        <th>Product Name</th>
+        <th>UOM</th>
+        <th>Cost</th>
+        <th>Unit Price</th>
+        <th>Tax (%)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% tableData.forEach((row, i) => { %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td><%= row.code %></td>
+          <td><%= row.name %></td>
+          <td><%= row.unit %></td>
+          <td><%= row.cost.toLocaleString('id-ID', {minimumFractionDigits:2}) %></td>
+          <td><%= row.salePrice.toLocaleString('id-ID', {minimumFractionDigits:2}) %></td>
+          <td><%= row.tax != null ? row.tax : '-' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <script>
+    window.onload = () => {
+      window.print();
+    };
+  </script>
+</body>
+</html>

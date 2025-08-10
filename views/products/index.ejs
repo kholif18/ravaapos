@@ -9,9 +9,9 @@
         </a>
         <button class="btn btn-outline-secondary" id="btnExportPDF" title="Export PDF"><i class="bx bxs-file-pdf" title="Export PDF"></i></button>
         <button class="btn btn-outline-secondary" id="btnExportCSV" title="Export CSV"><i class="bx bx-file" title="Export CSV"></i></button>
-        <button class="btn btn-outline-secondary" onclick="window.print()" title="Cetak"><i class="bx bx-printer"></i></button>
+        <button class="btn btn-outline-secondary"  id="btnPrint" title="Cetak"><i class="bx bx-printer"></i></button>
         <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
-        <a href="/products/template-csv" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
+        <a href="/products/import/template" class="btn btn-outline-info"><i class="bx bx-download"></i> Template CSV</a>
       </div>
       <div class="gap-2">
         <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
@@ -39,7 +39,7 @@
       <!-- Kategori -->
       <div class="col-md-2">
         <label class="form-label">Kategori</label>
-        <select name="category" class="form-select" onchange="this.form.submit()">
+        <select name="category" id="categoryFilter" class="form-select" onchange="this.form.submit()">
           <option value="">Semua</option>
           <% categories.forEach(cat => { %>
             <option value="<%= cat.id %>" <%= selectedCategory == cat.id ? 'selected' : '' %>>
@@ -52,7 +52,7 @@
       <!-- Supplier -->
       <div class="col-md-2">
         <label class="form-label">Supplier</label>
-        <select name="supplierId" class="form-select" onchange="this.form.submit()">
+        <select name="supplierId" id="supplierFilter" class="form-select" onchange="this.form.submit()">
           <option value="">Semua</option>
           <% suppliers.forEach(s => { %>
             <option value="<%= s.id %>" <%= selectedSupplier == s.id ? 'selected' : '' %>>
@@ -65,7 +65,7 @@
       <!-- Tipe Produk -->
       <div class="col-md-2">
         <label class="form-label">Tipe</label>
-        <select name="type" class="form-select" onchange="this.form.submit()">
+        <select name="type" id="typeFilter" class="form-select" onchange="this.form.submit()">
           <option value="">Semua</option>
           <option value="product" <%= selectedType === 'product' ? 'selected' : '' %>>Produk Fisik</option>
           <option value="service" <%= selectedType === 'service' ? 'selected' : '' %>>Jasa</option>
@@ -257,7 +257,7 @@
 <!-- Modal Import CSV -->
 <div class="modal fade" id="modalImportCSV" tabindex="-1" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <form action="/products/import-csv" method="POST" enctype="multipart/form-data" class="modal-content">
+    <form action="/products/import" method="POST" enctype="multipart/form-data" class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalImportCSVLabel">Import Produk dari CSV</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

@@ -26,4 +26,11 @@ router.put('/:id', upload.single('image'), productController.updateProduct);
 
 router.get('/barcode', barcodeController.index);
 
+router.get('/import/template', productController.downloadTemplateCSV);
+router.post('/import', upload.single('csvFile'), productController.importCSV);
+
+router.get('/export/csv', productController.exportCSV);
+router.get('/export/pdf', productController.exportPDF);
+router.get('/print', productController.printProducts);
+
 module.exports = router;

@@ -13,6 +13,7 @@
   "dependencies": {
     "connect-flash": "^0.1.1",
     "csv-parser": "^3.2.0",
+    "csv-stringify": "^6.6.0",
     "dotenv": "^17.2.1",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
@@ -24,6 +25,7 @@
     "multer": "^2.0.2",
     "pdfkit": "^0.17.1",
     "pdfkit-table": "^0.1.99",
+    "pdfmake": "^0.2.20",
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7"
   },

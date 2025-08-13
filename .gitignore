@@ -29,3 +29,5 @@ Thumbs.db
 # Output build (jika ada)
 dist/
 build/
+
+/public/uploads/products/

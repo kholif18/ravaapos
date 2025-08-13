@@ -86,25 +86,26 @@
 <div class="modal fade" id="modalStockAdd" tabindex="-1">
     <div class="modal-dialog">
         <form id="formStockAdd" class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title">Tambah Stok Produk</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <input type="hidden" id="productIdStock">
-            <div class="mb-3">
-            <label>Jumlah Stok</label>
-            <input type="number" id="addQty" class="form-control" required>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="modal-header">
+                <h5 class="modal-title">Tambah Stok Produk</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="mb-3">
-            <label>Catatan</label>
-            <textarea class="form-control" id="addNote" rows="2"></textarea>
+            <div class="modal-body">
+                <input type="hidden" id="productIdStock">
+                <div class="mb-3">
+                <label>Jumlah Stok</label>
+                <input type="number" id="addQty" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                <label>Catatan</label>
+                <textarea class="form-control" id="addNote" rows="2"></textarea>
+                </div>
             </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-            <button class="btn btn-primary" type="submit">Simpan</button>
-        </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button class="btn btn-primary" type="submit">Simpan</button>
+            </div>
         </form>
     </div>
 </div>
@@ -112,6 +113,7 @@
 <div class="modal fade" id="modalStockAdjust" tabindex="-1">
     <div class="modal-dialog">
         <form id="formStockAdjust" class="modal-content">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="modal-header">
                 <h5 class="modal-title">Stock Opname</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

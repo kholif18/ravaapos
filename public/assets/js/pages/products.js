@@ -12,13 +12,15 @@ import {
     resetInputErrors
 } from '/assets/js/utils/formError.js';
 
-
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const modalCreate = document.getElementById('modalCreate');
 const formCreate = document.getElementById('formCreateProduct');
 const tbody = document.getElementById('productTableBody');
 const scrollContainer = document.getElementById('tableScrollContainer');
 const modalEdit = document.getElementById('modalEdit');
 const formEdit = document.getElementById('formEditProduct');
+const createFileInput = document.getElementById('productImage');
+const createPreviewEl = document.getElementById('createProductPreview');
 
 let currentSearch = '';
 let offset = 0;
@@ -87,6 +89,7 @@ async function loadMoreProducts() {
     }
 }
 
+// Saat klik Edit
 tbody.addEventListener('click', async (e) => {
     if (e.target.closest('.btn-edit')) {
         const row = e.target.closest('tr');
@@ -98,9 +101,11 @@ tbody.addEventListener('click', async (e) => {
             if (!res.ok) throw new Error('Failed to fetch product data');
             const product = await res.json();
 
+            // Set form action untuk submit PUT
             formEdit.action = `/products/${productId}`;
             formEdit.reset();
 
+            // Isi semua field...
             document.getElementById('editInputName').value = product.name || '';
             document.getElementById('editCategorySelect').value = product.categoryId || '';
             document.getElementById('editProductCode').value = product.code || '';
@@ -109,25 +114,45 @@ tbody.addEventListener('click', async (e) => {
             document.getElementById('editSupplierSelect').value = product.supplierId || '';
             document.getElementById('editDefaultQty').checked = !!product.defaultQty;
             document.getElementById('editIsService').checked = !!product.service;
-            document.getElementById('editInputCost').value = (typeof product.cost === 'number') ? product.cost : '';
-            document.getElementById('editInputMarkup').value = (typeof product.markup === 'number') ? product.markup : '';
+            document.getElementById('editInputCost').value = product.cost ?? '';
+            document.getElementById('editInputMarkup').value = product.markup ?? '';
             document.getElementById('editInputSalePrice').value = product.salePrice || '';
             document.getElementById('editPriceChangeAllowed').checked = !!product.priceChangeAllowed;
             document.getElementById('editReorderPoint').value = product.reorderPoint || '';
             document.getElementById('editPreferredQty').value = product.preferredQty || '';
-            document.getElementById('editEnableLowStockWarning').checked = !!product.enableLowStockWarning;
+            document.getElementById('editEnableLowStockWarning').checked = !!product.lowStockWarning;
             document.getElementById('editLowStockWarning').value = product.lowStockThreshold || '';
-            document.getElementById('editLowStockWarning').disabled = !product.enableLowStockWarning;
+            document.getElementById('editLowStockWarning').disabled = !product.lowStockWarning;
             document.getElementById('editEnableInputTax').checked = !!product.enableInputTax;
             document.getElementById('editTax').value = product.tax || '';
             document.getElementById('editTax').disabled = !product.enableInputTax;
             document.getElementById('editEnableAltDesc').checked = !!product.enableAltDesc;
 
-            setupEditMarkupSalePriceHandlers();
+            // Preview image lama
+            const previewEl = document.getElementById('editProductPreview');
+            if (product.image) {
+                previewEl.src = product.image;
+                previewEl.style.display = 'block';
+            } else {
+                previewEl.src = '';
+                previewEl.style.display = 'none';
+            }
 
-            // Tampilkan modal edit
-            const bsModalEdit = bootstrap.Modal.getOrCreateInstance(modalEdit);
-            bsModalEdit.show();
+            // Event listener untuk update preview saat pilih gambar baru
+            const fileInput = document.getElementById('editProductImage');
+            fileInput.addEventListener('change', function () {
+                if (this.files && this.files[0]) {
+                    previewEl.src = URL.createObjectURL(this.files[0]);
+                    previewEl.style.display = 'block';
+                } else {
+                    previewEl.src = product.image || '';
+                    previewEl.style.display = product.image ? 'block' : 'none';
+                }
+            });
+
+            setupEditMarkupSalePriceHandlers();
+            bootstrap.Modal.getOrCreateInstance(modalEdit).show();
+
         } catch (err) {
             console.error(err);
             showToast({
@@ -190,36 +215,30 @@ function setupEditMarkupSalePriceHandlers() {
 
 formEdit.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     resetInputErrors(formEdit);
 
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     const formData = new FormData(formEdit);
-    const data = Object.fromEntries(formData.entries());
 
-    // Konversi boolean untuk checkbox
-    data.defaultQty = formData.get('defaultQty') === 'on';
-    data.isService = formData.get('isService') === 'on'; // sesuaikan key sesuai input name
-    data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
-    data.enableLowStockWarning = formData.get('enableLowStockWarning') === 'on';
-    data.enableInputTax = formData.get('enableInputTax') === 'on';
-    data.enableAltDesc = formData.get('enableAltDesc') === 'on';
-
-    // Ambil id dari form action (url /products/:id)
-    const url = new URL(formEdit.action, window.location.origin);
+    // Checkbox → Boolean
+    formData.set('defaultQty', formData.get('defaultQty') === 'on');
+    formData.set('service', formData.get('isService') === 'on');
+    formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
+    formData.set('enableLowStockWarning', formData.get('enableLowStockWarning') === 'on');
+    formData.set('enableInputTax', formData.get('enableInputTax') === 'on');
+    formData.set('enableAltDesc', formData.get('enableAltDesc') === 'on');
 
     try {
-        const res = await fetch(url.pathname, {
+        const res = await fetch(formEdit.action, {
             method: 'PUT',
             headers: {
-                'Content-Type': 'application/json'
+                'CSRF-Token': csrfToken 
             },
-            body: JSON.stringify(data)
+            body: formData
         });
 
         const result = await res.json();
-
         if (res.ok && result.success) {
-            // Berhasil update
             showToast({
                 type: 'success',
                 title: 'Berhasil',
@@ -227,13 +246,11 @@ formEdit.addEventListener('submit', async (e) => {
             });
             bootstrap.Modal.getInstance(modalEdit).hide();
 
-            // Refresh list / reload produk
             offset = 0;
             done = false;
             tbody.innerHTML = '';
             await loadMoreProducts();
         } else {
-            // Tampilkan error validasi jika ada
             if (result.errors) {
                 showInputErrors(result.errors, formEdit);
             } else {
@@ -373,22 +390,34 @@ scrollContainer.addEventListener('scroll', () => {
     }
 });
 
+if (createFileInput) {
+    createFileInput.addEventListener('change', function () {
+        if (this.files && this.files[0]) {
+            createPreviewEl.src = URL.createObjectURL(this.files[0]);
+            createPreviewEl.style.display = 'block';
+        } else {
+            createPreviewEl.src = '';
+            createPreviewEl.style.display = 'none';
+        }
+    });
+}
+
 formCreate.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(formCreate);
-    const data = Object.fromEntries(formData.entries());
 
-    data.defaultQty = formData.get('defaultQty') === 'on';
-    data.service = formData.get('isService') === 'on';
-    data.priceChangeAllowed = formData.get('priceChangeAllowed') === 'on';
+    // kalau mau set nilai boolean secara manual:
+    formData.set('defaultQty', formData.get('defaultQty') === 'on');
+    formData.set('service', formData.get('isService') === 'on');
+    formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
 
     try {
         const res = await fetch('/products', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'CSRF-Token': csrfToken // jangan set Content-Type manual
             },
-            body: JSON.stringify(data)
+            body: formData
         });
 
         const result = await res.json();
@@ -436,7 +465,30 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
         }
     });
     resetInputErrors(formCreate);
+
+    // Reset image preview
+    if (createPreviewEl) {
+        createPreviewEl.src = '';
+        createPreviewEl.style.display = 'none';
+    }
+
+    // Reset file input
+    if (createFileInput) createFileInput.value = '';
 });
+
+modalEdit.addEventListener('hidden.bs.modal', () => {
+    resetInputErrors(formEdit);
+
+    // Reset image preview
+    const editPreviewEl = document.getElementById('editProductPreview');
+    const editFileInput = document.getElementById('editProductImage');
+    if (editPreviewEl) {
+        editPreviewEl.src = '';
+        editPreviewEl.style.display = 'none';
+    }
+    if (editFileInput) editFileInput.value = '';
+});
+
 
 modalCreate.addEventListener('shown.bs.modal', () => {
     modalCreate.querySelector('[name="name"]')?.focus();
@@ -514,7 +566,11 @@ tbody.addEventListener('click', async function (e) {
 
     try {
         const res = await fetch(`/products/${productId}/delete`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'CSRF-Token': csrfToken
+            }
         });
         const result = await res.json();
 
@@ -550,6 +606,8 @@ document.querySelector('#modalImportCSV form').addEventListener('submit', async 
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Importing...';
 
+    formData.append('_csrf', csrfToken);
+    
     try {
         const res = await fetch(form.action, {
             method: 'POST',

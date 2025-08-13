@@ -8,6 +8,8 @@
         <title><%= typeof title !== 'undefined' ? title + ' | RavaaPOS' : 'RavaaPOS' %></title>
 
         <meta name="description" content="" />
+        <!-- CSRF Token -->
+        <meta name="csrf-token" content="<%= csrfToken %>">
 
         <!-- Favicon -->
         <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico" />

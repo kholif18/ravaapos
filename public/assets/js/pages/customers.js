@@ -12,6 +12,7 @@ import {
     initPagination
 } from '/assets/js/utils/initPagination.js';
 
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const modalEl = document.getElementById('modalCustomer');
 const form = document.getElementById('formCustomer') || document.getElementById('customerForm');
 const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
@@ -159,7 +160,10 @@ document.addEventListener('click', async (e) => {
 
         try {
             const res = await fetch(`/customers/${id}/delete`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'CSRF-Token': csrfToken
+                }
             });
             const result = await res.json();
 
@@ -313,7 +317,8 @@ if (form) {
             const res = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'CSRF-Token': csrfToken
                 },
                 body: JSON.stringify(formData)
             });
@@ -425,6 +430,8 @@ document.getElementById('btnTemplateCSV')?.addEventListener('click', (e) => {
 document.getElementById('formImportCSV')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+
+    formData.append('_csrf', csrfToken);
 
     try {
         const res = await fetch('/customers/import', {

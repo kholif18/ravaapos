@@ -113,6 +113,7 @@
 <div class="modal fade" id="modalCreate" tabindex="-1" aria-labelledby="modalCreateLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <form id="formCreateProduct" action="/products" method="POST" class="modal-content" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-header bg-primary">
         <h5 class="modal-title text-white" id="modalCreateLabel">Tambah Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -216,7 +217,7 @@
         <div class="row">
           <div class="col-md-6">
             <div class="form-check form-switch mb-2">
-              <input class="form-check-input" type="checkbox" id="enableLowStockWarning" name="enableLowStockWarning">
+              <input class="form-check-input" type="checkbox" id="enableLowStockWarning" name="lowStockWarning">
               <label class="form-check-label" for="enableLowStockWarning">Aktifkan peringatan stok rendah</label>
             </div>
             <div class="mb-3">
@@ -244,6 +245,9 @@
         <div class="mb-3">
           <label for="productImage" class="form-label">Upload Gambar Produk</label>
           <input class="form-control" type="file" id="productImage" name="image" accept="image/*">
+          <div class="mt-2">
+            <img id="createProductPreview" src="" alt="Preview Gambar Produk" style="max-width: 150px; display: none;">
+          </div>
         </div>
       </div>
 
@@ -258,6 +262,7 @@
 <div class="modal fade" id="modalImportCSV" tabindex="-1" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form action="/products/import" method="POST" enctype="multipart/form-data" class="modal-content">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
       <div class="modal-header">
         <h5 class="modal-title" id="modalImportCSVLabel">Import Produk dari CSV</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -277,6 +282,7 @@
 <div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <form id="formEditProduct" method="POST" class="modal-content" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="_method" value="PUT" />
       <div class="modal-header bg-warning">
         <h5 class="modal-title text-white" id="modalEditLabel">Edit Product</h5>
@@ -336,7 +342,7 @@
         </div>
 
         <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" name="isService" id="editIsService">
+          <input class="form-check-input" type="checkbox" name="service" id="editIsService">
           <label class="form-check-label" for="editIsService">Jasa (tidak menggunakan stok)</label>
         </div>
 
@@ -381,7 +387,7 @@
         <div class="row">
           <div class="col-md-6">
             <div class="form-check form-switch mb-2">
-              <input class="form-check-input" type="checkbox" id="editEnableLowStockWarning" name="enableLowStockWarning">
+              <input class="form-check-input" type="checkbox" id="editEnableLowStockWarning" name="lowStockWarning">
               <label class="form-check-label" for="editEnableLowStockWarning">Aktifkan peringatan stok rendah</label>
             </div>
             <div class="mb-3">
@@ -410,6 +416,10 @@
           <label for="editProductImage" class="form-label">Upload Gambar Produk (opsional)</label>
           <input class="form-control" type="file" id="editProductImage" name="image" accept="image/*">
           <small class="text-muted">Biarkan kosong jika tidak ingin mengubah gambar</small>
+          <!-- Preview -->
+          <div class="mt-2">
+            <img id="editProductPreview" src="" alt="Preview Gambar Produk" style="max-width: 150px; display: none;">
+          </div>
         </div>
       </div>
 

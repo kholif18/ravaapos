@@ -31,6 +31,7 @@
 <div class="modal fade" id="modalCreate" tabindex="-1">
   <div class="modal-dialog">
     <form id="formCreateSupplier" class="modal-content">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-header">
         <h5 class="modal-title">Tambah Supplier</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -104,6 +105,7 @@
 <div class="modal fade" id="modalEdit" tabindex="-1">
   <div class="modal-dialog">
     <form id="formEditSupplier" class="modal-content">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-header">
         <h5 class="modal-title">Edit Supplier</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -169,6 +171,7 @@
 <div class="modal fade" id="modalImportCSV" tabindex="-1">
   <div class="modal-dialog">
     <form id="formImportCSV" class="modal-content" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
       <div class="modal-header">
         <h5 class="modal-title">Import Supplier dari CSV</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

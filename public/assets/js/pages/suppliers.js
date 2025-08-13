@@ -9,6 +9,7 @@ import {
     confirmDelete
 } from '/assets/js/utils/confirm.js';
 
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 let currentPage = 1;
 let currentLimit = 10;
 let currentSearch = '';
@@ -125,7 +126,10 @@ function bindEvents() {
 
             try {
                 const res = await fetch(`/suppliers/${id}/delete`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'CSRF-Token': csrfToken
+                    }
                 });
                 const result = await res.json();
 
@@ -213,7 +217,8 @@ formCreate?.addEventListener('submit', async function (e) {
         const res = await fetch('/suppliers', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'CSRF-Token': csrfToken
             },
             body: JSON.stringify(formData)
         });
@@ -261,7 +266,8 @@ formEdit?.addEventListener('submit', async function (e) {
         const res = await fetch(`/suppliers/${id}/update`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'CSRF-Token': csrfToken
             },
             body: JSON.stringify(formData)
         });
@@ -299,6 +305,8 @@ document.getElementById('btnExportCSV')?.addEventListener('click', () => {
 document.getElementById('formImportCSV')?.addEventListener('submit', async function (e) {
     e.preventDefault();
     const formData = new FormData(this);
+    
+    formData.append('_csrf', csrfToken);
 
     try {
         const res = await fetch('/suppliers/import-csv', {
@@ -339,7 +347,7 @@ document.querySelector('.btn-outline-info')?.addEventListener('click', (e) => {
 // Modal reset & focus
 ['modalCreate', 'modalEdit'].forEach(id => {
     const modal = document.getElementById(id);
-    modal?.addEventListener('shown.bs.modal', () => modal.querySelector('input[name="code"]').focus());
+    modal?.addEventListener('shown.bs.modal', () => modal.querySelector('input[name="name"]').focus());
     modal?.addEventListener('hidden.bs.modal', () => {
         resetModalForm(modal);
         if (id === 'modalCreate') {

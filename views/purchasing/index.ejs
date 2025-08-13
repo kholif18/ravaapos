@@ -1,0 +1,42 @@
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex flex-wrap justify-content-between mb-3">
+        <div class="d-flex gap-2">
+            <div class="me-2">
+            <input type="text" id="searchCategory" class="form-control" placeholder="Cari Kategori...">
+            </div>
+            <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
+        </div>
+        <div class="gap-2">
+            <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+            <a href="/purchasing/create" class="btn btn-primary">
+                <i class="bx bx-plus"></i> Buat Purchasing Baru
+            </a>
+        </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover table-striped" id="tablePurchasings">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Tanggal</th>
+                    <th>Supplier</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <%- include('_tbody', { purchasings: purchasings, pagination }) %>
+            </tbody>
+        </table>
+
+        <div id="paginationContainer">
+            <%- include('../partials/pagination', { pagination }) %>
+        </div>
+
+    </div>
+</div>
+
+<script type="module" src="/assets/js/pages/purchasing.js"></script>

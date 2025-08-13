@@ -1,0 +1,28 @@
+<% if (!purchasings || purchasings.length === 0) { %>
+<tr>
+    <td colspan="6" class="text-center">Tidak ada data</td>
+</tr>
+<% } else { %>
+<% purchasings.forEach((p, idx) => { %>
+<tr>
+    <td><%= (pagination.page - 1) * pagination.limit + idx + 1 %></td>
+    <td><%= new Date(p.date).toLocaleDateString() %></td>
+    <td><%= p.Supplier.name %></td>
+    <td><%= p.total.toLocaleString() %></td>
+    <td>
+        <% if (p.status === 'completed') { %>
+            <span class="badge bg-success">Completed</span>
+        <% } else if (p.status === 'draft') { %>
+            <span class="badge bg-warning">Draft</span>
+        <% } else { %>
+            <span class="badge bg-danger">Cancelled</span>
+        <% } %>
+    </td>
+    <td>
+        <button class="btn btn-sm btn-info btn-view-purchasing" data-id="<%= p.id %>">
+            <i class="bx bx-show"></i>
+        </button>
+    </td>
+</tr>
+<% }) %>
+<% } %>

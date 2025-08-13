@@ -5,6 +5,7 @@ import {
     resetModalForm
 } from '/assets/js/utils/resetModal.js';
 
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const tbody = document.getElementById('stockTbody');
 const searchInput = document.getElementById('searchProduct');
 const categoryFilter = document.getElementById('categoryFilter');
@@ -195,7 +196,8 @@ document.getElementById('formStockAdd').addEventListener('submit', async (e) => 
     const res = await fetch(`/stock/${id}/add-stock`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'CSRF-Token': csrfToken
         },
         body: JSON.stringify({
             qty,
@@ -206,14 +208,22 @@ document.getElementById('formStockAdd').addEventListener('submit', async (e) => 
     const data = await res.json();
 
     if (data.success) {
-        showToast('success', data.message);
+        showToast({
+            title: 'Sukses',
+            message: data.message,
+            type: 'success'
+        });
         bootstrap.Modal.getInstance(document.getElementById('modalStockAdd')).hide();
 
         await reloadRow(id);
 
         updateBadges();
     } else {
-        showToast('error', data.message);
+        showToast({
+            title: 'Gagal',
+            message: data.message,
+            type: 'danger'
+        });
     }
 });
 
@@ -242,7 +252,8 @@ document.getElementById('formStockAdjust').addEventListener('submit', async (e) 
     const res = await fetch(`/stock/${id}/adjust`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'CSRF-Token': csrfToken
         },
         body: JSON.stringify({
             qty,
@@ -253,7 +264,11 @@ document.getElementById('formStockAdjust').addEventListener('submit', async (e) 
     const data = await res.json();
 
     if (data.success) {
-        showToast('success', data.message);
+        showToast({
+            title: 'Sukses',
+            message: data.message,
+            type: 'success'
+        });
         bootstrap.Modal.getInstance(document.getElementById('modalStockAdjust')).hide();
 
         // Reload 1 row
@@ -261,7 +276,11 @@ document.getElementById('formStockAdjust').addEventListener('submit', async (e) 
 
         updateBadges();
     } else {
-        showToast('error', data.message);
+        showToast({
+            title: 'Gagal',
+            message: data.message,
+            type: 'danger'
+        });
     }
 });
 

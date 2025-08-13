@@ -50,6 +50,7 @@
 <div class="modal fade" id="modalCustomer" tabindex="-1" aria-labelledby="modalCustomerLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <form id="formCustomer" class="modal-content" method="POST" action="/customers">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-header">
         <h5 class="modal-title" id="modalCustomerLabel">Tambah Customer</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
@@ -129,6 +130,7 @@
 <div class="modal fade" id="modalImportCSV" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form id="formImportCSV" class="modal-content" method="POST" enctype="multipart/form-data" action="/customers/import">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
       <div class="modal-header">
         <h5 class="modal-title">Import Customer dari CSV</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>

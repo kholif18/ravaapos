@@ -11,6 +11,7 @@ import {
     initPagination
 } from '/assets/js/utils/initPagination.js';
 
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const modalCreate = document.getElementById('modalCreate');
 const modalEdit = document.getElementById('modalEdit');
 const formCreate = document.getElementById('formCreateCategory');
@@ -182,7 +183,8 @@ formCreate?.addEventListener('submit', async e => {
         const res = await fetch('/categories', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'CSRF-Token': csrfToken
             },
             body: JSON.stringify(data),
         });
@@ -225,7 +227,8 @@ formEdit?.addEventListener('submit', async e => {
         const res = await fetch(`/categories/${id}/update`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'CSRF-Token': csrfToken
             },
             body: JSON.stringify(data),
         });
@@ -276,7 +279,11 @@ function initDeleteButtons() {
 
             try {
                 const res = await fetch(`/categories/${id}/delete`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'CSRF-Token': csrfToken
+                    }
                 });
                 const result = await res.json();
 

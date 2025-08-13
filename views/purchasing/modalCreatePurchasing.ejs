@@ -1,0 +1,30 @@
+<!-- Modal Add Item -->
+<div class="modal fade" id="modalAddPurchasingItem" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="formAddItem" class="modal-content">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="modal-header">
+                <h5 class="modal-title">Tambah Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                <label for="productSelect" class="form-label">Produk</label>
+                <select id="productSelect" class="form-select" required></select>
+                </div>
+                <div class="mb-3">
+                <label for="itemQty" class="form-label">Qty</label>
+                <input type="number" class="form-control" id="itemQty" min="0" step="0.01" required>
+                </div>
+                <div class="mb-3">
+                <label for="itemPrice" class="form-label">Harga</label>
+                <input type="number" class="form-control" id="itemPrice" min="0" step="0.01" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Tambah</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -57,6 +57,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: true
     },
+    enableInputTax: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
     tax: {
       type: DataTypes.FLOAT,
       allowNull: true
@@ -85,6 +89,10 @@ module.exports = (sequelize, DataTypes) => {
     Product.hasMany(models.StockHistory, {
       foreignKey: 'productId',
       as: 'histories'
+    });
+
+    Product.hasMany(models.PurchasingItem, {
+      foreignKey: 'productId'
     });
   };
 

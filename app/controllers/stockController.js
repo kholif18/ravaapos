@@ -285,16 +285,21 @@ exports.adjustStock = async (req, res) => {
             });
         }
 
-        const diff = newQty - product.stock;
         const oldQty = product.stock;
+        const diff = newQty - oldQty;
         product.stock = newQty;
         await product.save();
+
+        // Catatan default + catatan user (opsional)
+        const defaultNote = `Stock opname: ${oldQty} → ${newQty}`;
+        const userNote = req.body.note?.trim();
+        const finalNote = userNote ? `${defaultNote} | ${userNote}` : defaultNote;
 
         await recordStockHistory({
             productId: product.id,
             type: 'adjust',
             qty: diff,
-            note: req.body.note || `Stock opname: ${oldQty} → ${newQty}`,
+            note: finalNote,
             createdBy: 'admin'
         });
 
@@ -310,6 +315,7 @@ exports.adjustStock = async (req, res) => {
         });
     }
 };
+
 
 exports.historyPage = async (req, res) => {
     try {

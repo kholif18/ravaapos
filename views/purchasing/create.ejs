@@ -33,9 +33,10 @@
 
             <h6>Items</h6>
             <div class="mb-3">
-                <button type="button" class="btn btn-sm btn-primary" id="btnAddItem">
+                <button type="button" class="btn btn-sm btn-primary" id="btnOpenModalCreate">
                     <i class="bx bx-plus"></i> Tambah Item
                 </button>
+                <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
             </div>
 
             <table class="table table-bordered" id="purchasingItemsTable">
@@ -51,7 +52,7 @@
                 <tbody></tbody>
             </table>
 
-            <div class="d-flex justify-content-end">
+            <div class="d-flex justify-content-end mt-3">
                 <h6>Total: <span id="purchasingTotal">0</span></h6>
             </div>
         </div>
@@ -65,33 +66,51 @@
 
 <!-- Modal Add Item -->
 <div class="modal fade" id="modalAddPurchasingItem" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="formAddItem" class="modal-content">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <div class="modal-header">
-                <h5 class="modal-title">Tambah Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+  <div class="modal-dialog">
+    <form id="formAddItem" class="modal-content">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="modal-header">
+        <h5 class="modal-title">Tambah Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Produk dengan Select2 -->
+        <div class="mb-3">
+          <label for="productSelect2" class="form-label">Product</label>
+          <select id="productSelect2" class="form-select" placeholder="Ketik nama produk..."></select>
+        </div>
+
+        <!-- Qty -->
+        <div class="mb-3">
+          <label for="itemQty" class="form-label">Qty</label>
+          <input type="number" class="form-control" id="itemQty" min="1" step="1" required>
+        </div>
+
+        <!-- Harga beli + update cost -->
+        <div class="mb-3">
+          <label for="itemPrice" class="form-label">Cost</label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="itemPrice" min="0" step="0.01" required>
+            <div class="input-group-text">
+              <input class="form-check-input mt-0" type="checkbox" id="updateCost">
+              <label class="ms-2 mb-0" for="updateCost">Update cost produk</label>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                <label for="productSelect" class="form-label">Produk</label>
-                <select id="productSelect" class="form-select" required></select>
-                </div>
-                <div class="mb-3">
-                <label for="itemQty" class="form-label">Qty</label>
-                <input type="number" class="form-control" id="itemQty" min="0" step="1" required>
-                </div>
-                <div class="mb-3">
-                <label for="itemPrice" class="form-label">Harga</label>
-                <input type="number" class="form-control" id="itemPrice" min="0" step="1" required>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="submit" class="btn btn-primary">Tambah</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-            </div>
-        </form>
-    </div>
+          </div>
+          <small class="text-muted d-block mt-1">
+            Harga default dari cost produk, bisa diubah untuk transaksi ini. 
+            Jika centang, cost produk akan ikut diupdate.
+          </small>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Tambah</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script type="module" src="/assets/js/pages/purchasing_create.js"></script>
+<script type="module" src="/assets/js/utils/shortcut.js"></script>

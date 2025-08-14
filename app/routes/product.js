@@ -33,4 +33,6 @@ router.get('/export/csv', productController.exportCSV);
 router.get('/export/pdf', productController.exportPDF);
 router.get('/print', productController.printProducts);
 
+router.get('/search', productController.searchJSON);
+
 module.exports = router;

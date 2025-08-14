@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
         price: {
             type: DataTypes.FLOAT,
             defaultValue: 0
+        },
+        updateCost: { 
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
         }
     }, {
         tableName: 'PurchasingItems'

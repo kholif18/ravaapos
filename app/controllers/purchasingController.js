@@ -7,6 +7,9 @@ const {
 const path = require('path');
 const fs = require('fs');
 const {
+    Op
+} = require('sequelize');
+const {
     recordStockHistory
 } = require('../helpers/recordStockHistory');
 
@@ -59,8 +62,8 @@ exports.index = (req, res) => {
         pagination: {
             page: 1,
             limit: 10,
-            totalPages: 0,
-            totalItems: 0
+            total: 0,
+            pages: 1
         }
     });
 };
@@ -89,21 +92,64 @@ exports.createPage = async (req, res) => {
     }
 };
 
+exports.searchJSON = async (req, res) => {
+    try {
+        const supplierId = req.query.supplierId;
+        const term = req.query.term?.trim() || '';
+
+        if (!supplierId) return res.json({ products: [] });
+
+        const where = {
+            supplierId
+        };
+
+        if (term) {
+            where.name = { [Op.like]: `%${term}%` };
+        }
+
+        const products = await Product.findAll({
+            where,
+            attributes: ['id', 'name', 'cost'] // cost digunakan sebagai harga default
+        });
+
+        res.json({ products });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ products: [] });
+    }
+};
+
 // JSON untuk AJAX reload table
 exports.listJSON = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search?.trim() || '';
+        const supplier = req.query.supplier || '';
+        const status = req.query.status || '';
         const offset = (page - 1) * limit;
+
+        const where = {};
+        if (search) {
+            where[Op.or] = [{
+                id: {
+                    [Op.like]: `%${search}%`
+                }
+            }];
+        }
+        if (supplier) where.supplierId = supplier;
+        if (status) where.status = status;
 
         const {
             count,
             rows
         } = await Purchasing.findAndCountAll({
+            where,
             include: [{
                     model: Supplier,
                     as: 'supplier',
-                    attributes: ['name']
+                    attributes: ['name'],
+                    required: false
                 },
                 {
                     model: PurchasingItem,
@@ -119,7 +165,8 @@ exports.listJSON = async (req, res) => {
                 ['date', 'DESC']
             ],
             limit,
-            offset
+            offset,
+            distinct: true
         });
 
         const totalPages = Math.ceil(count / limit);
@@ -135,13 +182,14 @@ exports.listJSON = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Error load purchasing:', err);
+        console.error(err);
         res.status(500).json({
             success: false,
             message: 'Gagal load data purchasing'
         });
     }
 };
+
 
 // JSON daftar supplier untuk dropdown AJAX
 exports.listSuppliersJSON = async (req, res) => {
@@ -158,88 +206,6 @@ exports.listSuppliersJSON = async (req, res) => {
             success: false,
             message: 'Gagal load suppliers'
         });
-    }
-};
-
-// list partial untuk AJAX reload
-exports.listPartial = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const search = req.query.search?.trim() || '';
-        const supplier = req.query.supplier || '';
-        const status = req.query.status || '';
-
-        const where = {};
-
-        if (search) {
-            where[Op.or] = [{
-                    '$supplier.name$': {
-                        [Op.like]: `%${search}%`
-                    }
-                },
-                {
-                    id: {
-                        [Op.like]: `%${search}%`
-                    }
-                }
-            ];
-        }
-
-        if (supplier) {
-            where.supplierId = supplier;
-        }
-
-        if (status) {
-            where.status = status;
-        }
-
-        const {
-            count,
-            rows
-        } = await Purchasing.findAndCountAll({
-            where,
-            include: [{
-                model: Supplier,
-                as: 'supplier',
-                required: false // biar data muncul walau supplier null
-            }],
-            order: [
-                ['date', 'DESC']
-            ],
-            limit,
-            offset: (page - 1) * limit
-        });
-
-        const totalPages = Math.max(1, Math.ceil(count / limit));
-
-        const pagination = {
-            page,
-            limit,
-            total: count,
-            pages: totalPages
-        };
-
-        if (req.xhr) {
-            return res.render('purchasing/_tbody', {
-                layout: false,
-                purchasings: rows,
-                pagination,
-                activePage: page,
-                limit
-            });
-        }
-
-        res.render('purchasing/index', {
-            purchasings: rows,
-            pagination,
-            activePage: page,
-            limit
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Terjadi kesalahan server');
     }
 };
 
@@ -278,7 +244,8 @@ exports.create = async (req, res) => {
             purchasingId: purchasing.id,
             productId: i.productId,
             qty: i.qty,
-            price: i.price
+            price: i.price,
+            updateCost: i.updateCost
         }));
         await PurchasingItem.bulkCreate(purchasingItems);
 
@@ -318,8 +285,15 @@ exports.complete = async (req, res) => {
         for (const item of purchasing.items) {
             const product = await Product.findByPk(item.productId);
             if (product) {
+                // Update stock
                 const oldStock = product.stock || 0;
                 product.stock = oldStock + item.qty;
+
+                // Update cost hanya jika flag updateCost = true
+                if (item.updateCost) {
+                    product.cost = item.price;
+                }
+
                 await product.save();
 
                 await recordStockHistory({

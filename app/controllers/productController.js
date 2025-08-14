@@ -1065,3 +1065,52 @@ exports.printProducts = async (req, res) => {
     res.status(500).send('Gagal menampilkan halaman print');
   }
 };
+
+exports.searchJSON = async (req, res) => {
+  try {
+    const supplierId = req.query.supplierId;
+    const term = req.query.term?.trim() || '';
+
+    // Jika tidak ada supplierId, return array kosong
+    if (!supplierId) {
+      return res.json({
+        results: []
+      });
+    }
+
+    // Filter product berdasarkan supplier dan nama
+    const where = {
+      supplierId
+    };
+    if (term) {
+      where.name = {
+        [Op.like]: `%${term}%`
+      };
+    }
+
+    const products = await Product.findAll({
+      where,
+      attributes: ['id', 'name', 'cost'], // cost sebagai harga beli default
+      order: [
+        ['name', 'ASC']
+      ],
+      limit: 50 // batasi jumlah product untuk performa
+    });
+
+    // Format untuk Select2
+    const results = products.map(p => ({
+      id: p.id,
+      text: p.name,
+      price: p.cost
+    }));
+
+    res.json({
+      results
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      results: []
+    });
+  }
+};

@@ -1,159 +1,357 @@
 import {
-    showToast
-} from '/assets/js/utils/toast.js';
-import {
     initPagination
 } from '../utils/initPagination.js';
+import {
+    showToast
+} from '../utils/toast.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     const tbody = document.querySelector('#purchasingTbody');
-    const paginationWrapper = document.querySelector('#purchasingPaginationWrapper');
     const searchInput = document.querySelector('#searchPurchasing');
-    const supplierFilter = document.querySelector('#filterSupplier'); // kalau ada filter supplier
-    const statusFilter = document.querySelector('#filterStatus'); // kalau ada filter status
 
     let state = {
-        page: parseInt(tbody.dataset.page) || 1,
-        limit: parseInt(tbody.dataset.limit) || 10,
+        page: 1,
+        limit: 10,
         search: '',
         supplier: '',
         status: ''
     };
 
-    function loadPurchasings() {
-        const params = new URLSearchParams({
-            page: state.page,
-            limit: state.limit,
-            search: state.search,
-            supplier: state.supplier,
-            status: state.status
-        });
+    async function loadPurchasings() {
+        try {
+            const params = new URLSearchParams({
+                page: state.page,
+                limit: state.limit,
+                search: state.search,
+                supplier: state.supplier,
+                status: state.status
+            });
 
-        fetch(`/purchasing/listPartial?${params.toString()}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(res => res.text())
-            .then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
+            const res = await fetch(`/purchasing/listJSON?${params.toString()}`);
+            const data = await res.json();
+            if (!data.success) return;
 
-                // Ambil wrapper lengkap
-                const newWrapper = doc.querySelector('#purchasingWrapper');
-                if (newWrapper) {
-                    const wrapper = document.querySelector('#purchasingWrapper');
-                    wrapper.innerHTML = newWrapper.innerHTML;
-                }
+            tbody.innerHTML = '';
 
-                // Bind event untuk tombol baru
-                bindEvents();
-            })
-            .catch(err => console.error('Gagal memuat data purchasing:', err));
+            if (data.purchasings.length === 0) {
+                tbody.innerHTML = `<tr>
+                    <td colspan="6" class="text-center text-muted py-4">Tidak ada data purchasing ditemukan.</td>
+                </tr>`;
+                initPaginationUI(data.pagination);
+                return;
+            }
+
+            const startNumber = (data.pagination.page - 1) * data.pagination.limit + 1;
+
+            data.purchasings.forEach((p, i) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${startNumber + i}</td>
+                    <td>${new Date(p.date).toLocaleDateString()}</td>
+                    <td>${p.supplier?.name || '-'}</td>
+                    <td>${p.total.toLocaleString()}</td>
+                    <td>
+                        ${p.status === 'completed' ? '<span class="badge bg-success">Completed</span>' :
+                        p.status === 'draft' ? '<span class="badge bg-warning">Draft</span>' :
+                        '<span class="badge bg-danger">Cancelled</span>'}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-info btn-view" data-id="${p.id}"><i class="bx bx-show"></i></button>
+                        ${p.status === 'draft' ? `
+                            <button class="btn btn-sm btn-success btn-complete" data-id="${p.id}"><i class="bx bx-check"></i> Complete</button>
+                            <button class="btn btn-sm btn-danger btn-cancel" data-id="${p.id}"><i class="bx bx-x"></i> Cancel</button>
+                        ` : p.status === 'completed' ? `
+                            <button class="btn btn-sm btn-warning btn-return" data-id="${p.id}"><i class="bx bx-rotate-left"></i> Return</button>
+                        ` : ''}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            bindEvents();
+            initPaginationUI(data.pagination);
+
+        } catch (err) {
+            console.error('Gagal load data purchasing:', err);
+            showToast({
+                title: 'Error',
+                message: 'Gagal load data purchasing',
+                type: 'danger'
+            });
+        }
     }
 
     function bindEvents() {
-        const tbody = document.querySelector('#purchasingTbody');
-        const paginationWrapper = document.querySelector('#purchasingPaginationWrapper');
-
-        // Pagination
         initPagination({
-            onPageChange: (page) => {
-                state.page = page;
+            onPageChange: p => {
+                state.page = p;
                 loadPurchasings();
             },
-            onLimitChange: (limit) => {
-                state.limit = limit;
+            onLimitChange: l => {
+                state.limit = l;
                 state.page = 1;
                 loadPurchasings();
             }
         });
 
-        // Tombol aksi (complete, cancel, return, view)
-        tbody.querySelectorAll('.btn-complete, .btn-cancel, .btn-return, .btn-view').forEach(btn => {
-            btn.onclick = () => {
+        tbody.querySelectorAll('.btn-view, .btn-complete, .btn-cancel, .btn-return').forEach(btn => {
+            btn.onclick = async () => {
                 const id = btn.dataset.id;
+                if (!id) return;
 
-                if (btn.classList.contains('btn-view')) {
-                    // Load modal detail via AJAX
-                    fetch(`/purchasing/view/${id}`, {
+                try {
+                    // === VIEW DETAIL ===
+                    if (btn.classList.contains('btn-view')) {
+                        const res = await fetch(`/purchasing/view/${id}`, {
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
-                        })
-                        .then(res => res.text())
-                        .then(html => {
-                            document.querySelector('#modalViewContent').innerHTML = html;
-                            const modal = new bootstrap.Modal(document.querySelector('#modalViewPurchasing'));
-                            modal.show();
                         });
-                    return;
+                        const data = await res.json();
+                        if (!data.success) return showToast({
+                            title: 'Error',
+                            message: 'Gagal load detail',
+                            type: 'danger'
+                        });
+
+                        const d = data.data;
+                        const html = `
+                        <p><strong>Supplier:</strong> ${d.supplier?.name || '-'}</p>
+                        <p><strong>Tanggal:</strong> ${new Date(d.date).toLocaleDateString()}</p>
+                        <p><strong>Total:</strong> ${d.total.toLocaleString()}</p>
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>
+                            </thead>
+                            <tbody>
+                                ${d.items.map(i => `
+                                    <tr>
+                                        <td>${i.product?.name || '-'}</td>
+                                        <td>${i.qty}</td>
+                                        <td>${i.price.toLocaleString()}</td>
+                                        <td>${(i.qty * i.price).toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                        document.getElementById('modalViewContent').innerHTML = html;
+                        new bootstrap.Modal(document.getElementById('modalViewPurchasing')).show();
+                        return;
+                    }
+
+                    // === COMPLETE ===
+                    if (btn.classList.contains('btn-complete')) {
+                        const res = await fetch(`/purchasing/complete/${id}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'CSRF-Token': csrfToken
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            showToast({
+                                type: 'success',
+                                title: 'Berhasil',
+                                message: data.message || 'Purchasing selesai'
+                            });
+                            loadPurchasings();
+                        } else {
+                            showToast({
+                                type: 'danger',
+                                title: 'Gagal',
+                                message: data.message || 'Gagal menyelesaikan purchasing'
+                            });
+                        }
+                        return;
+                    }
+
+                    // === CANCEL ===
+                    if (btn.classList.contains('btn-cancel')) {
+                        const res = await fetch(`/purchasing/cancel/${id}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'CSRF-Token': csrfToken
+                            }
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            showToast({
+                                type: 'success',
+                                title: 'Berhasil',
+                                message: data.message || 'Purchasing dibatalkan'
+                            });
+                            loadPurchasings();
+                        } else {
+                            showToast({
+                                type: 'danger',
+                                title: 'Gagal',
+                                message: data.message || 'Gagal membatalkan purchasing'
+                            });
+                        }
+                        return;
+                    }
+
+                    // === RETURN ===
+                    if (btn.classList.contains('btn-return')) {
+                        const qty = prompt('Masukkan jumlah yang dikembalikan:');
+                        if (!qty || isNaN(qty) || qty <= 0) return;
+                        const res = await fetch(`/purchasing/return/${id}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'CSRF-Token': csrfToken
+                            },
+                            body: JSON.stringify({
+                                items: [{
+                                    productId: btn.dataset.productId,
+                                    qty: parseFloat(qty)
+                                }]
+                            })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            showToast({
+                                type: 'success',
+                                title: 'Berhasil',
+                                message: data.message || 'Item dikembalikan'
+                            });
+                            loadPurchasings();
+                        } else {
+                            showToast({
+                                type: 'danger',
+                                title: 'Gagal',
+                                message: data.message || 'Gagal mengembalikan item'
+                            });
+                        }
+                        return;
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    showToast({
+                        type: 'danger',
+                        title: 'Error',
+                        message: 'Gagal memproses aksi'
+                    });
                 }
-
-                const action = btn.classList.contains('btn-complete') ? 'complete' :
-                    btn.classList.contains('btn-cancel') ? 'cancel' : 'return';
-
-                fetch(`/purchasing/${id}/${action}`, {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) loadPurchasings();
-                        else alert(data.message || 'Aksi gagal');
-                    });
-            };
-        });
-
-        // Tombol delete (jika ada)
-        tbody.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.onclick = () => {
-                if (!confirm('Yakin ingin menghapus purchasing ini?')) return;
-                const id = btn.dataset.id;
-                fetch(`/purchasing/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) loadPurchasings();
-                        else alert(data.message || 'Gagal menghapus data');
-                    });
             };
         });
     }
 
-    // Search input
     if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            state.search = searchInput.value;
+        searchInput.addEventListener('input', e => {
+            state.search = e.target.value;
             state.page = 1;
             loadPurchasings();
         });
     }
 
-    // Filter supplier
-    if (supplierFilter) {
-        supplierFilter.addEventListener('change', () => {
-            state.supplier = supplierFilter.value;
-            state.page = 1;
-            loadPurchasings();
+    function initPaginationUI(pagination) {
+        const wrapper = document.querySelector('#purchasingPaginationWrapper');
+        wrapper.innerHTML = '';
+
+        const {
+            page: current,
+            totalPages: total,
+            limit,
+            totalItems: totalData
+        } = pagination;
+
+        const container = document.createElement('div');
+        container.className = 'd-flex mt-3 gap-3 align-items-center justify-content-between flex-wrap';
+
+        // Limit select
+        const limitWrapper = document.createElement('div');
+        limitWrapper.className = 'd-flex align-items-center';
+        limitWrapper.style.minWidth = '180px';
+        limitWrapper.innerHTML = `
+        <label for="limitSelect" class="me-2 mb-0">Tampilkan:</label>
+        <select id="limitSelect" class="form-select form-select-sm" style="width: auto;">
+            ${[10, 25, 50].map(val => `<option value="${val}" ${val === limit ? 'selected' : ''}>${val}</option>`).join('')}
+        </select>
+    `;
+
+        // Pagination
+        const nav = document.createElement('nav');
+        nav.setAttribute('aria-label', 'Page navigation');
+        nav.className = 'flex-grow-1 d-flex justify-content-center';
+        const ul = document.createElement('ul');
+        ul.className = 'pagination mb-0';
+
+        const createPageItem = (n, text = null, disabled = false, active = false) => {
+            const li = document.createElement('li');
+            li.className = `page-item ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`;
+            li.innerHTML = `<a class="page-link" href="javascript:void(0);" data-page="${n}">${text || n}</a>`;
+            return li;
+        };
+
+        // First & Prev
+        ul.appendChild(createPageItem(1, '<i class="tf-icon bx bx-chevrons-left"></i>', current === 1));
+        ul.appendChild(createPageItem(current - 1, '<i class="tf-icon bx bx-chevron-left"></i>', current === 1));
+
+        // Page numbers with ellipsis
+        if (current > 3) {
+            ul.appendChild(createPageItem(1));
+            const li = document.createElement('li');
+            li.className = 'page-item disabled';
+            li.innerHTML = '<span class="page-link">...</span>';
+            ul.appendChild(li);
+        }
+        for (let i = Math.max(current - 2, 1); i <= Math.min(current + 2, total); i++) {
+            ul.appendChild(createPageItem(i, null, false, i === current));
+        }
+        if (current < total - 2) {
+            const li = document.createElement('li');
+            li.className = 'page-item disabled';
+            li.innerHTML = '<span class="page-link">...</span>';
+            ul.appendChild(li);
+            ul.appendChild(createPageItem(total));
+        }
+
+        // Next & Last
+        ul.appendChild(createPageItem(current + 1, '<i class="tf-icon bx bx-chevron-right"></i>', current === total));
+        ul.appendChild(createPageItem(total, '<i class="tf-icon bx bx-chevrons-right"></i>', current === total));
+
+        nav.appendChild(ul);
+
+        // Info
+        const info = document.createElement('p');
+        info.className = 'mb-0 text-nowrap';
+        info.style.minWidth = '200px';
+        info.textContent = `Halaman ${current} dari ${total} — Total ${totalData} data`;
+
+        // Masukkan semua ke container
+        container.appendChild(limitWrapper);
+        container.appendChild(nav);
+        container.appendChild(info);
+
+        wrapper.appendChild(container);
+
+        // Bind limit change
+        const limitSelect = document.querySelector('#limitSelect');
+        if (limitSelect) {
+            limitSelect.onchange = e => {
+                state.limit = parseInt(e.target.value);
+                state.page = 1;
+                loadPurchasings();
+            };
+        }
+
+        // Bind page clicks
+        wrapper.querySelectorAll('[data-page]').forEach(btn => {
+            btn.onclick = () => {
+                const page = parseInt(btn.dataset.page);
+                if (!isNaN(page) && page >= 1 && page <= total) {
+                    state.page = page;
+                    loadPurchasings();
+                }
+            };
         });
     }
 
-    // Filter status
-    if (statusFilter) {
-        statusFilter.addEventListener('change', () => {
-            state.status = statusFilter.value;
-            state.page = 1;
-            loadPurchasings();
-        });
-    }
-
-    // First bind events (supaya pagination & tombol langsung aktif dari server render)
-    bindEvents();
+    loadPurchasings();
 });

@@ -16,27 +16,28 @@
         </div>
     </div>
     <div class="card-body">
-        <table class="table table-hover table-striped" id="tablePurchasings">
-            <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th>Tanggal</th>
-                    <th>Supplier</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                <%- include('_tbody', { purchasings: purchasings, pagination }) %>
-            </tbody>
-        </table>
-
-        <div id="paginationContainer">
-            <%- include('../partials/pagination', { pagination }) %>
-        </div>
-
+        <%- include('_tbody', { purchasings, pagination }) %>
     </div>
 </div>
 
-<script type="module" src="/assets/js/pages/purchasing.js"></script>
+<script type="module" src="/assets/js/pages/purchasing_index.js"></script>
+<script>
+    document.addEventListener('keydown', function (e) {
+        // Cegah jika user sedang mengetik di input
+        const isInputFocused = document.activeElement.tagName === 'INPUT' ||
+            document.activeElement.tagName === 'TEXTAREA' ||
+            document.activeElement.isContentEditable;
+        if (isInputFocused) return;
+
+        // Shortcut: Alt + N (new)
+        if (e.altKey && e.key.toLowerCase() === 'n') {
+            e.preventDefault();
+
+            // Langsung navigasi ke halaman create purchasing
+            const linkNewPage = document.querySelector('a[href="/purchasing/create"]');
+            if (linkNewPage) {
+                window.location.href = linkNewPage.href;
+            }
+        }
+    });
+</script>

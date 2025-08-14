@@ -1,125 +1,49 @@
+// --- /assets/js/pages/purchasing.js ---
 import {
     showToast
 } from '/assets/js/utils/toast.js';
 import {
     resetModalForm
 } from '/assets/js/utils/resetModal.js';
-import {
-    initPagination
-} from '/assets/js/utils/initPagination.js';
 
-const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-const form = document.getElementById('formCreatePurchasing');
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+// --- Cache DOM ---
+const purchasingWrapper = document.getElementById('purchasingWrapper');
+const paginationContainer = document.getElementById('purchasingPaginationWrapper');
+const formCreate = document.getElementById('formCreatePurchasing');
+const formAddItem = document.getElementById('formAddItem');
+const searchInput = document.getElementById('searchPurchasing');
 
 let currentPage = 1;
 let currentLimit = 10;
-let currentPurchasingId = null;
+let currentFilter = '';
 
-// --- Cache DOM ---
-const tableBody = document.querySelector('#tablePurchasings tbody');
-const paginationContainer = document.getElementById('paginationContainer');
-
-// --- Helper URLs ---
+// --- API ---
 const API = {
-    purchasing: '/purchasing',
+    purchasingList: '/purchasing/listJSON',
     suppliers: '/purchasing/suppliers',
-    products: '/products/list',
-    pagination: '/purchasing/partials/pagination'
+    products: '/products/json',
+    create: '/purchasing/create'
 };
 
-// --- Fetch helper ---
-async function fetchJSON(url, options) {
+// --- Helper: Fetch JSON ---
+async function fetchJSON(url, options = {}) {
     const res = await fetch(url, options);
     if (!res.ok) throw new Error('Network error');
     return res.json();
 }
 
-// --- Load Purchasings ---
-async function loadPurchasings(page = 1, limit = 10) {
-    if (!tableBody || !paginationContainer) return;
-
-    try {
-        const params = new URLSearchParams({
-            page,
-            limit
-        });
-        const data = await fetchJSON(`${API.purchasing}/list?${params}`);
-
-        tableBody.innerHTML = '';
-        if (!data.data.length) {
-            tableBody.innerHTML = `<tr><td colspan="6" class="text-center">Tidak ada data</td></tr>`;
-            paginationContainer.innerHTML = '';
-            return;
-        }
-
-        data.data.forEach((p, idx) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${(page - 1) * limit + idx + 1}</td>
-                <td>${new Date(p.date).toLocaleDateString()}</td>
-                <td>${p.supplierName}</td>
-                <td>${p.total.toLocaleString()}</td>
-                <td>
-                    ${p.status === 'completed' ? '<span class="badge bg-success">Completed</span>' : ''}
-                    ${p.status === 'draft' ? '<span class="badge bg-warning">Draft</span>' : ''}
-                    ${p.status === 'cancelled' ? '<span class="badge bg-danger">Cancelled</span>' : ''}
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-info btn-view-purchasing" data-id="${p.id}">
-                        <i class="bx bx-show"></i>
-                    </button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-
-        // --- Pagination partial ---
-        const paginationHTML = await fetch(`${API.pagination}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                pagination: {
-                    page,
-                    totalPages: Math.ceil(data.total / limit),
-                    limit,
-                    totalItems: data.total
-                }
-            })
-        }).then(res => res.text());
-
-        paginationContainer.innerHTML = paginationHTML;
-
-        // --- Init pagination events ---
-        initPagination({
-            onPageChange: (newPage) => {
-                currentPage = newPage;
-                loadPurchasings(currentPage, currentLimit);
-            },
-            onLimitChange: (newLimit) => {
-                currentLimit = newLimit;
-                currentPage = 1;
-                loadPurchasings(currentPage, currentLimit);
-            }
-        });
-
-    } catch (err) {
-        console.error(err);
-        showToast({
-            type: 'danger',
-            title: 'Error',
-            message: 'Gagal load daftar purchasing'
-        });
-    }
-}
-
-// --- Load Supplier Options ---
+// --- Load suppliers ---
 async function loadSuppliers() {
+    const supplierSelect = document.getElementById('supplierSelect'); // ambil ulang setiap kali
+    if (!supplierSelect) return;
+
     try {
         const suppliers = await fetchJSON(API.suppliers);
-        const select = document.getElementById('supplierSelect');
-        select.innerHTML = suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        supplierSelect.innerHTML = suppliers
+            .map(s => `<option value="${s.id}">${s.name}</option>`)
+            .join('');
     } catch (err) {
         console.error(err);
         showToast({
@@ -130,12 +54,17 @@ async function loadSuppliers() {
     }
 }
 
-// --- Load Product Options ---
+// --- Load products ---
 async function loadProducts() {
+    if (!supplierSelect?.value) return;
     try {
-        const products = await fetchJSON(API.products);
+        const res = await fetchJSON(`/products/json?supplierId=${supplierSelect.value}`);
         const select = document.getElementById('productSelect');
-        select.innerHTML = products.map(p => `<option value="${p.id}" data-price="${p.salePrice}">${p.name}</option>`).join('');
+        if (select && res.products) {
+            select.innerHTML = res.products.map(p => `<option value="${p.id}" data-price="${p.salePrice}">${p.name}</option>`).join('');
+            const selected = select.selectedOptions[0];
+            document.getElementById('itemPrice').value = selected?.dataset.price || 0;
+        }
     } catch (err) {
         console.error(err);
         showToast({
@@ -146,114 +75,280 @@ async function loadProducts() {
     }
 }
 
-// --- Init ---
-document.addEventListener('DOMContentLoaded', () => {
-    loadPurchasings(currentPage, currentLimit);
-});
+// --- Update total ---
+function updateTotal() {
+    const tbody = document.querySelector('#purchasingItemsTable tbody');
+    if (!tbody) return;
+    let total = 0;
+    tbody.querySelectorAll('tr').forEach(r => {
+        total += Number(r.cells[3].textContent.replace(/,/g, '')) || 0;
+    });
+    const totalEl = document.getElementById('purchasingTotal');
+    if (totalEl) totalEl.textContent = total.toLocaleString();
+}
 
-// --- Modal Handlers ---
-document.getElementById('btnCreatePurchasing')?.addEventListener('click', async () => {
+// --- Page load ---
+document.addEventListener('DOMContentLoaded', async () => {
     await loadSuppliers();
-    currentPurchasingId = null;
-    const tbody = document.getElementById('purchasingItemsTable').querySelector('tbody');
-    tbody.innerHTML = '';
-    document.getElementById('purchasingTotal').textContent = '0';
-    resetModalForm(document.getElementById('modalCreatePurchasing'));
-    new bootstrap.Modal(document.getElementById('modalCreatePurchasing')).show();
-});
+    loadPurchasingTable(currentPage, currentLimit);
 
-document.getElementById('btnAddItem')?.addEventListener('click', async () => {
-    await loadProducts();
-    resetModalForm(document.getElementById('modalAddPurchasingItem'));
-    new bootstrap.Modal(document.getElementById('modalAddPurchasingItem')).show();
-});
+    // Event: supplier change → load products
+    document.getElementById('supplierSelect')?.addEventListener('change', loadProducts);
 
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const supplierId = document.getElementById('supplierSelect').value;
-    const notaNumber = document.getElementById('notaNumber').value;
-    const notaFile = document.getElementById('uploadNota').files[0];
-    const rows = document.querySelectorAll('#purchasingItemsTable tbody tr');
-
-    if (!rows.length) return alert('Tambahkan minimal 1 item');
-
-    const items = Array.from(rows).map(r => ({
-        productId: r.dataset.productId,
-        qty: parseFloat(r.cells[1].textContent),
-        price: parseFloat(r.cells[2].textContent.replace(/,/g, ''))
-    }));
-
-    const formData = new FormData();
-    formData.append('supplierId', supplierId);
-    formData.append('notaNumber', notaNumber);
-    if (notaFile) formData.append('notaFile', notaFile);
-    formData.append('items', JSON.stringify(items));
-
-    const res = await fetch('/purchasing/create', {
-        method: 'POST',
-        headers: {
-            'CSRF-Token': csrfToken
-        },
-        body: formData
+    // Event: search filter
+    searchInput?.addEventListener('input', () => {
+        currentFilter = searchInput.value.trim();
+        currentPage = 1;
+        loadPurchasingTable(currentPage, currentLimit, currentFilter);
     });
 
-    const data = await res.json();
-    if (data.success) {
-        alert('Purchasing berhasil dibuat');
-        window.location.href = '/purchasing';
-    } else {
-        alert(data.message || 'Gagal menyimpan purchasing');
+    // Event: auto update harga
+    document.getElementById('productSelect')?.addEventListener('change', function () {
+        document.getElementById('itemPrice').value = this.selectedOptions[0]?.dataset.price || 0;
+    });
+});
+
+// --- Load table AJAX ---
+export async function loadPurchasingTable(page = 1, limit = 10, filter = '') {
+    try {
+        const url = `${API.purchasingList}?page=${page}&limit=${limit}&filter=${encodeURIComponent(filter)}`;
+        const data = await fetchJSON(url);
+        if (!data.success) throw new Error('Gagal load data');
+
+        const tbody = purchasingWrapper.querySelector('#purchasingTbody');
+        tbody.innerHTML = '';
+
+        if (!data.purchasings.length) {
+            tbody.innerHTML = `<tr>
+                <td colspan="6" class="text-center text-muted py-4">Tidak ada data purchasing ditemukan.</td>
+            </tr>`;
+            paginationContainer.innerHTML = '';
+            return;
+        }
+
+        const startNumber = (data.pagination.page - 1) * data.pagination.limit + 1;
+        data.purchasings.forEach((p, i) => {
+            const row = document.createElement('tr');
+            row.dataset.id = p.id;
+            row.innerHTML = `
+                <td>${startNumber + i}</td>
+                <td>${new Date(p.date).toLocaleDateString()}</td>
+                <td>${p.supplier?.name || '-'}</td>
+                <td>${p.total.toLocaleString()}</td>
+                <td>
+                    ${p.status === 'completed' ? '<span class="badge bg-success">Completed</span>' :
+                      p.status === 'draft' ? '<span class="badge bg-warning">Draft</span>' :
+                      '<span class="badge bg-danger">Cancelled</span>'}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-info btn-view" data-id="${p.id}">
+                        <i class="bx bx-show"></i>
+                    </button>
+                    ${p.status === 'draft' ? `
+                        <button class="btn btn-sm btn-success btn-complete" data-id="${p.id}">
+                            <i class="bx bx-check"></i> Complete
+                        </button>
+                        <button class="btn btn-sm btn-danger btn-cancel" data-id="${p.id}">
+                            <i class="bx bx-x"></i> Cancel
+                        </button>` :
+                      p.status === 'completed' ? `
+                        <button class="btn btn-sm btn-warning btn-return" data-id="${p.id}">
+                            <i class="bx bx-rotate-left"></i> Return
+                        </button>` : ''
+                    }
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        renderPagination(data.pagination);
+    } catch (err) {
+        console.error(err);
+        showToast({
+            type: 'danger',
+            title: 'Error',
+            message: 'Gagal memuat purchasing'
+        });
+    }
+}
+
+purchasingWrapper.addEventListener('click', async e => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (!id) return;
+
+    try {
+        if (btn.classList.contains('btn-view')) {
+            const res = await fetchJSON(`/purchasing/view/${id}`);
+            if (res.success) {
+                const content = document.getElementById('modalViewContent');
+                content.innerHTML = `
+                    <p><strong>Supplier:</strong> ${res.data.supplier?.name || '-'}</p>
+                    <p><strong>Total:</strong> ${res.data.total.toLocaleString()}</p>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>
+                        </thead>
+                        <tbody>
+                            ${res.data.items.map(i => `
+                                <tr>
+                                    <td>${i.product?.name || '-'}</td>
+                                    <td>${i.qty}</td>
+                                    <td>${i.price.toLocaleString()}</td>
+                                    <td>${(i.qty * i.price).toLocaleString()}</td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+                new bootstrap.Modal(document.getElementById('modalViewPurchasing')).show();
+            }
+            return;
+        }
+
+        if (btn.classList.contains('btn-complete')) await fetchJSON(`/purchasing/complete/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'CSRF-Token': csrfToken
+            }
+        });
+        if (btn.classList.contains('btn-cancel')) await fetchJSON(`/purchasing/cancel/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'CSRF-Token': csrfToken
+            }
+        });
+        if (btn.classList.contains('btn-return')) {
+            const qty = prompt('Masukkan jumlah yang dikembalikan:');
+            if (!qty || isNaN(qty) || qty <= 0) return;
+            await fetchJSON(`/purchasing/return/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    items: [{
+                        productId: btn.dataset.productId,
+                        qty: parseFloat(qty)
+                    }]
+                })
+            });
+        }
+
+        showToast({
+            type: 'success',
+            title: 'Sukses',
+            message: 'Aksi berhasil diproses'
+        });
+        loadPurchasingTable(currentPage, currentLimit, currentFilter);
+    } catch (err) {
+        console.error(err);
+        showToast({
+            type: 'danger',
+            title: 'Error',
+            message: 'Gagal memproses aksi'
+        });
     }
 });
 
-// --- Submit Add Item ---
-document.getElementById('formAddItem').addEventListener('submit', (e) => {
+// --- Filter live ---
+searchInput?.addEventListener('input', () => {
+    currentFilter = searchInput.value.trim();
+    currentPage = 1;
+    loadPurchasingTable(currentPage, currentLimit, currentFilter);
+});
+
+// --- Render pagination ---
+function renderPagination(pagination) {
+    if (!paginationContainer) return;
+    const {
+        page,
+        totalPages
+    } = pagination;
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="btn btn-sm ${i === page ? 'btn-primary' : 'btn-outline-primary'} me-1" data-page="${i}">${i}</button>`;
+    }
+    paginationContainer.innerHTML = html;
+
+    paginationContainer.querySelectorAll('button[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const p = parseInt(btn.dataset.page);
+            if (p && p !== currentPage) {
+                currentPage = p;
+                loadPurchasingTable(currentPage, currentLimit);
+            }
+        });
+    });
+}
+
+// --- Add item modal ---
+document.getElementById('btnAddItem')?.addEventListener('click', async () => {
+    if (!supplierSelect?.value) return showToast({
+        type: 'warning',
+        title: 'Perhatian',
+        message: 'Pilih supplier terlebih dahulu'
+    });
+
+    await loadProducts(); // isi productSelect
+    resetModalForm(document.getElementById('modalAddPurchasingItem'));
+
+    // Set harga langsung berdasarkan produk pertama yang muncul
+    const productSelect = document.getElementById('productSelect');
+    const firstOption = productSelect.selectedOptions[0];
+    if (firstOption) {
+        document.getElementById('itemPrice').value = firstOption.dataset.price || 0;
+    }
+
+    new bootstrap.Modal(document.getElementById('modalAddPurchasingItem')).show();
+});
+
+// --- Submit add item ---
+formAddItem?.addEventListener('submit', e => {
     e.preventDefault();
     const productSelect = document.getElementById('productSelect');
     const productId = productSelect.value;
     const productName = productSelect.selectedOptions[0].textContent;
     const qty = parseFloat(document.getElementById('itemQty').value);
     const price = parseFloat(document.getElementById('itemPrice').value);
-    const subtotal = qty * price;
+    if (!productId || qty <= 0) return;
 
-    const tbody = document.getElementById('purchasingItemsTable').querySelector('tbody');
+    const tbody = document.querySelector('#purchasingItemsTable tbody');
+    const subtotal = qty * price;
     const row = document.createElement('tr');
     row.dataset.productId = productId;
     row.innerHTML = `
-        <td>${productName}</td>
-        <td>${qty}</td>
-        <td>${price.toLocaleString()}</td>
-        <td>${subtotal.toLocaleString()}</td>
+        <td>${productName}<input type="hidden" name="items[][productId]" value="${productId}"></td>
+        <td>${qty}<input type="hidden" name="items[][qty]" value="${qty}"></td>
+        <td>${price.toLocaleString()}<input type="hidden" name="items[][price]" value="${price}"></td>
+        <td class="subtotal">${subtotal.toLocaleString()}</td>
         <td><button type="button" class="btn btn-sm btn-danger btn-remove-item"><i class="bx bx-trash"></i></button></td>
     `;
     tbody.appendChild(row);
-
     updateTotal();
     bootstrap.Modal.getInstance(document.getElementById('modalAddPurchasingItem')).hide();
 });
 
-// --- Remove Item ---
-document.getElementById('purchasingItemsTable').addEventListener('click', (e) => {
+// --- Remove item ---
+document.querySelector('#purchasingItemsTable')?.addEventListener('click', e => {
     if (e.target.closest('.btn-remove-item')) {
         e.target.closest('tr').remove();
         updateTotal();
     }
 });
 
-// --- Update Total ---
-function updateTotal() {
-    const rows = document.getElementById('purchasingItemsTable').querySelectorAll('tbody tr');
-    let total = 0;
-    rows.forEach(r => total += Number(r.cells[3].textContent.replace(/,/g, '')) || 0);
-    document.getElementById('purchasingTotal').textContent = total.toLocaleString();
-}
-
-// --- Submit Create Purchasing ---
-document.getElementById('formCreatePurchasing').addEventListener('submit', async (e) => {
+// --- Submit create purchasing ---
+formCreate?.addEventListener('submit', async e => {
     e.preventDefault();
-    const supplierId = document.getElementById('supplierSelect').value;
-    const rows = document.getElementById('purchasingItemsTable').querySelectorAll('tbody tr');
-
+    const rows = document.querySelectorAll('#purchasingItemsTable tbody tr');
     if (!rows.length) return showToast({
         type: 'warning',
         title: 'Peringatan',
@@ -262,35 +357,37 @@ document.getElementById('formCreatePurchasing').addEventListener('submit', async
 
     const items = Array.from(rows).map(r => ({
         productId: r.dataset.productId,
-        qty: parseFloat(r.cells[1].textContent),
-        price: parseFloat(r.cells[2].textContent.replace(/,/g, ''))
+        qty: parseFloat(r.querySelector('input[name="items[][qty]"]').value),
+        price: parseFloat(r.querySelector('input[name="items[][price]"]').value)
     }));
 
-    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    const formData = new FormData();
+    formData.append('supplierId', supplierSelect.value);
+    const notaFile = document.getElementById('uploadNota')?.files[0];
+    if (notaFile) formData.append('notaFile', notaFile);
+    formData.append('items', JSON.stringify(items));
+
+    const btnSubmit = formCreate.querySelector('button[type="submit"]');
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Menyimpan...';
 
     try {
-        const data = await fetchJSON(`${API.purchasing}/create`, {
+        const data = await fetchJSON(API.create, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'CSRF-Token': csrfToken
             },
-            body: JSON.stringify({
-                supplierId,
-                items
-            })
+            body: formData
         });
-
         if (data.success) {
             showToast({
                 type: 'success',
                 title: 'Sukses',
                 message: 'Purchasing berhasil dibuat'
             });
-            bootstrap.Modal.getInstance(document.getElementById('modalCreatePurchasing')).hide();
-            loadPurchasings(currentPage, currentLimit);
+            setTimeout(() => {
+                window.location.href = '/purchasing';
+            }, 1500);
         } else {
             showToast({
                 type: 'danger',
@@ -307,6 +404,11 @@ document.getElementById('formCreatePurchasing').addEventListener('submit', async
         });
     } finally {
         btnSubmit.disabled = false;
-        btnSubmit.textContent = 'Selesaikan Purchasing';
+        btnSubmit.textContent = 'Simpan Purchasing';
     }
+});
+
+// --- Auto update harga ---
+document.getElementById('productSelect')?.addEventListener('change', function () {
+    document.getElementById('itemPrice').value = this.selectedOptions[0]?.dataset.price || 0;
 });

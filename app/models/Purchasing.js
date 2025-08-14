@@ -1,4 +1,3 @@
-// models/Purchasing.js
 module.exports = (sequelize, DataTypes) => {
     const Purchasing = sequelize.define('Purchasing', {
         id: {
@@ -21,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
         status: {
             type: DataTypes.ENUM('draft', 'completed', 'cancelled'),
             defaultValue: 'draft'
+        },
+        notaFile: {
+            type: DataTypes.STRING,
+            allowNull: true
         }
     }, {
         tableName: 'Purchasings'
@@ -28,7 +31,8 @@ module.exports = (sequelize, DataTypes) => {
 
     Purchasing.associate = (models) => {
         Purchasing.belongsTo(models.Supplier, {
-            foreignKey: 'supplierId'
+            foreignKey: 'supplierId',
+            as: 'supplier'
         });
         Purchasing.hasMany(models.PurchasingItem, {
             foreignKey: 'purchasingId',

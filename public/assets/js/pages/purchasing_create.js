@@ -42,17 +42,22 @@ async function loadSuppliers() {
     }
 }
 
-// Update total harga
+// Update subtotal & total
 function updateTotal() {
     const tbody = document.querySelector('#purchasingItemsTable tbody');
     let total = 0;
     tbody.querySelectorAll('tr').forEach(r => {
-        total += Number(r.cells[3].textContent.replace(/,/g, '')) || 0;
+        const qty = parseFloat(r.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(r.querySelector('.item-price').value) || 0;
+        const subtotal = qty * price;
+        r.querySelector('.subtotal').textContent = subtotal.toLocaleString('id-ID');
+        total += subtotal;
     });
     purchasingTotal.textContent = total.toLocaleString('id-ID');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Init select2 untuk modal
     const productSelect = $('#productSelect2');
     productSelect.select2({
         placeholder: 'Ketik nama produk...',
@@ -77,56 +82,23 @@ document.addEventListener('DOMContentLoaded', () => {
             cache: true
         }
     });
-
-    productSelect.on('select2:select', e => {
-        const selected = e.params.data;
-        document.getElementById('itemPrice').value = selected.cost || 0;
-        document.getElementById('updateCost').checked = false;
-    });
-
-    productSelect.on('select2:clear', () => {
-        document.getElementById('itemPrice').value = 0;
-        document.getElementById('updateCost').checked = false;
-    });
 });
 
 const modalAddItem = document.getElementById('modalAddPurchasingItem');
 const bsModalAddItem = new bootstrap.Modal(modalAddItem);
 
-// Pasang listener sekali
+// Open modal
 document.getElementById('btnOpenModalCreate')?.addEventListener('click', () => {
     if (!supplierSelect?.value) return showToast({
         type: 'warning',
         title: 'Perhatian',
         message: 'Pilih supplier terlebih dahulu'
     });
-
     resetModalForm(modalAddItem);
-    bsModalAddItem.show(); // Show modal, Select2 sudah siap
+    bsModalAddItem.show();
 });
 
-modalAddItem.addEventListener('hidden.bs.modal', () => {
-    // Reset form input/checkbox
-    resetModalForm(modalAddItem, {
-        defaults: {
-            itemPrice: 0,
-            updateCost: false
-        }
-    });
-
-    // Reset Select2
-    const productSelect = $('#productSelect2');
-    productSelect.val(null).trigger('change');
-
-    // Reset harga & checkbox tambahan
-    document.getElementById('itemPrice').value = 0;
-    document.getElementById('updateCost').checked = false;
-
-    // Reset quantity
-    document.getElementById('itemQty').value = '';
-});
-
-// Submit form tambah item
+// Submit modal: hanya ambil product dan masukkan ke tabel
 formAddItem?.addEventListener('submit', e => {
     e.preventDefault();
     const productSelect = $('#productSelect2');
@@ -135,32 +107,27 @@ formAddItem?.addEventListener('submit', e => {
 
     const productId = selectedData.id;
     const productName = selectedData.text;
-    const qty = parseFloat(document.getElementById('itemQty').value);
-    const price = parseFloat(document.getElementById('itemPrice').value);
-    const updateCost = document.getElementById('updateCost').checked;
-
-    if (qty <= 0) return;
+    const cost = selectedData.cost || 0; // ambil dari API
 
     const tbody = document.querySelector('#purchasingItemsTable tbody');
-    const subtotal = qty * price;
+
     const row = document.createElement('tr');
     row.dataset.productId = productId;
-    row.dataset.updateCost = updateCost ? '1' : '0';
     row.innerHTML = `
         <td>${productName}<input type="hidden" name="items[][productId]" value="${productId}"></td>
-        <td>${qty}<input type="hidden" name="items[][qty]" value="${qty}"></td>
-        <td>${price.toLocaleString()}<input type="hidden" name="items[][price]" value="${price}"></td>
-        <td class="subtotal">${subtotal.toLocaleString()}</td>
+        <td><input type="number" class="form-control form-control-sm item-qty" name="items[][qty]" value="1" min="1"></td>
+        <td><input type="number" class="form-control form-control-sm item-price" name="items[][price]" value="${cost}" min="0" step="0.01"></td>
+        <td class="subtotal">${cost.toLocaleString()}</td>
         <td><button type="button" class="btn btn-sm btn-danger btn-remove-item"><i class="bx bx-trash"></i></button></td>
     `;
     tbody.appendChild(row);
     updateTotal();
 
-    // Cukup hide modal, listener hidden.bs.modal akan handle reset
     bsModalAddItem.hide();
 });
 
-// Hapus item
+
+// Listener untuk menghapus row
 document.querySelector('#purchasingItemsTable')?.addEventListener('click', e => {
     if (e.target.closest('.btn-remove-item')) {
         e.target.closest('tr').remove();
@@ -168,7 +135,14 @@ document.querySelector('#purchasingItemsTable')?.addEventListener('click', e => 
     }
 });
 
-// Submit form create purchasing
+// Listener untuk update subtotal saat input berubah
+document.querySelector('#purchasingItemsTable tbody')?.addEventListener('input', e => {
+    if (e.target.classList.contains('item-qty') || e.target.classList.contains('item-price')) {
+        updateTotal();
+    }
+});
+
+// Submit form create
 formCreate?.addEventListener('submit', async e => {
     e.preventDefault();
     const rows = document.querySelectorAll('#purchasingItemsTable tbody tr');
@@ -180,9 +154,8 @@ formCreate?.addEventListener('submit', async e => {
 
     const items = Array.from(rows).map(r => ({
         productId: r.dataset.productId,
-        qty: parseFloat(r.querySelector('input[name="items[][qty]"]').value),
-        price: parseFloat(r.querySelector('input[name="items[][price]"]').value),
-        updateCost: r.dataset.updateCost === '1'
+        qty: parseFloat(r.querySelector('.item-qty').value),
+        price: parseFloat(r.querySelector('.item-price').value)
     }));
 
     const formData = new FormData();
@@ -231,5 +204,4 @@ formCreate?.addEventListener('submit', async e => {
     }
 });
 
-// Init suppliers saat DOM siap
 document.addEventListener('DOMContentLoaded', loadSuppliers);

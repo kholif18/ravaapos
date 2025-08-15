@@ -303,6 +303,7 @@ document.getElementById('btnGenerateEditBarcode').addEventListener('click', () =
 document.getElementById('editEnableLowStockWarning').addEventListener('change', e => {
     document.getElementById('editLowStockWarning').disabled = !e.target.checked;
 });
+
 document.getElementById('editEnableInputTax').addEventListener('change', e => {
     document.getElementById('editTax').disabled = !e.target.checked;
 });
@@ -474,7 +475,21 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
 
     // Reset file input
     if (createFileInput) createFileInput.value = '';
+
+    // Pastikan input lowStockWarning dan tax sesuai checkbox
+    const lowStockCheckbox = document.getElementById('enableLowStockWarning');
+    const lowStockInput = document.getElementById('lowStockWarning');
+    if (lowStockCheckbox && lowStockInput) {
+        lowStockInput.disabled = !lowStockCheckbox.checked;
+    }
+
+    const taxCheckbox = document.getElementById('enableInputTax');
+    const taxInput = document.getElementById('tax');
+    if (taxCheckbox && taxInput) {
+        taxInput.disabled = !taxCheckbox.checked;
+    }
 });
+
 
 modalEdit.addEventListener('hidden.bs.modal', () => {
     resetInputErrors(formEdit);

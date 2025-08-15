@@ -1080,7 +1080,8 @@ exports.searchJSON = async (req, res) => {
 
     // Filter product berdasarkan supplier dan nama
     const where = {
-      supplierId
+      supplierId,
+      service: false
     };
     if (term) {
       where.name = {

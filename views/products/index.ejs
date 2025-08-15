@@ -261,8 +261,8 @@
 <!-- Modal Import CSV -->
 <div class="modal fade" id="modalImportCSV" tabindex="-1" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <form action="/products/import" method="POST" enctype="multipart/form-data" class="modal-content">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+    <form action="/products/import-csv" method="POST" enctype="multipart/form-data" class="modal-content">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="modal-header">
         <h5 class="modal-title" id="modalImportCSVLabel">Import Produk dari CSV</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

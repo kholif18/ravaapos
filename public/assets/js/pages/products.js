@@ -620,13 +620,12 @@ document.querySelector('#modalImportCSV form').addEventListener('submit', async 
     const btnSubmit = form.querySelector('button[type="submit"]');
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Importing...';
-
-    formData.append('_csrf', csrfToken);
     
     try {
         const res = await fetch(form.action, {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
         const result = await res.json();
 

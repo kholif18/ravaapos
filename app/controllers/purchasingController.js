@@ -13,46 +13,6 @@ const {
     recordStockHistory
 } = require('../helpers/recordStockHistory');
 
-// Helper untuk ambil data purchasing + pagination
-async function fetchPurchasingData(page, limit) {
-    const offset = (page - 1) * limit;
-    const {
-        count,
-        rows
-    } = await Purchasing.findAndCountAll({
-        include: [{
-                model: Supplier,
-                as: 'supplier',
-                attributes: ['name']
-            },
-            {
-                model: PurchasingItem,
-                as: 'items',
-                include: {
-                    model: Product,
-                    as: 'product',
-                    attributes: ['name']
-                }
-            }
-        ],
-        order: [
-            ['date', 'DESC']
-        ],
-        limit,
-        offset
-    });
-
-    return {
-        purchasings: rows,
-        pagination: {
-            page,
-            limit,
-            totalPages: Math.ceil(count / limit),
-            totalItems: count
-        }
-    };
-}
-
 // Halaman utama (table akan di-load via AJAX)
 exports.index = (req, res) => {
     res.render('purchasing/index', {
@@ -214,7 +174,8 @@ exports.create = async (req, res) => {
     try {
         const {
             supplierId,
-            items
+            items,
+            note
         } = req.body;
         const itemsParsed = JSON.parse(items || '[]');
 
@@ -237,7 +198,8 @@ exports.create = async (req, res) => {
             total,
             date: new Date(),
             status: 'draft', // draft dulu
-            notaFile: notaFilePath
+            notaFile: notaFilePath,
+            note
         });
 
         const purchasingItems = itemsParsed.map(i => ({

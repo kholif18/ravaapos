@@ -201,23 +201,6 @@ body.swal2-shown .layout-menu {
   background-color: #f5f5f5;
 }
 
-/* Modal Add Item Scrollable */
-#modalAddPurchasingItem .modal-body {
-  max-height: 60vh;
-  overflow-y: auto;
-  padding-right: 8px; /* hindari scrollbar menimpa konten */
-}
-
-/* Select2 full width & sesuai modal */
-#productSelect2.select2-container {
-  width: 100% !important;
-  box-sizing: border-box;
-}
-
-#productSelect2 + .select2-container {
-  margin-top: 4px;
-}
-
 .select2-dropdown {
   z-index: 1055;
 }
@@ -227,26 +210,6 @@ body.swal2-shown .layout-menu {
   padding-bottom: 5px;
   height: auto;
   min-height: 38px;
-}
-
-#itemPrice,
-#itemQty {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-#updateCost {
-  cursor: pointer;
-}
-
-#updateCost + label {
-  margin-bottom: 0;
-  cursor: pointer;
-  user-select: none;
-}
-
-#modalAddPurchasingItem .text-muted {
-  font-size: 0.85rem;
 }
 
 /* Responsive kecil */

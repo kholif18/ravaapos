@@ -55,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${p.status === 'completed' ? '<span class="badge bg-success">Completed</span>' :
                         p.status === 'draft' ? '<span class="badge bg-warning">Draft</span>' :
                         '<span class="badge bg-danger">Cancelled</span>'}
+                        ${p.returnQty > 0 ? `<span class="badge bg-info ms-1">Returned ${p.returnQty}</span>` : ''
+                        }
                     </td>
                     <td>
                         <button class="btn btn-sm btn-info btn-view" data-id="${p.id}"><i class="bx bx-show"></i></button>
@@ -197,38 +199,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // === RETURN ===
                     if (btn.classList.contains('btn-return')) {
-                        const qty = prompt('Masukkan jumlah yang dikembalikan:');
-                        if (!qty || isNaN(qty) || qty <= 0) return;
-                        const res = await fetch(`/purchasing/return/${id}`, {
-                            method: 'POST',
+                        const id = btn.dataset.id;
+                        const res = await fetch(`/purchasing/view/${id}`, {
                             headers: {
-                                'Content-Type': 'application/json',
-                                'CSRF-Token': csrfToken
-                            },
-                            body: JSON.stringify({
-                                items: [{
-                                    productId: btn.dataset.productId,
-                                    qty: parseFloat(qty)
-                                }]
-                            })
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
                         });
                         const data = await res.json();
-                        if (data.success) {
-                            showToast({
-                                type: 'success',
-                                title: 'Berhasil',
-                                message: data.message || 'Item dikembalikan'
-                            });
-                            loadPurchasings();
-                        } else {
-                            showToast({
+                        if (!data.success) {
+                            return showToast({
                                 type: 'danger',
-                                title: 'Gagal',
-                                message: data.message || 'Gagal mengembalikan item'
+                                title: 'Error',
+                                message: 'Gagal load detail'
                             });
                         }
+
+                        const d = data.data;
+                        const tableRows = d.items.map(i => `
+                            <tr>
+                                <td>${i.product?.name || '-'}</td>
+                                <td>${i.qty}</td>
+                                <td>${i.price.toLocaleString()}</td>
+                                <td>${(i.qty * i.price).toLocaleString()}</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" 
+                                        name="returnQty" min="0" max="${i.qty}" value="0"
+                                        data-product-id="${i.productId}">
+                                </td>
+                            </tr>
+                        `).join('');
+
+                                            const html = `
+                            <p><strong>Supplier:</strong> ${d.supplier?.name || '-'}</p>
+                            <p><strong>Tanggal:</strong> ${new Date(d.date).toLocaleDateString()}</p>
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th><th>Qty Return</th></tr>
+                                </thead>
+                                <tbody>${tableRows}</tbody>
+                            </table>
+                        `;
+
+                        document.getElementById('modalReturnContent').innerHTML = html;
+                        document.getElementById('formReturnPurchasing').dataset.purchasingId = id;
+                        new bootstrap.Modal(document.getElementById('modalReturnPurchasing')).show();
                         return;
                     }
+
 
                 } catch (err) {
                     console.error(err);
@@ -241,6 +258,67 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
     }
+
+    document.getElementById('formReturnPurchasing').addEventListener('submit', async e => {
+        e.preventDefault();
+        const id = e.target.dataset.purchasingId;
+        const inputs = e.target.querySelectorAll('input[name="returnQty"]');
+        const items = [];
+
+        inputs.forEach(inp => {
+            const qty = parseFloat(inp.value);
+            if (qty > 0) {
+                items.push({
+                    productId: inp.dataset.productId,
+                    qty
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            return showToast({
+                type: 'warning',
+                title: 'Peringatan',
+                message: 'Tidak ada item yang dikembalikan'
+            });
+        }
+
+        try {
+            const res = await fetch(`/purchasing/return/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({
+                    items
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast({
+                    type: 'success',
+                    title: 'Berhasil',
+                    message: data.message || 'Return berhasil'
+                });
+                bootstrap.Modal.getInstance(document.getElementById('modalReturnPurchasing')).hide();
+                loadPurchasings();
+            } else {
+                showToast({
+                    type: 'danger',
+                    title: 'Gagal',
+                    message: data.message || 'Return gagal'
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            showToast({
+                type: 'danger',
+                title: 'Error',
+                message: 'Gagal memproses return'
+            });
+        }
+    });
 
     if (searchInput) {
         searchInput.addEventListener('input', e => {

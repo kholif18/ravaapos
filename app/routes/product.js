@@ -27,7 +27,15 @@ router.put('/:id', upload.single('image'), productController.updateProduct);
 router.get('/barcode', barcodeController.index);
 
 router.get('/import/template', productController.downloadTemplateCSV);
-router.post('/import', upload.single('csvFile'), productController.importCSV);
+router.post(
+    '/import-csv',
+    (req, res, next) => {
+        req.skipGlobalCsrf = true; // kasih flag biar CSRF dilewati
+        next();
+    },
+    upload.single('csvFile'), // pastikan sama dengan name di form
+    productController.importCSV
+);
 
 router.get('/export/csv', productController.exportCSV);
 router.get('/export/pdf', productController.exportPDF);

@@ -117,6 +117,7 @@ formAddItem?.addEventListener('submit', e => {
         <td>${productName}<input type="hidden" name="items[][productId]" value="${productId}"></td>
         <td><input type="number" class="form-control form-control-sm item-qty" name="items[][qty]" value="1" min="1"></td>
         <td><input type="number" class="form-control form-control-sm item-price" name="items[][price]" value="${cost}" min="0" step="0.01"></td>
+        <td class="text-center"><input type="checkbox" class="form-check-input item-update-cost" name="items[][updateCost]"></td>
         <td class="subtotal">${cost.toLocaleString()}</td>
         <td><button type="button" class="btn btn-sm btn-danger btn-remove-item"><i class="bx bx-trash"></i></button></td>
     `;
@@ -126,6 +127,9 @@ formAddItem?.addEventListener('submit', e => {
     bsModalAddItem.hide();
 });
 
+$('#modalAddPurchasingItem').on('hidden.bs.modal', function () {
+    $('#productSelect2').val(null).trigger('change');
+});
 
 // Listener untuk menghapus row
 document.querySelector('#purchasingItemsTable')?.addEventListener('click', e => {
@@ -155,11 +159,13 @@ formCreate?.addEventListener('submit', async e => {
     const items = Array.from(rows).map(r => ({
         productId: r.dataset.productId,
         qty: parseFloat(r.querySelector('.item-qty').value),
-        price: parseFloat(r.querySelector('.item-price').value)
+        price: parseFloat(r.querySelector('.item-price').value),
+        updateCost: r.querySelector('.item-update-cost').checked
     }));
 
     const formData = new FormData();
     formData.append('supplierId', supplierSelect.value);
+    formData.append('note', document.getElementById('note')?.value || '');
     const notaFile = document.getElementById('uploadNota')?.files[0];
     if (notaFile) formData.append('notaFile', notaFile);
     formData.append('items', JSON.stringify(items));

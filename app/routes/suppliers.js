@@ -57,7 +57,16 @@ router.post('/:id/delete', supplierController.delete);
 router.get('/:id/detail', supplierController.getDetail);
 router.get('/export-csv', supplierController.exportCSV);
 
-router.post('/import-csv', upload.single('csv'), supplierController.importCSV);
+router.post(
+    '/import-csv',
+    (req, res, next) => {
+        req.skipGlobalCsrf = true;
+        next();
+    },
+    upload.single('csv'),
+    supplierController.importCSV
+);
+
 router.get('/template-csv', supplierController.downloadTemplate);
 
 module.exports = router;

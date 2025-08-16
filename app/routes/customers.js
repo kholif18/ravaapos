@@ -23,6 +23,14 @@ router.post('/:id/delete', customerController.destroy);
 
 router.get('/template-csv', customerController.downloadTemplate);
 router.get('/export', customerController.exportCSV);
-router.post('/import', upload.single('csvFile'), customerController.importCSV);
+router.post(
+    '/import-csv',
+    (req, res, next) => {
+        req.skipGlobalCsrf = true;
+        next();
+    },
+    upload.single('csvFile'),
+    customerController.importCSV
+);
 
 module.exports = router;

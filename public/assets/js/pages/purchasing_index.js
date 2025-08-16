@@ -53,10 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${p.total.toLocaleString()}</td>
                     <td>
                         ${p.status === 'completed' ? '<span class="badge bg-success">Completed</span>' :
-                        p.status === 'draft' ? '<span class="badge bg-warning">Draft</span>' :
-                        '<span class="badge bg-danger">Cancelled</span>'}
-                        ${p.returnQty > 0 ? `<span class="badge bg-info ms-1">Returned ${p.returnQty}</span>` : ''
-                        }
+                            p.status === 'draft' ? '<span class="badge bg-warning">Draft</span>' :
+                            '<span class="badge bg-danger">Cancelled</span>'}
+                        ${p.returnQty > 0 ? `<span class="badge bg-info ms-1">Returned ${p.returnQty}</span>` : ''}
                     </td>
                     <td>
                         <button class="btn btn-sm btn-info btn-view" data-id="${p.id}"><i class="bx bx-show"></i></button>
@@ -137,6 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 `).join('')}
                             </tbody>
                         </table>
+
+                        <hr>
+                            <p><strong>Catatan: </strong><br>${d.note ? d.note.replace(/\n/g, '<br>'): '-'}</p>
                     `;
                         document.getElementById('modalViewContent').innerHTML = html;
                         new bootstrap.Modal(document.getElementById('modalViewPurchasing')).show();
@@ -238,6 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </thead>
                                 <tbody>${tableRows}</tbody>
                             </table>
+
+                            <div class="mb-3">
+                                <label for="returnNote" class="form-label">Catatan Return</label> 
+                                <textarea id="returnNote" name="returnNote" class="form-control" rows="3"
+                                placeholder="Masukkan catatan pengembalian..."></textarea> 
+                            </div>
                         `;
 
                         document.getElementById('modalReturnContent').innerHTML = html;
@@ -245,7 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         new bootstrap.Modal(document.getElementById('modalReturnPurchasing')).show();
                         return;
                     }
-
 
                 } catch (err) {
                     console.error(err);
@@ -261,21 +268,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('formReturnPurchasing').addEventListener('submit', async e => {
         e.preventDefault();
-        const id = e.target.dataset.purchasingId;
-        const inputs = e.target.querySelectorAll('input[name="returnQty"]');
-        const items = [];
 
-        inputs.forEach(inp => {
-            const qty = parseFloat(inp.value);
-            if (qty > 0) {
-                items.push({
-                    productId: inp.dataset.productId,
-                    qty
-                });
-            }
-        });
+        const form = e.target;
+        const purchasingId = form.dataset.purchasingId;
+        const inputs = form.querySelectorAll('input[name="returnQty"]');
+        const note = form.querySelector('#returnNote')?.value.trim() || '';
 
-        if (items.length === 0) {
+        // Ambil item yang dikembalikan
+        const items = Array.from(inputs)
+            .map(inp => ({
+                productId: inp.dataset.productId,
+                qty: parseFloat(inp.value)
+            }))
+            .filter(i => i.qty > 0);
+
+        if (!items.length) {
             return showToast({
                 type: 'warning',
                 title: 'Peringatan',
@@ -283,18 +290,26 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const payload = {
+            items,
+            note
+        };
+
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Menyimpan...';
+
         try {
-            const res = await fetch(`/purchasing/return/${id}`, {
+            const res = await fetch(`/purchasing/return/${purchasingId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({
-                    items
-                })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
+
             if (data.success) {
                 showToast({
                     type: 'success',
@@ -317,6 +332,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Error',
                 message: 'Gagal memproses return'
             });
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = 'Simpan Return';
         }
     });
 

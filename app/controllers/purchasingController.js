@@ -2,12 +2,15 @@ const {
     Purchasing,
     Supplier,
     Product,
-    PurchasingItem
+    PurchasingItem,
+    StockHistory
 } = require('../models');
 const path = require('path');
 const fs = require('fs');
 const {
-    Op
+    Op,
+    fn, 
+    col
 } = require('sequelize');
 const {
     recordStockHistory
@@ -79,24 +82,19 @@ exports.searchJSON = async (req, res) => {
     }
 };
 
-// JSON untuk AJAX reload table
 exports.listJSON = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
         const search = req.query.search?.trim() || '';
         const supplier = req.query.supplier || '';
         const status = req.query.status || '';
-        const offset = (page - 1) * limit;
 
         const where = {};
-        if (search) {
-            where[Op.or] = [{
-                id: {
-                    [Op.like]: `%${search}%`
-                }
-            }];
-        }
+        if (search) where.id = {
+            [Op.like]: `%${search}%`
+        };
         if (supplier) where.supplierId = supplier;
         if (status) where.status = status;
 
@@ -129,27 +127,39 @@ exports.listJSON = async (req, res) => {
             distinct: true
         });
 
-        const totalPages = Math.ceil(count / limit);
+        const purchasingsWithReturn = await Promise.all(rows.map(async p => {
+            // Hitung total returnQty (abs supaya selalu positif)
+            const totalReturn = await StockHistory.sum('qty', {
+                where: {
+                    purchasingId: p.id,
+                    type: 'return'
+                }
+            });
+            return {
+                ...p.toJSON(),
+                returnQty: Math.abs(totalReturn || 0)
+            };
+        }));
 
         res.json({
             success: true,
-            purchasings: rows,
+            purchasings: purchasingsWithReturn,
             pagination: {
                 page,
                 limit,
-                totalPages,
+                totalPages: Math.ceil(count / limit),
                 totalItems: count
             }
         });
+
     } catch (err) {
-        console.error(err);
+        console.error('Gagal load data purchasing:', err);
         res.status(500).json({
             success: false,
             message: 'Gagal load data purchasing'
         });
     }
 };
-
 
 // JSON daftar supplier untuk dropdown AJAX
 exports.listSuppliersJSON = async (req, res) => {
@@ -248,18 +258,16 @@ exports.complete = async (req, res) => {
             const product = await Product.findByPk(item.productId);
             if (product) {
                 // Update stock
-                const oldStock = product.stock || 0;
-                product.stock = oldStock + item.qty;
+                product.stock = (product.stock || 0) + item.qty;
 
                 // Update cost hanya jika flag updateCost = true
-                if (item.updateCost) {
-                    product.cost = item.price;
-                }
+                if (item.updateCost) product.cost = item.price;
 
                 await product.save();
 
                 await recordStockHistory({
                     productId: product.id,
+                    purchasingId: purchasing.id, // <-- tambahan
                     type: 'purchase',
                     qty: item.qty,
                     note: `Pembelian #${purchasing.id}`,
@@ -307,12 +315,12 @@ exports.cancel = async (req, res) => {
             for (const item of purchasing.items) {
                 const product = await Product.findByPk(item.productId);
                 if (product) {
-                    const oldStock = product.stock || 0;
-                    product.stock = oldStock - item.qty;
+                    product.stock = (product.stock || 0) - item.qty;
                     await product.save();
 
                     await recordStockHistory({
                         productId: product.id,
+                        purchasingId: purchasing.id, // <-- tambahan
                         type: 'cancel',
                         qty: -item.qty,
                         note: `Pembatalan Pembelian #${purchasing.id}`,
@@ -343,8 +351,9 @@ exports.cancel = async (req, res) => {
 exports.return = async (req, res) => {
     try {
         const {
-            items
-        } = req.body; // [{productId, qty}]
+            items,
+            note
+        } = req.body;
         const purchasing = await Purchasing.findByPk(req.params.id);
         if (!purchasing) return res.status(404).json({
             success: false,
@@ -354,18 +363,23 @@ exports.return = async (req, res) => {
         for (const i of items) {
             const product = await Product.findByPk(i.productId);
             if (product) {
-                const oldStock = product.stock || 0;
-                product.stock = oldStock - i.qty;
+                product.stock = (product.stock || 0) - i.qty;
                 await product.save();
 
                 await recordStockHistory({
                     productId: product.id,
+                    purchasingId: purchasing.id, // <-- tambahan
                     type: 'return',
-                    qty: -i.qty,
-                    note: `Pengembalian Pembelian #${purchasing.id}`,
+                    qty: i.qty,
+                    note: `Pengembalian Pembelian #${purchasing.id} | ${note || ''}`,
                     createdBy: req.user?.name || 'admin'
                 });
             }
+        }
+
+        if (note) {
+            purchasing.note = purchasing.note ? `${purchasing.note} | ${note}` : note;
+            await purchasing.save();
         }
 
         res.json({

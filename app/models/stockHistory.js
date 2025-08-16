@@ -5,6 +5,10 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             allowNull: false
         },
+        purchasingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true 
+        },
         type: {
             type: DataTypes.ENUM('add', 'adjust', 'purchase', 'sale'),
             allowNull: false
@@ -19,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         createdBy: {
             type: DataTypes.STRING,
-            allowNull: true // Bisa nanti diganti relasi ke user kalau sudah ada
+            allowNull: true // Bisa nanti diganti relasi ke user kalau sudah ada// <--- relasi baru
         }
     }, {
         tableName: 'stock_histories',
@@ -30,6 +34,10 @@ module.exports = (sequelize, DataTypes) => {
         StockHistory.belongsTo(models.Product, {
             foreignKey: 'productId',
             as: 'product'
+        });
+        StockHistory.belongsTo(models.Purchasing, {
+            foreignKey: 'purchasingId',
+            as: 'purchasing'
         });
     };
 

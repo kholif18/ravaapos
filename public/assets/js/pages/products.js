@@ -114,6 +114,7 @@ tbody.addEventListener('click', async (e) => {
             document.getElementById('editSupplierSelect').value = product.supplierId || '';
             document.getElementById('editDefaultQty').checked = !!product.defaultQty;
             document.getElementById('editIsService').checked = !!product.service;
+            document.getElementById('editProductType').value = product.type;
             document.getElementById('editInputCost').value = product.cost ?? '';
             document.getElementById('editInputMarkup').value = product.markup ?? '';
             document.getElementById('editInputSalePrice').value = product.salePrice || '';

@@ -18,7 +18,7 @@
         <td><%= p.salePrice ? formatRupiah(p.salePrice) : 0 %></td>
         <td><%= formatRupiah(p.nilai) %></td>
         <td class="text-center">
-            <% if (isService) { %>
+            <% if (isService || p.type === 'ppob') { %>
                 <span class="text-muted small fst-italic text-nowrap">Tanpa stok</span>
             <% } else { %>
                 <button 

@@ -19,7 +19,7 @@
               <div class="col-md-6">
                   <div class="mb-3">
                       <label for="notaNumber" class="form-label">Nomor Nota</label>
-                      <input type="text" class="form-control" id="notaNumber" name="notaNumber" placeholder="Masukkan nomor nota">
+                      <input type="text" class="form-control" id="notaNumber" name="notaNumber" placeholder="Masukkan nomor nota" autofocus>
                   </div>
               </div>
               <div class="col-md-6">
@@ -30,20 +30,30 @@
               </div>
           </div>
 
-          <div class="mb-3">
+          <div class="row">
+            <div class="col-md-6">
               <label for="supplierSelect" class="form-label">Pilih Supplier</label>
-              <select id="supplierSelect" name="supplierId" class="form-select" required></select>
+              <div class="d-flex gap-2">
+                <select id="supplierSelect" name="supplierId" class="form-select" required></select>
+                <button type="button" class="btn btn-sm btn-warning" id="btnChangeSupplier">Ubah</button>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="productSelect2" class="form-label">Product</label>
+                <div class="d-flex gap-2">
+                  <select id="productSelect2" class="form-select" placeholder="Ketik nama produk..."></select>
+                  <button type="button" class="btn btn-sm btn-primary" id="btnAddItem">
+                    <i class="bx bx-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <hr>
 
           <h6>Items</h6>
-          <div class="mb-3">
-              <button type="button" class="btn btn-sm btn-primary" id="btnOpenModalCreate">
-                  <i class="bx bx-plus"></i> Tambah Item
-              </button>
-              <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
-          </div>
 
           <div id="purchasingItemsTableWrapper" class="table-responsive" style="max-height: 400px; overflow-y: auto;">
             <table class="table table-bordered" id="purchasingItemsTable">
@@ -83,6 +93,9 @@
   </form>
 </div>
 
+<script type="module" src="/assets/js/pages/purchasing_create.js"></script>
+<script type="module" src="/assets/js/utils/shortcut.js"></script>
+
 <!-- Modal Add Item -->
 <div class="modal fade" id="modalAddPurchasingItem" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -108,6 +121,3 @@
     </form>
   </div>
 </div>
-
-<script type="module" src="/assets/js/pages/purchasing_create.js"></script>
-<script type="module" src="/assets/js/utils/shortcut.js"></script>

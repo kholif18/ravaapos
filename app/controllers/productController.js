@@ -319,6 +319,9 @@ exports.updateProduct = async (req, res) => {
     const parsedPreferredQty = parseInt(preferredQty);
     const parsedLowStockThreshold = parseInt(lowStockThreshold);
 
+    // ⚡ type tidak boleh diubah (ambil dari DB, bukan dari req.body)
+    const type = product.type;
+
     // Validasi
     const errors = {};
     if (!name?.trim()) errors.name = 'Nama harus diisi';
@@ -326,18 +329,32 @@ exports.updateProduct = async (req, res) => {
     if (req.body.tax && (isNaN(tax) || tax < 0 || tax > 100)) {
       errors.tax = 'Pajak harus antara 0 - 100';
     }
-    if (!isService && (isNaN(parsedCost) || parsedCost <= 0)) {
-      errors.cost = 'Harga modal harus lebih dari 0';
+
+    if (type === 'fisik') {
+      if (!isService) {
+        if (isNaN(parsedCost) || parsedCost <= 0) {
+          errors.cost = 'Harga modal harus lebih dari 0';
+        }
+        if (isNaN(parsedMarkup)) {
+          errors.markup = 'Markup tidak valid';
+        }
+      } else {
+        // jasa → cost & markup boleh kosong, fallback ke 0
+        if (isNaN(parsedCost)) parsedCost = 0;
+        if (isNaN(parsedMarkup)) parsedMarkup = 0;
+      }
+      if (isNaN(parsedSalePrice)) {
+        errors.salePrice = 'Harga jual tidak valid';
+      }
     }
-    if (isService && isNaN(parsedCost)) {
+
+    if (type === 'ppob') {
+      // PPOB harga fleksibel → abaikan validasi cost/markup/salePrice
       parsedCost = 0;
+      parsedMarkup = 0;
+      parsedSalePrice = 0;
     }
-    if (!isService && isNaN(parsedMarkup)) {
-      errors.markup = 'Markup tidak valid';
-    }
-    if (isNaN(parsedSalePrice)) {
-      errors.salePrice = 'Harga jual tidak valid';
-    }
+
     if (hasLowStockWarning && (isNaN(parsedLowStockThreshold) || parsedLowStockThreshold < 0)) {
       errors.lowStockThreshold = 'Batas stok rendah tidak valid';
     }
@@ -351,23 +368,18 @@ exports.updateProduct = async (req, res) => {
 
     // Handle gambar baru
     if (req.file) {
-      // Hapus gambar lama jika ada
       if (product.image) {
         const oldImagePath = path.join(__dirname, '../public', product.image);
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
         }
       }
-
-      // Pastikan folder ada
       const uploadDir = path.join(__dirname, '../../public/uploads/products');
       if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, {
           recursive: true
         });
       }
-
-      // Simpan gambar baru
       const ext = path.extname(req.file.originalname);
       const fileName = `product-${Date.now()}${ext}`;
       const targetPath = path.join(uploadDir, fileName);
@@ -383,7 +395,7 @@ exports.updateProduct = async (req, res) => {
       unit,
       categoryId: categoryId || null,
       defaultQty: isDefaultQty,
-      service: isService,
+      service: isService, // toggle jasa / fisik
       cost: parsedCost || 0,
       markup: parsedMarkup || 0,
       salePrice: parsedSalePrice || 0,
@@ -396,6 +408,7 @@ exports.updateProduct = async (req, res) => {
       enableInputTax: isEnableInputTax,
       tax: isNaN(tax) ? null : tax,
       enableAltDesc: isEnableAltDesc
+      // ❌ jangan ubah type
     });
 
     await product.save();
@@ -1099,7 +1112,10 @@ exports.searchJSON = async (req, res) => {
     // Filter product berdasarkan supplier dan nama
     const where = {
       supplierId,
-      service: false
+      service: false,
+      type: {
+        [Op.ne]: 'ppob'
+      }
     };
     if (term) {
       where.name = {

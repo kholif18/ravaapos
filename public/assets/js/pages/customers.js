@@ -431,12 +431,11 @@ document.getElementById('formImportCSV')?.addEventListener('submit', async (e) =
     e.preventDefault();
     const formData = new FormData(e.target);
 
-    formData.append('_csrf', csrfToken);
-
     try {
-        const res = await fetch('/customers/import', {
+        const res = await fetch('/customers/import-csv', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
 
         const result = await res.json();

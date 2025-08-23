@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
         price: {
             type: DataTypes.FLOAT,
             defaultValue: 0
+        },
+        updateCost: { 
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
         }
     }, {
         tableName: 'PurchasingItems'
@@ -33,6 +37,10 @@ module.exports = (sequelize, DataTypes) => {
         PurchasingItem.belongsTo(models.Product, {
             foreignKey: 'productId',
             as: 'product'
+        });
+        PurchasingItem.hasMany(models.StockHistory, {
+            foreignKey: 'purchasingItemId',
+            as: 'stockHistories'
         });
     };
 

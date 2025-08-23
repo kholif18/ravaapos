@@ -1,97 +1,113 @@
 <!-- views/purchasing/create.ejs -->
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header">
+    <div class="d-flex flex-wrap justify-content-between align-items-center">
+      <div class="gap-2">
         <h5>Buat Purchasing Baru</h5>
+      </div>
+      <div class="gap-2">
         <a href="/purchasing" class="btn btn-secondary"><i class="bx bx-arrow-back"></i> Kembali</a>
+      </div>
     </div>
+  </div>
 
-    <form id="formCreatePurchasing" enctype="multipart/form-data">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <form id="formCreatePurchasing" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="notaNumber" class="form-label">Nomor Nota</label>
-                        <input type="text" class="form-control" id="notaNumber" name="notaNumber" placeholder="Masukkan nomor nota">
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="uploadNota" class="form-label">Upload Nota / Bukti</label>
-                        <input type="file" class="form-control" id="uploadNota" name="notaFile" accept="image/*,application/pdf">
-                    </div>
-                </div>
-            </div>
+      <div class="card-body">
+          <div class="row">
+              <div class="col-md-6">
+                  <div class="mb-3">
+                      <label for="notaNumber" class="form-label">Nomor Nota</label>
+                      <input type="text" class="form-control" id="notaNumber" name="notaNumber" placeholder="Masukkan nomor nota">
+                  </div>
+              </div>
+              <div class="col-md-6">
+                  <div class="mb-3">
+                      <label for="uploadNota" class="form-label">Upload Nota / Bukti</label>
+                      <input type="file" class="form-control" id="uploadNota" name="notaFile" accept="image/*,application/pdf">
+                  </div>
+              </div>
+          </div>
 
-            <div class="mb-3">
-                <label for="supplierSelect" class="form-label">Pilih Supplier</label>
-                <select id="supplierSelect" name="supplierId" class="form-select" required></select>
-            </div>
+          <div class="mb-3">
+              <label for="supplierSelect" class="form-label">Pilih Supplier</label>
+              <select id="supplierSelect" name="supplierId" class="form-select" required></select>
+          </div>
 
-            <hr>
+          <hr>
 
-            <h6>Items</h6>
-            <div class="mb-3">
-                <button type="button" class="btn btn-sm btn-primary" id="btnAddItem">
-                    <i class="bx bx-plus"></i> Tambah Item
-                </button>
-            </div>
+          <h6>Items</h6>
+          <div class="mb-3">
+              <button type="button" class="btn btn-sm btn-primary" id="btnOpenModalCreate">
+                  <i class="bx bx-plus"></i> Tambah Item
+              </button>
+              <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+          </div>
 
+          <div id="purchasingItemsTableWrapper" class="table-responsive" style="max-height: 400px; overflow-y: auto;">
             <table class="table table-bordered" id="purchasingItemsTable">
                 <thead class="table-light">
                     <tr>
-                        <th>Produk</th>
+                        <th>Product</th>
                         <th>Qty</th>
-                        <th>Harga</th>
+                        <th>Cost</th>
+                        <th>Update Cost?</th>
                         <th>Subtotal</th>
-                        <th>Aksi</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
+          </div>
 
-            <div class="d-flex justify-content-end">
-                <h6>Total: <span id="purchasingTotal">0</span></h6>
-            </div>
-        </div>
+          <div class="d-flex justify-content-end mt-3">
+              <h6>Total: <span id="purchasingTotal">0</span></h6>
+          </div>
+          <!-- Note -->
+          <div class="mb-3">
+              <label for="note" class="form-label">Catatan</label>
+              <textarea 
+                  class="form-control" 
+                  id="note" 
+                  name="note" 
+                  rows="3" 
+                  placeholder="Tulis catatan tambahan tentang purchasing ini..."></textarea>
+          </div>
+      </div>
 
-        <div class="card-footer d-flex justify-content-end gap-2">
-            <button type="submit" class="btn btn-success">Simpan Purchasing</button>
-            <a href="/purchasing" class="btn btn-secondary">Batal</a>
-        </div>
-    </form>
+      <div class="card-footer d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-success">Simpan Purchasing</button>
+          <a href="/purchasing" class="btn btn-secondary">Batal</a>
+      </div>
+  </form>
 </div>
 
 <!-- Modal Add Item -->
 <div class="modal fade" id="modalAddPurchasingItem" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form id="formAddItem" class="modal-content">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <div class="modal-header">
-                <h5 class="modal-title">Tambah Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                <label for="productSelect" class="form-label">Produk</label>
-                <select id="productSelect" class="form-select" required></select>
-                </div>
-                <div class="mb-3">
-                <label for="itemQty" class="form-label">Qty</label>
-                <input type="number" class="form-control" id="itemQty" min="0" step="1" required>
-                </div>
-                <div class="mb-3">
-                <label for="itemPrice" class="form-label">Harga</label>
-                <input type="number" class="form-control" id="itemPrice" min="0" step="1" required>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="submit" class="btn btn-primary">Tambah</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-            </div>
-        </form>
-    </div>
+  <div class="modal-dialog">
+    <form id="formAddItem" class="modal-content">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="modal-header">
+        <h5 class="modal-title">Tambah Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Produk dengan Select2 -->
+        <div class="mb-3">
+          <label for="productSelect2" class="form-label">Product</label>
+          <select id="productSelect2" class="form-select" placeholder="Ketik nama produk..."></select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Tambah</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script type="module" src="/assets/js/pages/purchasing_create.js"></script>
+<script type="module" src="/assets/js/utils/shortcut.js"></script>

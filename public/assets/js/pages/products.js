@@ -156,7 +156,7 @@ tbody.addEventListener('click', async (e) => {
                 value: product.type
             };
             handleProductTypeChange(typeSelect, 'edit');
-            
+
             bootstrap.Modal.getOrCreateInstance(modalEdit).show();
 
         } catch (err) {
@@ -374,6 +374,7 @@ document.getElementById('btnGenerateEditBarcode').addEventListener('click', () =
 document.getElementById('editEnableLowStockWarning').addEventListener('change', e => {
     document.getElementById('editLowStockWarning').disabled = !e.target.checked;
 });
+
 document.getElementById('editEnableInputTax').addEventListener('change', e => {
     document.getElementById('editTax').disabled = !e.target.checked;
 });
@@ -554,6 +555,7 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
     }
 });
 
+
 modalEdit.addEventListener('hidden.bs.modal', () => {
     resetInputErrors(formEdit);
 
@@ -683,13 +685,12 @@ document.querySelector('#modalImportCSV form').addEventListener('submit', async 
     const btnSubmit = form.querySelector('button[type="submit"]');
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Importing...';
-
-    formData.append('_csrf', csrfToken);
     
     try {
         const res = await fetch(form.action, {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
         const result = await res.json();
 

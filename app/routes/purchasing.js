@@ -19,8 +19,6 @@ router.get('/', purchasingController.index);
 // Data JSON untuk daftar purchasing (AJAX)
 router.get('/listJSON', purchasingController.listJSON);
 
-router.get('/listPartial', purchasingController.listPartial);
-
 // Data JSON untuk daftar supplier (dropdown AJAX)
 router.get('/suppliers', purchasingController.listSuppliersJSON);
 

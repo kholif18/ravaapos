@@ -14,11 +14,11 @@ const purchasingTotal = document.getElementById('purchasingTotal');
 
 const API = {
     suppliers: '/purchasing/suppliers',
-    products: '/products/json',
+    productsSearch: '/products/search',
     create: '/purchasing/create'
 };
 
-// Helper fetch JSON
+// Fetch JSON helper
 async function fetchJSON(url, options = {}) {
     const res = await fetch(url, options);
     if (!res.ok) throw new Error('Network error');
@@ -42,94 +42,96 @@ async function loadSuppliers() {
     }
 }
 
-// Load products berdasarkan supplier terpilih
-async function loadProducts() {
-    if (!supplierSelect?.value) return;
-    try {
-        const res = await fetchJSON(`${API.products}?supplierId=${supplierSelect.value}`);
-        const select = document.getElementById('productSelect');
-        if (select && res.products) {
-            select.innerHTML = res.products
-                .map(p => `<option value="${p.id}" data-price="${p.salePrice}">${p.name}</option>`)
-                .join('');
-            const selected = select.selectedOptions[0];
-            document.getElementById('itemPrice').value = selected?.dataset.price || 0;
-        }
-    } catch (err) {
-        console.error(err);
-        showToast({
-            type: 'danger',
-            title: 'Error',
-            message: 'Gagal load products'
-        });
-    }
-}
-
-// Update total harga
+// Update subtotal & total
 function updateTotal() {
     const tbody = document.querySelector('#purchasingItemsTable tbody');
     let total = 0;
     tbody.querySelectorAll('tr').forEach(r => {
-        total += Number(r.cells[3].textContent.replace(/,/g, '')) || 0;
+        const qty = parseFloat(r.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(r.querySelector('.item-price').value) || 0;
+        const subtotal = qty * price;
+        r.querySelector('.subtotal').textContent = subtotal.toLocaleString('id-ID');
+        total += subtotal;
     });
-    purchasingTotal.textContent = total.toLocaleString();
+    purchasingTotal.textContent = total.toLocaleString('id-ID');
 }
 
-// Event: Supplier change → load products
-supplierSelect?.addEventListener('change', loadProducts);
-
-// Event: Button "Tambah Item"
-document.getElementById('btnAddItem')?.addEventListener('click', async () => {
-    if (!supplierSelect?.value) {
-        return showToast({
-            type: 'warning',
-            title: 'Perhatian',
-            message: 'Pilih supplier terlebih dahulu'
-        });
-    }
-
-    await loadProducts();
-    resetModalForm(document.getElementById('modalAddPurchasingItem'));
-
-    // Set harga produk pertama
-    const productSelect = document.getElementById('productSelect');
-    const firstOption = productSelect.selectedOptions[0];
-    if (firstOption) {
-        document.getElementById('itemPrice').value = firstOption.dataset.price || 0;
-    }
-
-    new bootstrap.Modal(document.getElementById('modalAddPurchasingItem')).show();
+document.addEventListener('DOMContentLoaded', () => {
+    // Init select2 untuk modal
+    const productSelect = $('#productSelect2');
+    productSelect.select2({
+        placeholder: 'Ketik nama produk...',
+        width: '100%',
+        allowClear: true,
+        dropdownParent: $('#modalAddPurchasingItem'),
+        ajax: {
+            url: API.productsSearch,
+            dataType: 'json',
+            delay: 250,
+            data: params => ({
+                supplierId: supplierSelect.value,
+                term: params.term || ''
+            }),
+            processResults: data => ({
+                results: (data.results || []).map(p => ({
+                    id: p.id,
+                    text: p.text,
+                    cost: p.price
+                }))
+            }),
+            cache: true
+        }
+    });
 });
 
-// Event: Submit form tambah item
+const modalAddItem = document.getElementById('modalAddPurchasingItem');
+const bsModalAddItem = new bootstrap.Modal(modalAddItem);
+
+// Open modal
+document.getElementById('btnOpenModalCreate')?.addEventListener('click', () => {
+    if (!supplierSelect?.value) return showToast({
+        type: 'warning',
+        title: 'Perhatian',
+        message: 'Pilih supplier terlebih dahulu'
+    });
+    resetModalForm(modalAddItem);
+    bsModalAddItem.show();
+});
+
+// Submit modal: hanya ambil product dan masukkan ke tabel
 formAddItem?.addEventListener('submit', e => {
     e.preventDefault();
+    const productSelect = $('#productSelect2');
+    const selectedData = productSelect.select2('data')[0];
+    if (!selectedData) return;
 
-    const productSelect = document.getElementById('productSelect');
-    const productId = productSelect.value;
-    const productName = productSelect.selectedOptions[0].textContent;
-    const qty = parseFloat(document.getElementById('itemQty').value);
-    const price = parseFloat(document.getElementById('itemPrice').value);
-    if (!productId || qty <= 0) return;
+    const productId = selectedData.id;
+    const productName = selectedData.text;
+    const cost = selectedData.cost || 0; // ambil dari API
 
     const tbody = document.querySelector('#purchasingItemsTable tbody');
-    const subtotal = qty * price;
+
     const row = document.createElement('tr');
     row.dataset.productId = productId;
     row.innerHTML = `
         <td>${productName}<input type="hidden" name="items[][productId]" value="${productId}"></td>
-        <td>${qty}<input type="hidden" name="items[][qty]" value="${qty}"></td>
-        <td>${price.toLocaleString()}<input type="hidden" name="items[][price]" value="${price}"></td>
-        <td class="subtotal">${subtotal.toLocaleString()}</td>
+        <td><input type="number" class="form-control form-control-sm item-qty" name="items[][qty]" value="1" min="1"></td>
+        <td><input type="number" class="form-control form-control-sm item-price" name="items[][price]" value="${cost}" min="0" step="0.01"></td>
+        <td class="text-center"><input type="checkbox" class="form-check-input item-update-cost" name="items[][updateCost]"></td>
+        <td class="subtotal">${cost.toLocaleString()}</td>
         <td><button type="button" class="btn btn-sm btn-danger btn-remove-item"><i class="bx bx-trash"></i></button></td>
     `;
     tbody.appendChild(row);
     updateTotal();
 
-    bootstrap.Modal.getInstance(document.getElementById('modalAddPurchasingItem')).hide();
+    bsModalAddItem.hide();
 });
 
-// Event: Remove item dari tabel
+$('#modalAddPurchasingItem').on('hidden.bs.modal', function () {
+    $('#productSelect2').val(null).trigger('change');
+});
+
+// Listener untuk menghapus row
 document.querySelector('#purchasingItemsTable')?.addEventListener('click', e => {
     if (e.target.closest('.btn-remove-item')) {
         e.target.closest('tr').remove();
@@ -137,27 +139,33 @@ document.querySelector('#purchasingItemsTable')?.addEventListener('click', e => 
     }
 });
 
-// Event: Submit form create purchasing
+// Listener untuk update subtotal saat input berubah
+document.querySelector('#purchasingItemsTable tbody')?.addEventListener('input', e => {
+    if (e.target.classList.contains('item-qty') || e.target.classList.contains('item-price')) {
+        updateTotal();
+    }
+});
+
+// Submit form create
 formCreate?.addEventListener('submit', async e => {
     e.preventDefault();
-
     const rows = document.querySelectorAll('#purchasingItemsTable tbody tr');
-    if (!rows.length) {
-        return showToast({
-            type: 'warning',
-            title: 'Peringatan',
-            message: 'Tambahkan minimal 1 item'
-        });
-    }
+    if (!rows.length) return showToast({
+        type: 'warning',
+        title: 'Peringatan',
+        message: 'Tambahkan minimal 1 item'
+    });
 
     const items = Array.from(rows).map(r => ({
         productId: r.dataset.productId,
-        qty: parseFloat(r.querySelector('input[name="items[][qty]"]').value),
-        price: parseFloat(r.querySelector('input[name="items[][price]"]').value)
+        qty: parseFloat(r.querySelector('.item-qty').value),
+        price: parseFloat(r.querySelector('.item-price').value),
+        updateCost: r.querySelector('.item-update-cost').checked
     }));
 
     const formData = new FormData();
     formData.append('supplierId', supplierSelect.value);
+    formData.append('note', document.getElementById('note')?.value || '');
     const notaFile = document.getElementById('uploadNota')?.files[0];
     if (notaFile) formData.append('notaFile', notaFile);
     formData.append('items', JSON.stringify(items));
@@ -174,15 +182,14 @@ formCreate?.addEventListener('submit', async e => {
             },
             body: formData
         });
+
         if (data.success) {
             showToast({
                 type: 'success',
                 title: 'Sukses',
                 message: 'Purchasing berhasil dibuat'
             });
-            setTimeout(() => {
-                window.location.href = '/purchasing';
-            }, 1500);
+            setTimeout(() => window.location.href = '/purchasing', 1500);
         } else {
             showToast({
                 type: 'danger',
@@ -203,10 +210,4 @@ formCreate?.addEventListener('submit', async e => {
     }
 });
 
-// Auto update harga produk saat diganti
-document.getElementById('productSelect')?.addEventListener('change', function () {
-    document.getElementById('itemPrice').value = this.selectedOptions[0]?.dataset.price || 0;
-});
-
-// Init
 document.addEventListener('DOMContentLoaded', loadSuppliers);

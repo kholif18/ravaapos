@@ -1,43 +1,83 @@
 <div class="card">
     <div class="card-header">
         <div class="d-flex flex-wrap justify-content-between mb-3">
-        <div class="d-flex gap-2">
-            <div class="me-2">
-            <input type="text" id="searchCategory" class="form-control" placeholder="Cari Kategori...">
+            <div class="d-flex gap-2">
+                <div class="me-2">
+                <input type="text" id="searchPurchasing" class="form-control" placeholder="Cari Purchasing...">
+                </div>
+                <button class="btn btn-outline-secondary" id="resetFilter">
+                <i class="bx bx-sync"></i> Reset
+                </button>
             </div>
-            <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
-        </div>
-        <div class="gap-2">
-            <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
-            <a href="/purchasing/create" class="btn btn-primary">
+            <div class="gap-2">
+                <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+                <a href="/purchasing/create" class="btn btn-primary">
                 <i class="bx bx-plus"></i> Buat Purchasing Baru
-            </a>
-        </div>
+                </a>
+            </div>
         </div>
     </div>
+
     <div class="card-body">
-        <%- include('_tbody', { purchasings, pagination }) %>
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Tanggal</th>
+                    <th>Supplier</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="purchasingTbody">
+            </tbody>
+        </table>
+
+        <div id="purchasingPaginationWrapper">
+        <%- include('../partials/pagination', { pagination }) %>
+        </div>
+    </div>
+</div>
+
+<!-- Modal diletakkan di index, di luar partial -->
+<div class="modal fade" id="modalViewPurchasing" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detail Purchasing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalViewContent"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalReturnPurchasing" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form id="formReturnPurchasing" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Return Purchasing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modalReturnContent"></div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-warning">Proses Return</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script type="module" src="/assets/js/pages/purchasing_index.js"></script>
 <script>
     document.addEventListener('keydown', function (e) {
-        // Cegah jika user sedang mengetik di input
-        const isInputFocused = document.activeElement.tagName === 'INPUT' ||
-            document.activeElement.tagName === 'TEXTAREA' ||
-            document.activeElement.isContentEditable;
+        const isInputFocused = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
         if (isInputFocused) return;
 
-        // Shortcut: Alt + N (new)
         if (e.altKey && e.key.toLowerCase() === 'n') {
-            e.preventDefault();
-
-            // Langsung navigasi ke halaman create purchasing
-            const linkNewPage = document.querySelector('a[href="/purchasing/create"]');
-            if (linkNewPage) {
-                window.location.href = linkNewPage.href;
-            }
+        e.preventDefault();
+        const linkNewPage = document.querySelector('a[href="/purchasing/create"]');
+        if (linkNewPage) window.location.href = linkNewPage.href;
         }
     });
 </script>

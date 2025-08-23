@@ -24,6 +24,10 @@ module.exports = (sequelize, DataTypes) => {
         notaFile: {
             type: DataTypes.STRING,
             allowNull: true
+        },
+        note:{
+            type: DataTypes.TEXT,
+            allowNull: true
         }
     }, {
         tableName: 'Purchasings'

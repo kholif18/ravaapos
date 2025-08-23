@@ -201,3 +201,32 @@ body.swal2-shown .layout-menu {
   background-color: #f5f5f5;
 }
 
+.select2-dropdown {
+  z-index: 1055;
+}
+
+#productSelect2 + .select2-container .select2-selection {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  height: auto;
+  min-height: 38px;
+}
+
+/* Responsive kecil */
+@media (max-width: 576px) {
+  #modalAddPurchasingItem .modal-dialog {
+    max-width: 95%;
+  }
+}
+
+#purchasingItemsTableWrapper {
+    max-height: 400px; /* tinggi maksimal tabel sebelum scroll */
+    overflow-y: auto;
+}
+
+#purchasingItemsTable thead th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa; /* sesuaikan dengan header table */
+    z-index: 1;
+}

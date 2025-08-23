@@ -23,7 +23,7 @@ app.use(methodOverride('_method'));
 // ===== Cookie & Session =====
 app.use(cookieParser());
 app.use(session({
-  secret: 'rahasia-super-aman', // Ganti ke string unik
+  secret: 'rahasia-super-aman',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -31,24 +31,6 @@ app.use(session({
     sameSite: 'strict'
   }
 }));
-
-// ===== CSRF Protection =====
-const csrfProtection = csrf({
-  cookie: true
-});
-app.use(csrfProtection);
-
-// Kirim CSRF token ke semua view EJS
-app.use((req, res, next) => {
-  res.locals.csrfToken = req.csrfToken();
-  next();
-});
-
-// ===== View engine setup =====
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(expressLayouts);
-app.set('layout', 'layouts'); // views/layouts.ejs
 
 // ===== Flash Messages =====
 app.use(flash());
@@ -59,9 +41,40 @@ app.use((req, res, next) => {
   next();
 });
 
-// ===== Sidebar middleware =====
-const sidebarMiddleware = require('./app/middleware/sidebarCategories');
-app.use(sidebarMiddleware);
+// ===== View engine & Layout =====
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layouts'); // views/layouts.ejs
+
+// ===== Tentukan route yang di-skip CSRF =====
+app.use((req, res, next) => {
+  // Skip CSRF untuk semua POST import CSV
+  if (
+    req.method === 'POST' &&
+    req.path.match(/\/import-csv$/)
+  ) {
+    req.skipGlobalCsrf = true;
+  }
+  next();
+});
+
+// ===== CSRF Protection =====
+const csrfProtection = csrf({
+  cookie: true
+});
+app.use((req, res, next) => {
+  if (req.skipGlobalCsrf) return next();
+  csrfProtection(req, res, next);
+});
+
+// ===== Kirim CSRF token ke semua view (hanya jika tidak skip) =====
+app.use((req, res, next) => {
+  if (!req.skipGlobalCsrf) {
+    res.locals.csrfToken = req.csrfToken();
+  }
+  next();
+});
 
 // ===== Routes =====
 app.use('/', index);

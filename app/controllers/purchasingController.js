@@ -2,53 +2,19 @@ const {
     Purchasing,
     Supplier,
     Product,
-    PurchasingItem
+    PurchasingItem,
+    StockHistory
 } = require('../models');
 const path = require('path');
 const fs = require('fs');
 const {
+    Op,
+    fn, 
+    col
+} = require('sequelize');
+const {
     recordStockHistory
 } = require('../helpers/recordStockHistory');
-
-// Helper untuk ambil data purchasing + pagination
-async function fetchPurchasingData(page, limit) {
-    const offset = (page - 1) * limit;
-    const {
-        count,
-        rows
-    } = await Purchasing.findAndCountAll({
-        include: [{
-                model: Supplier,
-                as: 'supplier',
-                attributes: ['name']
-            },
-            {
-                model: PurchasingItem,
-                as: 'items',
-                include: {
-                    model: Product,
-                    as: 'product',
-                    attributes: ['name']
-                }
-            }
-        ],
-        order: [
-            ['date', 'DESC']
-        ],
-        limit,
-        offset
-    });
-
-    return {
-        purchasings: rows,
-        pagination: {
-            page,
-            limit,
-            totalPages: Math.ceil(count / limit),
-            totalItems: count
-        }
-    };
-}
 
 // Halaman utama (table akan di-load via AJAX)
 exports.index = (req, res) => {
@@ -59,8 +25,8 @@ exports.index = (req, res) => {
         pagination: {
             page: 1,
             limit: 10,
-            totalPages: 0,
-            totalItems: 0
+            total: 0,
+            pages: 1
         }
     });
 };
@@ -89,21 +55,59 @@ exports.createPage = async (req, res) => {
     }
 };
 
-// JSON untuk AJAX reload table
+exports.searchJSON = async (req, res) => {
+    try {
+        const supplierId = req.query.supplierId;
+        const term = req.query.term?.trim() || '';
+
+        if (!supplierId) return res.json({ products: [] });
+
+        const where = {
+            supplierId
+        };
+
+        if (term) {
+            where.name = { [Op.like]: `%${term}%` };
+        }
+
+        const products = await Product.findAll({
+            where,
+            attributes: ['id', 'name', 'cost'] // cost digunakan sebagai harga default
+        });
+
+        res.json({ products });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ products: [] });
+    }
+};
+
 exports.listJSON = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
+        const search = req.query.search?.trim() || '';
+        const supplier = req.query.supplier || '';
+        const status = req.query.status || '';
+
+        const where = {};
+        if (search) where.id = {
+            [Op.like]: `%${search}%`
+        };
+        if (supplier) where.supplierId = supplier;
+        if (status) where.status = status;
 
         const {
             count,
             rows
         } = await Purchasing.findAndCountAll({
+            where,
             include: [{
                     model: Supplier,
                     as: 'supplier',
-                    attributes: ['name']
+                    attributes: ['name'],
+                    required: false
                 },
                 {
                     model: PurchasingItem,
@@ -119,23 +123,37 @@ exports.listJSON = async (req, res) => {
                 ['date', 'DESC']
             ],
             limit,
-            offset
+            offset,
+            distinct: true
         });
 
-        const totalPages = Math.ceil(count / limit);
+        const purchasingsWithReturn = await Promise.all(rows.map(async p => {
+            // Hitung total returnQty (abs supaya selalu positif)
+            const totalReturn = await StockHistory.sum('qty', {
+                where: {
+                    purchasingId: p.id,
+                    type: 'return'
+                }
+            });
+            return {
+                ...p.toJSON(),
+                returnQty: Math.abs(totalReturn || 0)
+            };
+        }));
 
         res.json({
             success: true,
-            purchasings: rows,
+            purchasings: purchasingsWithReturn,
             pagination: {
                 page,
                 limit,
-                totalPages,
+                totalPages: Math.ceil(count / limit),
                 totalItems: count
             }
         });
+
     } catch (err) {
-        console.error('Error load purchasing:', err);
+        console.error('Gagal load data purchasing:', err);
         res.status(500).json({
             success: false,
             message: 'Gagal load data purchasing'
@@ -161,94 +179,13 @@ exports.listSuppliersJSON = async (req, res) => {
     }
 };
 
-// list partial untuk AJAX reload
-exports.listPartial = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const search = req.query.search?.trim() || '';
-        const supplier = req.query.supplier || '';
-        const status = req.query.status || '';
-
-        const where = {};
-
-        if (search) {
-            where[Op.or] = [{
-                    '$supplier.name$': {
-                        [Op.like]: `%${search}%`
-                    }
-                },
-                {
-                    id: {
-                        [Op.like]: `%${search}%`
-                    }
-                }
-            ];
-        }
-
-        if (supplier) {
-            where.supplierId = supplier;
-        }
-
-        if (status) {
-            where.status = status;
-        }
-
-        const {
-            count,
-            rows
-        } = await Purchasing.findAndCountAll({
-            where,
-            include: [{
-                model: Supplier,
-                as: 'supplier',
-                required: false // biar data muncul walau supplier null
-            }],
-            order: [
-                ['date', 'DESC']
-            ],
-            limit,
-            offset: (page - 1) * limit
-        });
-
-        const totalPages = Math.max(1, Math.ceil(count / limit));
-
-        const pagination = {
-            page,
-            limit,
-            total: count,
-            pages: totalPages
-        };
-
-        if (req.xhr) {
-            return res.render('purchasing/_tbody', {
-                layout: false,
-                purchasings: rows,
-                pagination,
-                activePage: page,
-                limit
-            });
-        }
-
-        res.render('purchasing/index', {
-            purchasings: rows,
-            pagination,
-            activePage: page,
-            limit
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Terjadi kesalahan server');
-    }
-};
-
 // Create purchasing (draft)
 exports.create = async (req, res) => {
     try {
         const {
             supplierId,
-            items
+            items,
+            note
         } = req.body;
         const itemsParsed = JSON.parse(items || '[]');
 
@@ -271,14 +208,16 @@ exports.create = async (req, res) => {
             total,
             date: new Date(),
             status: 'draft', // draft dulu
-            notaFile: notaFilePath
+            notaFile: notaFilePath,
+            note
         });
 
         const purchasingItems = itemsParsed.map(i => ({
             purchasingId: purchasing.id,
             productId: i.productId,
             qty: i.qty,
-            price: i.price
+            price: i.price,
+            updateCost: i.updateCost
         }));
         await PurchasingItem.bulkCreate(purchasingItems);
 
@@ -318,12 +257,17 @@ exports.complete = async (req, res) => {
         for (const item of purchasing.items) {
             const product = await Product.findByPk(item.productId);
             if (product) {
-                const oldStock = product.stock || 0;
-                product.stock = oldStock + item.qty;
+                // Update stock
+                product.stock = (product.stock || 0) + item.qty;
+
+                // Update cost hanya jika flag updateCost = true
+                if (item.updateCost) product.cost = item.price;
+
                 await product.save();
 
                 await recordStockHistory({
                     productId: product.id,
+                    purchasingId: purchasing.id, // <-- tambahan
                     type: 'purchase',
                     qty: item.qty,
                     note: `Pembelian #${purchasing.id}`,
@@ -371,12 +315,12 @@ exports.cancel = async (req, res) => {
             for (const item of purchasing.items) {
                 const product = await Product.findByPk(item.productId);
                 if (product) {
-                    const oldStock = product.stock || 0;
-                    product.stock = oldStock - item.qty;
+                    product.stock = (product.stock || 0) - item.qty;
                     await product.save();
 
                     await recordStockHistory({
                         productId: product.id,
+                        purchasingId: purchasing.id, // <-- tambahan
                         type: 'cancel',
                         qty: -item.qty,
                         note: `Pembatalan Pembelian #${purchasing.id}`,
@@ -407,8 +351,9 @@ exports.cancel = async (req, res) => {
 exports.return = async (req, res) => {
     try {
         const {
-            items
-        } = req.body; // [{productId, qty}]
+            items,
+            note
+        } = req.body;
         const purchasing = await Purchasing.findByPk(req.params.id);
         if (!purchasing) return res.status(404).json({
             success: false,
@@ -418,18 +363,23 @@ exports.return = async (req, res) => {
         for (const i of items) {
             const product = await Product.findByPk(i.productId);
             if (product) {
-                const oldStock = product.stock || 0;
-                product.stock = oldStock - i.qty;
+                product.stock = (product.stock || 0) - i.qty;
                 await product.save();
 
                 await recordStockHistory({
                     productId: product.id,
+                    purchasingId: purchasing.id, // <-- tambahan
                     type: 'return',
-                    qty: -i.qty,
-                    note: `Pengembalian Pembelian #${purchasing.id}`,
+                    qty: i.qty,
+                    note: `Pengembalian Pembelian #${purchasing.id} | ${note || ''}`,
                     createdBy: req.user?.name || 'admin'
                 });
             }
+        }
+
+        if (note) {
+            purchasing.note = purchasing.note ? `${purchasing.note} | ${note}` : note;
+            await purchasing.save();
         }
 
         res.json({

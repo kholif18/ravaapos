@@ -151,6 +151,12 @@ tbody.addEventListener('click', async (e) => {
             });
 
             setupEditMarkupSalePriceHandlers();
+            // Jalankan handler untuk sembunyikan field sesuai type
+            const typeSelect = {
+                value: product.type
+            };
+            handleProductTypeChange(typeSelect, 'edit');
+            
             bootstrap.Modal.getOrCreateInstance(modalEdit).show();
 
         } catch (err) {
@@ -163,6 +169,67 @@ tbody.addEventListener('click', async (e) => {
         }
     }
 });
+
+function handleProductTypeChange(typeSelect, context = 'create') {
+    const costInput = document.getElementById(context === 'create' ? 'inputCost' : 'editInputCost');
+    const markupInput = document.getElementById(context === 'create' ? 'inputMarkup' : 'editInputMarkup');
+    const salePriceInput = document.getElementById(context === 'create' ? 'inputSalePrice' : 'editInputSalePrice');
+    const stockSection = document.getElementById(context === 'create' ? 'stockSectionCreate' : 'stockSectionEdit');
+    const serviceCheckbox = document.getElementById(context === 'create' ? 'isService' : 'editIsService');
+    const priceChangeAllowed = document.getElementById(context === 'create' ? 'priceChangeAllowed' : 'editPriceChangeAllowed');
+    const lowStockWarning = document.getElementById(context === 'create' ? 'enableLowStockWarning' : 'editEnableLowStockWarning');
+    const inputLowStockWarning = document.getElementById(context === 'create' ? 'lowStockWarning' : 'editLowStockWarning');
+    const taxCheckbox = document.getElementById(context === 'create' ? 'enableInputTax' : 'editEnableInputTax');
+    const taxInput = document.getElementById(context === 'create' ? 'tax' : 'editTax');
+
+    if (typeSelect.value === 'ppob') {
+        // hide / disable untuk PPOB
+        costInput.closest('.col-md-4').style.display = 'none';
+        markupInput.closest('.col-md-4').style.display = 'none';
+        salePriceInput.closest('.col-md-4').style.display = 'none';
+
+        costInput.required = false;
+        markupInput.required = false;
+        salePriceInput.required = false;
+
+        if (stockSection) stockSection.style.display = 'none';
+
+        serviceCheckbox.checked = false;
+        serviceCheckbox.disabled = true;
+
+        // PPOB selalu bisa ubah harga di POS
+        priceChangeAllowed.checked = true;
+        priceChangeAllowed.disabled = true;
+
+        // Pajak optional, default disable
+        lowStockWarning.checked = false;
+        lowStockWarning.disabled = true;
+        inputLowStockWarning.value = '';
+        inputLowStockWarning.disabled = true;
+
+        // Pajak optional, default disable
+        taxCheckbox.checked = false;
+        taxCheckbox.disabled = true;
+        taxInput.value = '';
+        taxInput.disabled = true;
+    } else {
+        // kembali normal (fisik)
+        costInput.closest('.col-md-4').style.display = '';
+        markupInput.closest('.col-md-4').style.display = '';
+        salePriceInput.closest('.col-md-4').style.display = '';
+
+        costInput.required = true;
+        markupInput.required = true;
+        salePriceInput.required = true;
+        
+        if (stockSection) stockSection.style.display = '';
+
+        serviceCheckbox.disabled = false;
+        priceChangeAllowed.disabled = false;
+        lowStockWarning.disabled = false;
+        taxCheckbox.disabled = false;
+    }
+}
 
 function setupEditMarkupSalePriceHandlers() {
     const editInputCost = document.getElementById('editInputCost');
@@ -291,6 +358,10 @@ function generateBarcode(length = 12) {
 document.getElementById('btnGenerateBarcode')?.addEventListener('click', () => {
     const barcode = generateBarcode();
     document.getElementById('inputBarcode').value = barcode;
+});
+
+document.getElementById('productType')?.addEventListener('change', function () {
+    handleProductTypeChange(this, 'create');
 });
 
 // Tombol generate barcode modal edit, samakan dengan create
@@ -474,6 +545,13 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
 
     // Reset file input
     if (createFileInput) createFileInput.value = '';
+
+    // Reset Product Type ke default (fisik)
+    const typeSelect = document.getElementById('productType');
+    if (typeSelect) {
+        typeSelect.value = 'fisik'; // default ke fisik
+        handleProductTypeChange(typeSelect, 'create');
+    }
 });
 
 modalEdit.addEventListener('hidden.bs.modal', () => {

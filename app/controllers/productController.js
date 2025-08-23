@@ -124,6 +124,7 @@ exports.createProduct = async (req, res) => {
       supplierId,
       defaultQty,
       service,
+      type,
       cost,
       markup,
       salePrice,
@@ -151,7 +152,11 @@ exports.createProduct = async (req, res) => {
     if (req.body.tax && (isNaN(tax) || tax < 0 || tax > 100)) {
       errors.tax = 'Pajak harus antara 0 - 100';
     }
-
+    
+    if (!['fisik', 'service', 'ppob'].includes(type)) {
+      errors.type = 'Jenis produk tidak valid';
+    }
+    
     let parsedCost = parseFloat(cost);
     let parsedMarkup = parseFloat(markup);
     let parsedSalePrice = parseFloat(salePrice);
@@ -159,20 +164,32 @@ exports.createProduct = async (req, res) => {
     const parsedPreferredQty = parseInt(preferredQty);
     const parsedLowStockThreshold = parseInt(lowStockThreshold);
 
-    if (!isService && (isNaN(parsedCost) || parsedCost <= 0)) {
-      errors.cost = 'Harga modal harus lebih dari 0';
+    // validasi sesuai type
+    if (type === 'fisik') {
+      if (isNaN(parsedCost) || parsedCost <= 0) {
+        errors.cost = 'Harga modal harus lebih dari 0';
+      }
+      if (isNaN(parsedMarkup)) {
+        errors.markup = 'Markup tidak valid';
+      }
+      if (isNaN(parsedSalePrice)) {
+        errors.salePrice = 'Harga jual tidak valid';
+      }
     }
 
-    if (isService && isNaN(parsedCost)) {
+    if (type === 'service') {
+      if (isNaN(parsedCost)) parsedCost = 0; // boleh kosong
+      if (isNaN(parsedMarkup)) parsedMarkup = 0;
+      if (isNaN(parsedSalePrice)) {
+        errors.salePrice = 'Harga jual tidak valid';
+      }
+    }
+
+    if (type === 'ppob') {
+      // PPOB harga fleksibel → abaikan validasi cost/markup/salePrice
       parsedCost = 0;
-    }
-
-    if (!isService && isNaN(parsedMarkup)) {
-      errors.markup = 'Markup tidak valid';
-    }
-
-    if (isNaN(parsedSalePrice)) {
-      errors.salePrice = 'Harga jual tidak valid';
+      parsedMarkup = 0;
+      parsedSalePrice = 0;
     }
 
     if (hasLowStockWarning && (isNaN(parsedLowStockThreshold) || parsedLowStockThreshold < 0)) {
@@ -211,6 +228,7 @@ exports.createProduct = async (req, res) => {
       categoryId: categoryId || null,
       defaultQty: isDefaultQty,
       service: isService,
+      type,
       cost: parsedCost || 0,
       markup: parsedMarkup || 0,
       salePrice: parsedSalePrice || 0,

@@ -22,6 +22,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    type: {
+      type: DataTypes.ENUM('fisik', 'ppob'),
+      allowNull: false,
+      defaultValue: 'fisik'
+    },
     cost: DataTypes.FLOAT,
     markup: DataTypes.FLOAT,
     salePrice: DataTypes.FLOAT,

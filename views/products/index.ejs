@@ -165,15 +165,26 @@
           </div>
         </div>
 
-        <!-- Default Qty & Service -->
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" name="defaultQty" id="defaultQty" checked>
-          <label class="form-check-label" for="defaultQty">Default Qty = 1</label>
-        </div>
-
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" name="isService" id="isService">
-          <label class="form-check-label" for="isService">Jasa (tidak menggunakan stok)</label>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <!-- Default Qty & Service -->
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" name="defaultQty" id="defaultQty" checked>
+              <label class="form-check-label" for="defaultQty">Default Qty = 1</label>
+            </div>
+    
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" name="isService" id="isService">
+              <label class="form-check-label" for="isService">Jasa (tidak menggunakan stok)</label>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="productType" class="form-label">Jenis Produk</label>
+            <select name="type" id="productType" class="form-select" required>
+              <option value="fisik">Fisik</option>
+              <option value="ppob">PPOB</option>
+            </select>
+          </div>
         </div>
 
         <!-- Harga -->
@@ -202,7 +213,7 @@
 
         <!-- Stock Control -->
         <h6 class="fw-bold">Kontrol Stok</h6>
-        <div class="row">
+        <div class="row" id="stockSectionCreate">
           <div class="col-md-6 mb-3">
             <label>Reorder Point</label>
             <input type="number" name="reorderPoint" min="0" class="form-control" placeholder="mis. 10">
@@ -253,26 +264,6 @@
 
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">Simpan</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal Import CSV -->
-<div class="modal fade" id="modalImportCSV" tabindex="-1" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form action="/products/import" method="POST" enctype="multipart/form-data" class="modal-content">
-      <input type="hidden" name="_csrf" value="{{csrfToken}}">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalImportCSVLabel">Import Produk dari CSV</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="file" name="csvFile" accept=".csv" class="form-control" required>
-        <div class="form-text mt-2">Pastikan file sesuai format template CSV.</div>
-      </div>
-      <div class="modal-footer">
-        <button type="submit" class="btn btn-success">Import</button>
       </div>
     </form>
   </div>
@@ -372,7 +363,7 @@
 
         <!-- Stock Control -->
         <h6 class="fw-bold">Kontrol Stok</h6>
-        <div class="row">
+        <div class="row" id="stockSectionEdit">
           <div class="col-md-6 mb-3">
             <label>Reorder Point</label>
             <input type="number" name="reorderPoint" min="0" id="editReorderPoint" class="form-control" placeholder="mis. 10">
@@ -425,6 +416,26 @@
 
       <div class="modal-footer">
         <button type="submit" class="btn btn-warning">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Import CSV -->
+<div class="modal fade" id="modalImportCSV" tabindex="-1" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form action="/products/import" method="POST" enctype="multipart/form-data" class="modal-content">
+      <input type="hidden" name="_csrf" value="{{csrfToken}}">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalImportCSVLabel">Import Produk dari CSV</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" name="csvFile" accept=".csv" class="form-control" required>
+        <div class="form-text mt-2">Pastikan file sesuai format template CSV.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success">Import</button>
       </div>
     </form>
   </div>

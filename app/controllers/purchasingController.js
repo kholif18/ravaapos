@@ -414,14 +414,52 @@ exports.view = async (req, res) => {
                 }
             ]
         });
-        if (!purchasing) return res.status(404).json({
-            success: false,
-            message: 'Purchasing tidak ditemukan'
+        if (!purchasing) {
+            return res.status(404).json({
+                success: false,
+                message: 'Purchasing tidak ditemukan'
+            });
+        }
+
+        // Ambil return per produk
+        const returnPerItem = await StockHistory.findAll({
+            where: {
+                purchasingId: purchasing.id,
+                type: 'return'
+            },
+            attributes: ['productId', [fn('SUM', col('qty')), 'totalReturn']],
+            group: ['productId']
         });
+
+        const returnMap = {};
+        returnPerItem.forEach(r => {
+            returnMap[r.productId] = Math.abs(parseInt(r.get('totalReturn'), 10));
+        });
+
+        // Ambil catatan return terakhir (opsional)
+        const lastReturn = await StockHistory.findOne({
+            where: {
+                purchasingId: purchasing.id,
+                type: 'return'
+            },
+            order: [
+                ['createdAt', 'DESC']
+            ]
+        });
+
+        const result = {
+            ...purchasing.toJSON(),
+            items: purchasing.items.map(it => ({
+                ...it.toJSON(),
+                returnQty: returnMap[it.productId] || 0
+            })),
+            returnQty: Object.values(returnMap).reduce((a, b) => a + b, 0),
+            returnNote: lastReturn ? lastReturn.note : ''
+        };
 
         res.json({
             success: true,
-            data: purchasing
+            data: result
         });
     } catch (err) {
         console.error(err);
@@ -431,3 +469,4 @@ exports.view = async (req, res) => {
         });
     }
 };
+

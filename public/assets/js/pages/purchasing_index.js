@@ -142,49 +142,58 @@ document.addEventListener('DOMContentLoaded', () => {
                         else if (d.status === 'draft') statusClass = 'status-draft';
                         else statusClass = 'status-cancelled';
 
-                        const html = `
+                        // Cek apakah ada return
+                        const hasReturn = d.items.some(i => i.returnQty && i.returnQty > 0);
+
+                        const tableHeader = `
+                            <tr>
+                                <th>Produk</th>
+                                <th>Qty</th>
+                                ${hasReturn ? '<th class="text-danger">Return</th>' : ''}
+                                <th>Harga</th>
+                                <th>Subtotal</th>
+                                ${hasReturn ? '<th>Subtotal Akhir</th>' : ''}
+                            </tr>
+                        `;
+
+                            const tableRows = d.items.map(i => {
+                                const subtotal = i.qty * i.price;
+                                const subtotalAfter = (i.qty - (i.returnQty || 0)) * i.price;
+                                return `
+                                <tr>
+                                    <td>${i.product?.name || '-'}</td>
+                                    <td>${i.qty}</td>
+                                    ${hasReturn ? `<td class="text-danger">-${i.returnQty || 0}</td>` : ''}
+                                    <td>${i.price.toLocaleString()}</td>
+                                    <td>${subtotal.toLocaleString()}</td>
+                                    ${hasReturn ? `<td>${subtotalAfter.toLocaleString()}</td>` : ''}
+                                </tr>
+                            `;
+                            }).join('');
+
+                            const html = `
                             <div class="row mb-3">
-                                <div class="col-md-3">
-                                <strong>Supplier: </strong><br>
-                                    ${d.supplier?.name || '-'} </div> 
-                                <div class="col-md-3"><strong>Tanggal: </strong><br>
-                                    ${new Date(d.date).toLocaleDateString()} 
-                                </div> 
-                                <div class="col-md-3">
-                                    <strong>Total: </strong><br>
-                                ${d.total.toLocaleString()} 
-                                </div> 
-                                <div class="col-md-3">
-                                    <strong>Status: </strong>
-                                    <br> 
-                                    <span class="status-dot ${statusClass}"
-                                    title="${d.status}"></span> ${d.status} 
+                                <div class="col-md-3"><strong>Supplier: </strong><br>${d.supplier?.name || '-'}</div> 
+                                <div class="col-md-3"><strong>Tanggal: </strong><br>${new Date(d.date).toLocaleDateString()}</div> 
+                                <div class="col-md-3"><strong>Total: </strong><br>${d.total.toLocaleString()}</div> 
+                                <div class="col-md-3"><strong>Status: </strong><br>
+                                    <span span class = "status-dot ${statusClass}"
+                                    title="${d.status}"></span> ${d.status}
                                 </div> 
                             </div>
 
                             ${d.returnQty > 0 ? `
                                 <div class="row mb-3">
                                     <div class="col-md-12 text-danger">
-                                        <strong>Return:</strong> -${d.returnQty} item<br>
+                                        <strong>Total Return:</strong> -${d.returnQty} item<br>
                                         <small>${d.returnNote ? d.returnNote.replace(/\n/g, '<br>') : '(tanpa catatan)'}</small>
                                     </div>
                                 </div>
                             ` : ''}
 
                             <table class="table table-sm table-bordered">
-                                <thead>
-                                    <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>
-                                </thead>
-                                <tbody>
-                                    ${d.items.map(i => `
-                                        <tr>
-                                            <td>${i.product?.name || '-'}</td>
-                                            <td>${i.qty}</td>
-                                            <td>${i.price.toLocaleString()}</td>
-                                            <td>${(i.qty * i.price).toLocaleString()}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
+                                <thead>${tableHeader}</thead>
+                                <tbody>${tableRows}</tbody>
                             </table>
 
                             <hr>
@@ -195,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         new bootstrap.Modal(document.getElementById('modalViewPurchasing')).show();
                         return;
                     }
+
 
                     // === COMPLETE ===
                     if (btn.classList.contains('btn-complete')) {

@@ -30,4 +30,6 @@ Thumbs.db
 dist/
 build/
 
-/public/uploads/products/
+/public/uploads/
+/uploads
+/tmp

@@ -230,3 +230,22 @@ body.swal2-shown .layout-menu {
     background: #f8f9fa; /* sesuaikan dengan header table */
     z-index: 1;
 }
+
+.status-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.status-completed {
+  background-color: #28a745; /* hijau */
+}
+.status-draft {
+  background-color: #ffc107; /* kuning */
+}
+.status-cancelled {
+  background-color: #dc3545; /* merah */
+}
+.status-returned {
+  background-color: #0dcaf0; /* biru */
+}

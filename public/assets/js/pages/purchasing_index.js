@@ -46,26 +46,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
             data.purchasings.forEach((p, i) => {
                 const row = document.createElement('tr');
+
+                // Tentukan class status
+                let statusClass = '';
+                if (p.status === 'completed') statusClass = 'status-completed';
+                else if (p.status === 'draft') statusClass = 'status-draft';
+                else statusClass = 'status-cancelled';
+
+                // Jika ada return
+                const returnDot = p.returnQty > 0 ?
+                    `<span class="status-dot status-returned ms-2" title="Returned ${p.returnQty}"></span>` :
+                    '';
+
                 row.innerHTML = `
                     <td>${startNumber + i}</td>
                     <td>${new Date(p.date).toLocaleDateString()}</td>
                     <td>${p.supplier?.name || '-'}</td>
                     <td>${p.total.toLocaleString()}</td>
                     <td>
-                        ${p.status === 'completed' ? '<span class="badge bg-success">Completed</span>' :
-                            p.status === 'draft' ? '<span class="badge bg-warning">Draft</span>' :
-                            '<span class="badge bg-danger">Cancelled</span>'}
-                        ${p.returnQty > 0 ? `<span class="badge bg-info ms-1">Returned ${p.returnQty}</span>` : ''}
+                        <span class="status-dot ${statusClass}" title="${p.status}"></span>
+                        ${returnDot}
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-info btn-view" data-id="${p.id}"><i class="bx bx-show"></i></button>
+                        <button class = "btn btn-sm btn-info btn-view" data-id="${p.id}" title="Lihat">
+                        <i class="bx bx-show"></i></button>
                         ${p.status === 'draft' ? `
-                            <button class="btn btn-sm btn-success btn-complete" data-id="${p.id}"><i class="bx bx-check"></i> Complete</button>
-                            <button class="btn btn-sm btn-danger btn-cancel" data-id="${p.id}"><i class="bx bx-x"></i> Cancel</button>
+                            <button class="btn btn-sm btn-success btn-complete" data-id="${p.id}" title="Complete">
+                                <i class="bx bx-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger btn-cancel" data-id="${p.id}" title="Cancel">
+                                <i class="bx bx-x"></i>
+                            </button>
                         ` : p.status === 'completed' ? `
-                            <button class="btn btn-sm btn-warning btn-return" data-id="${p.id}"><i class="bx bx-rotate-left"></i> Return</button>
+                            <button class="btn btn-sm btn-warning btn-return" data-id="${p.id}" title="Return">
+                                <i class="bx bx-rotate-left"></i>
+                            </button>
                         ` : ''}
                     </td>
+
                 `;
                 tbody.appendChild(row);
             });
@@ -117,29 +135,62 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
 
                         const d = data.data;
-                        const html = `
-                        <p><strong>Supplier:</strong> ${d.supplier?.name || '-'}</p>
-                        <p><strong>Tanggal:</strong> ${new Date(d.date).toLocaleDateString()}</p>
-                        <p><strong>Total:</strong> ${d.total.toLocaleString()}</p>
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>
-                            </thead>
-                            <tbody>
-                                ${d.items.map(i => `
-                                    <tr>
-                                        <td>${i.product?.name || '-'}</td>
-                                        <td>${i.qty}</td>
-                                        <td>${i.price.toLocaleString()}</td>
-                                        <td>${(i.qty * i.price).toLocaleString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
 
-                        <hr>
-                            <p><strong>Catatan: </strong><br>${d.note ? d.note.replace(/\n/g, '<br>'): '-'}</p>
-                    `;
+                        // Tentukan class status
+                        let statusClass = '';
+                        if (d.status === 'completed') statusClass = 'status-completed';
+                        else if (d.status === 'draft') statusClass = 'status-draft';
+                        else statusClass = 'status-cancelled';
+
+                        const html = `
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                <strong>Supplier: </strong><br>
+                                    ${d.supplier?.name || '-'} </div> 
+                                <div class="col-md-3"><strong>Tanggal: </strong><br>
+                                    ${new Date(d.date).toLocaleDateString()} 
+                                </div> 
+                                <div class="col-md-3">
+                                    <strong>Total: </strong><br>
+                                ${d.total.toLocaleString()} 
+                                </div> 
+                                <div class="col-md-3">
+                                    <strong>Status: </strong>
+                                    <br> 
+                                    <span class="status-dot ${statusClass}"
+                                    title="${d.status}"></span> ${d.status} 
+                                </div> 
+                            </div>
+
+                            ${d.returnQty > 0 ? `
+                                <div class="row mb-3">
+                                    <div class="col-md-12 text-danger">
+                                        <strong>Return:</strong> -${d.returnQty} item<br>
+                                        <small>${d.returnNote ? d.returnNote.replace(/\n/g, '<br>') : '(tanpa catatan)'}</small>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${d.items.map(i => `
+                                        <tr>
+                                            <td>${i.product?.name || '-'}</td>
+                                            <td>${i.qty}</td>
+                                            <td>${i.price.toLocaleString()}</td>
+                                            <td>${(i.qty * i.price).toLocaleString()}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+
+                            <hr>
+                            <p><strong>Catatan: </strong><br>${d.note ? d.note.replace(/\n/g, '<br>') : '-'}</p>
+                        `;
+
                         document.getElementById('modalViewContent').innerHTML = html;
                         new bootstrap.Modal(document.getElementById('modalViewPurchasing')).show();
                         return;

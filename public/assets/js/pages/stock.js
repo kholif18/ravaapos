@@ -234,6 +234,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProducts(); // initial load
 });
 
+const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+[...tooltipTriggerList].map(el => new bootstrap.Tooltip(el));
+
 // Kalkulasi selisih otomatis
 document.getElementById('adjustQty').addEventListener('input', () => {
     const current = getFloatValue('currentQty');

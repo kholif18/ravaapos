@@ -46,8 +46,21 @@ document.getElementById("supplierSelect").addEventListener("change", function ()
 });
 
 document.getElementById("btnChangeSupplier").addEventListener("click", () => {
-    document.getElementById("supplierSelect").removeAttribute("disabled");
+    // aktifkan kembali supplier select
+    supplierSelect.removeAttribute("disabled");
+    supplierSelect.value = ""; // kosongkan value
+
+    // reset tabel item
+    const tbody = document.querySelector('#purchasingItemsTable tbody');
+    tbody.innerHTML = "";
+
+    // reset total
+    purchasingTotal.textContent = "0";
+
+    // reset Select2 product
+    productSelect.val(null).trigger('change');
 });
+
 
 // Init Select2 untuk product
 const productSelect = $('#productSelect2');
@@ -163,6 +176,7 @@ formCreate?.addEventListener('submit', async e => {
 
     const formData = new FormData();
     formData.append('supplierId', supplierSelect.value);
+    formData.append('notaNumber', document.getElementById('notaNumber')?.value || '');
     formData.append('note', document.getElementById('note')?.value || '');
     const notaFile = document.getElementById('uploadNota')?.files[0];
     if (notaFile) formData.append('notaFile', notaFile);

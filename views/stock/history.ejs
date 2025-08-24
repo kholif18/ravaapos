@@ -28,14 +28,23 @@
                     <tr>
                         <td><%= new Date(item.createdAt).toLocaleString() %></td>
                         <td>
-                        <% if (item.type === 'add') { %> Penambahan <% } %>
-                        <% if (item.type === 'adjust') { %> Stock Opname <% } %>
-                        <% if (item.type === 'purchase') { %> Pembelian <% } %>
+                            <% if (item.type === 'add') { %> Penambahan <% } %>
+                            <% if (item.type === 'adjust') { %> Stock Opname <% } %>
+                            <% if (item.type === 'purchase') { %> Pembelian <% } %>
+                            <% if (item.type === 'return') { %> Pengembalian <% } %>
                         </td>
                         <td class="<%= item.qty > 0 ? 'text-success' : 'text-danger' %>">
-                        <%= item.qty > 0 ? '+' : '' %><%= item.qty %>
+                            <%= item.qty > 0 ? '+' : '' %><%= item.qty %>
                         </td>
-                        <td><%= item.note || '-' %></td>
+                        <td 
+                            data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="<%= item.note %>">
+                            <%= item.note && item.note.length > 30 
+                                ? item.note.substring(0, 30) + '…' 
+                                : (item.note || '-') 
+                            %>
+                        </td>
                         <td><%= item.createdBy || '-' %></td>
                     </tr>
                     <% }) %>

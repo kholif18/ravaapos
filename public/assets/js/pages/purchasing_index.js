@@ -8,7 +8,22 @@ import {
 document.addEventListener('DOMContentLoaded', () => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     const tbody = document.querySelector('#purchasingTbody');
-    const searchInput = document.querySelector('#searchPurchasing');
+
+    const searchInput = document.getElementById('searchPurchasing');
+    const resetBtn = document.getElementById('resetFilter');
+
+    searchInput.addEventListener('input', () => {
+        state.search = searchInput.value;
+        state.page = 1;
+        loadPurchasings();
+    });
+
+    resetBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        state.search = '';
+        state.page = 1;
+        loadPurchasings();
+    });
 
     let state = {
         page: 1,
@@ -145,6 +160,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Cek apakah ada return
                         const hasReturn = d.items.some(i => i.returnQty && i.returnQty > 0);
 
+                        const modal = document.getElementById('modalViewPurchasing');
+                        const modalTitle = modal.querySelector('.modal-title');
+                        modalTitle.innerHTML = `Detail Purchasing #${d.id}
+                            ${d.notaNumber ? `<span class="badge bg-label-info ms-2">Nota: ${d.notaNumber}</span>` : ''}
+                            ${d.notaFile ? `<button class="btn btn-sm btn-outline-primary ms-3" id="btnViewNota">
+                                <i class="bx bx-file"></i> Lihat Nota
+                            </button>` : ''}`;
+
+                        if (d.notaFile) {
+                            document.getElementById('btnViewNota').onclick = () => {
+
+                                document.getElementById('notaPreviewImg').src = d.notaFile;
+                                new bootstrap.Modal(document.getElementById('modalNota')).show();
+                            };
+                        }
+
                         const tableHeader = `
                             <tr>
                                 <th>Produk</th>
@@ -163,7 +194,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <tr>
                                     <td>${i.product?.name || '-'}</td>
                                     <td>${i.qty}</td>
-                                    ${hasReturn ? `<td class="text-danger">-${i.returnQty || 0}</td>` : ''}
+                                    ${hasReturn
+                                        ?`<td class="${i.returnQty > 0 ? 'text-danger' : ''}">-${i.returnQty || 0}</td>` 
+                                        :''
+                                    }
+
                                     <td>${i.price.toLocaleString()}</td>
                                     <td>${subtotal.toLocaleString()}</td>
                                     ${hasReturn ? `<td>${subtotalAfter.toLocaleString()}</td>` : ''}
@@ -177,8 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="col-md-3"><strong>Tanggal: </strong><br>${new Date(d.date).toLocaleDateString()}</div> 
                                 <div class="col-md-3"><strong>Total: </strong><br>${d.total.toLocaleString()}</div> 
                                 <div class="col-md-3"><strong>Status: </strong><br>
-                                    <span span class = "status-dot ${statusClass}"
-                                    title="${d.status}"></span> ${d.status}
+                                    <span class="status-dot ${statusClass}" title="${d.status}"></span> 
+                                    ${d.status}
+                                    ${d.returnQty > 0 ? `<span class="badge bg-danger ms-2">return</span>` : ''}
                                 </div> 
                             </div>
 
@@ -186,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="row mb-3">
                                     <div class="col-md-12 text-danger">
                                         <strong>Total Return:</strong> -${d.returnQty} item<br>
-                                        <small>${d.returnNote ? d.returnNote.replace(/\n/g, '<br>') : '(tanpa catatan)'}</small>
                                     </div>
                                 </div>
                             ` : ''}
@@ -197,14 +232,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             </table>
 
                             <hr>
-                            <p><strong>Catatan: </strong><br>${d.note ? d.note.replace(/\n/g, '<br>') : '-'}</p>
+                            <p>
+                                <strong>Catatan: </strong><br>
+                                ${d.note 
+                                    ? d.note
+                                    .split('|') 
+                                    .map(n => n.trim())
+                                    .map(n => {
+                                        if (n.startsWith('RETURN:')) {
+                                            return `<div class="p-2 my-1 bg-label-danger text-danger">
+                                        ${n.replace(/\n/g, '<br>')}
+                                    </div>`;
+                                        }
+                                        return `<div class="my-1">${n.replace(/\n/g, '<br>')}</div>`;
+                                    })
+                                    .join(''): '-'
+                                }
+                            </p>
                         `;
 
                         document.getElementById('modalViewContent').innerHTML = html;
                         new bootstrap.Modal(document.getElementById('modalViewPurchasing')).show();
                         return;
                     }
-
 
                     // === COMPLETE ===
                     if (btn.classList.contains('btn-complete')) {

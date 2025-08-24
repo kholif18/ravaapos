@@ -3,11 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const purchasingController = require('../controllers/purchasingController');
 
-// --- Multer setup untuk upload nota ---
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, 'public/uploads/notas'),
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
-});
+// --- Multer pakai memoryStorage ---
+const storage = multer.memoryStorage();
 const upload = multer({
     storage
 });

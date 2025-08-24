@@ -554,8 +554,25 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
         typeSelect.value = 'fisik'; // default ke fisik
         handleProductTypeChange(typeSelect, 'create');
     }
-});
 
+    // Reset Low Stock Warning
+    const lowStockCheckbox = document.getElementById('enableLowStockWarning');
+    const lowStockInput = document.querySelector('input[name="lowStockThreshold"]');
+    if (lowStockCheckbox && lowStockInput) {
+        lowStockCheckbox.checked = false;
+        lowStockInput.value = '';
+        lowStockInput.disabled = true;
+    }
+
+    // Reset Tax Input
+    const taxCheckbox = document.getElementById('enableInputTax');
+    const taxInput = document.getElementById('tax');
+    if (taxCheckbox && taxInput) {
+        taxCheckbox.checked = false;
+        taxInput.value = '';
+        taxInput.disabled = true;
+    }
+});
 
 modalEdit.addEventListener('hidden.bs.modal', () => {
     resetInputErrors(formEdit);

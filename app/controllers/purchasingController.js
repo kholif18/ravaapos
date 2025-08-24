@@ -10,7 +10,8 @@ const fs = require('fs');
 const {
     Op,
     fn, 
-    col
+    col,
+    Sequelize
 } = require('sequelize');
 const {
     recordStockHistory
@@ -88,58 +89,83 @@ exports.listJSON = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
         const search = req.query.search?.trim() || '';
-        const supplier = req.query.supplier || '';
+        const supplierId = req.query.supplier || '';
         const status = req.query.status || '';
 
+        // Filter utama
         const where = {};
-        if (search) where.id = {
-            [Op.like]: `%${search}%`
-        };
-        if (supplier) where.supplierId = supplier;
         if (status) where.status = status;
+        if (supplierId) where.supplierId = supplierId;
+
+        // Include supplier & items
+        const include = [{
+                model: Supplier,
+                as: 'supplier',
+                attributes: ['name'],
+                required: false,
+                where: search && isNaN(search) ? {
+                    name: {
+                        [Op.like]: `%${search}%`
+                    }
+                } : undefined
+            },
+            {
+                model: PurchasingItem,
+                as: 'items',
+                include: {
+                    model: Product,
+                    as: 'product',
+                    attributes: ['name']
+                }
+            }
+        ];
+
+        // Jika search berupa angka, kita search notaNumber
+        if (search && !isNaN(search)) {
+            where.notaNumber = {
+                [Op.like]: `%${search}%`
+            };
+        }
+
+        // Jika search bukan angka, kita biarkan filter supplier di include
+        // OR notaNumber tetap bisa ditambahkan
+        if (search && isNaN(search)) {
+            where[Op.or] = [{
+                notaNumber: {
+                    [Op.like]: `%${search}%`
+                }
+            }];
+        }
 
         const {
             count,
             rows
         } = await Purchasing.findAndCountAll({
             where,
-            include: [{
-                    model: Supplier,
-                    as: 'supplier',
-                    attributes: ['name'],
-                    required: false
-                },
-                {
-                    model: PurchasingItem,
-                    as: 'items',
-                    include: {
-                        model: Product,
-                        as: 'product',
-                        attributes: ['name']
-                    }
-                }
-            ],
+            include,
+            distinct: true,
             order: [
                 ['date', 'DESC']
             ],
             limit,
-            offset,
-            distinct: true
+            offset
         });
 
-        const purchasingsWithReturn = await Promise.all(rows.map(async p => {
-            // Hitung total returnQty (abs supaya selalu positif)
-            const totalReturn = await StockHistory.sum('qty', {
-                where: {
-                    purchasingId: p.id,
-                    type: 'return'
-                }
-            });
-            return {
-                ...p.toJSON(),
-                returnQty: Math.abs(totalReturn || 0)
-            };
-        }));
+        // Hitung returnQty
+        const purchasingsWithReturn = await Promise.all(
+            rows.map(async p => {
+                const totalReturn = await StockHistory.sum('qty', {
+                    where: {
+                        purchasingId: p.id,
+                        type: 'return'
+                    }
+                });
+                return {
+                    ...p.toJSON(),
+                    returnQty: Math.abs(totalReturn || 0)
+                };
+            })
+        );
 
         res.json({
             success: true,
@@ -160,6 +186,7 @@ exports.listJSON = async (req, res) => {
         });
     }
 };
+
 
 // JSON daftar supplier untuk dropdown AJAX
 exports.listSuppliersJSON = async (req, res) => {
@@ -183,32 +210,50 @@ exports.listSuppliersJSON = async (req, res) => {
 exports.create = async (req, res) => {
     try {
         const {
+            notaNumber,
             supplierId,
             items,
             note
         } = req.body;
         const itemsParsed = JSON.parse(items || '[]');
 
-        if (!itemsParsed.length)
+        if (!itemsParsed.length) {
             return res.status(400).json({
                 success: false,
                 message: 'Tambahkan minimal 1 item'
             });
+        }
 
         const total = itemsParsed.reduce((sum, i) => sum + (i.qty || 0) * (i.price || 0), 0);
 
+        // === Handle upload nota ===
         let notaFilePath = null;
         if (req.file) {
-            notaFilePath = `/uploads/notas/${req.file.filename}`;
+            const uploadDir = path.join(__dirname, '../../public/uploads/notas');
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, {
+                    recursive: true
+                });
+            }
+
+            const ext = path.extname(req.file.originalname);
+            const fileName = `nota-${Date.now()}${ext}`;
+            const targetPath = path.join(uploadDir, fileName);
+
+            // Simpan file dari buffer
+            fs.writeFileSync(targetPath, req.file.buffer);
+
+            notaFilePath = `/uploads/notas/${fileName}`;
         }
 
         // Buat draft purchasing
         const purchasing = await Purchasing.create({
+            notaNumber,
+            notaFile: notaFilePath,
             supplierId,
             total,
             date: new Date(),
-            status: 'draft', // draft dulu
-            notaFile: notaFilePath,
+            status: 'draft',
             note
         });
 
@@ -267,7 +312,7 @@ exports.complete = async (req, res) => {
 
                 await recordStockHistory({
                     productId: product.id,
-                    purchasingId: purchasing.id, // <-- tambahan
+                    purchasingId: purchasing.id,
                     type: 'purchase',
                     qty: item.qty,
                     note: `Pembelian #${purchasing.id}`,
@@ -365,7 +410,7 @@ exports.return = async (req, res) => {
             if (product) {
                 product.stock = (product.stock || 0) - i.qty;
                 await product.save();
-
+                
                 await recordStockHistory({
                     productId: product.id,
                     purchasingId: purchasing.id, // <-- tambahan
@@ -378,7 +423,10 @@ exports.return = async (req, res) => {
         }
 
         if (note) {
-            purchasing.note = purchasing.note ? `${purchasing.note} | ${note}` : note;
+            purchasing.note = purchasing.note ?
+                `${purchasing.note} | RETURN: ${note}`
+                :
+                `RETURN: ${note}`;
             await purchasing.save();
         }
 
@@ -449,12 +497,12 @@ exports.view = async (req, res) => {
 
         const result = {
             ...purchasing.toJSON(),
+            notaNumber: purchasing.notaNumber,
             items: purchasing.items.map(it => ({
                 ...it.toJSON(),
                 returnQty: returnMap[it.productId] || 0
             })),
-            returnQty: Object.values(returnMap).reduce((a, b) => a + b, 0),
-            returnNote: lastReturn ? lastReturn.note : ''
+            returnQty: Object.values(returnMap).reduce((a, b) => a + b, 0)
         };
 
         res.json({
@@ -469,4 +517,3 @@ exports.view = async (req, res) => {
         });
     }
 };
-

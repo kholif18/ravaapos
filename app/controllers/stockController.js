@@ -316,7 +316,6 @@ exports.adjustStock = async (req, res) => {
     }
 };
 
-
 exports.historyPage = async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);

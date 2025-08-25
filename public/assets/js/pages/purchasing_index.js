@@ -2,6 +2,9 @@ import {
     initPagination
 } from '../utils/initPagination.js';
 import {
+    confirmDelete
+} from '../utils/confirm.js';
+import {
     showToast
 } from '../utils/toast.js';
 
@@ -92,6 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button class="btn btn-sm btn-danger btn-cancel" data-id="${p.id}" title="Cancel">
                                 <i class="bx bx-x"></i>
                             </button>
+                            <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${p.id}"
+                                title="Delete"><i class="bx bx-trash"></i>
+                            </button>
                         ` : p.status === 'completed' ? `
                             <button class="btn btn-sm btn-warning btn-return" data-id="${p.id}" title="Return">
                                 <i class="bx bx-rotate-left"></i>
@@ -129,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        tbody.querySelectorAll('.btn-view, .btn-complete, .btn-cancel, .btn-return').forEach(btn => {
+        tbody.querySelectorAll('.btn-view, .btn-complete, .btn-cancel, .btn-delete, .btn-return').forEach(btn => {
             btn.onclick = async () => {
                 const id = btn.dataset.id;
                 if (!id) return;
@@ -162,8 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         const modal = document.getElementById('modalViewPurchasing');
                         const modalTitle = modal.querySelector('.modal-title');
-                        modalTitle.innerHTML = `Detail Purchasing #${d.id}
-                            ${d.notaNumber ? `<span class="badge bg-label-info ms-2">Nota: ${d.notaNumber}</span>` : ''}
+                        modalTitle.innerHTML = `Detail Purchasing #${d.trxNumber || d.id}
+                            ${d.notaNumber ? `<span class="badge bg-label-info ms-2">Nota Supplier: ${d.notaNumber}</span>` : ''}
                             ${d.notaFile ? `<button class="btn btn-sm btn-outline-primary ms-3" id="btnViewNota">
                                 <i class="bx bx-file"></i> Lihat Nota
                             </button>` : ''}`;
@@ -307,6 +313,36 @@ document.addEventListener('DOMContentLoaded', () => {
                                 message: data.message || 'Gagal membatalkan purchasing'
                             });
                         }
+                        return;
+                    }
+
+                    // === DELETE (draft only) ===
+                    if (btn.classList.contains('btn-delete')) {
+                        confirmDelete('Draft purchasing ini akan dihapus. Lanjutkan?').then(async (confirmed) => {
+                            if (!confirmed) return;
+
+                            const res = await fetch(`/purchasing/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'CSRF-Token': csrfToken
+                                }
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                                showToast({
+                                    type: 'success',
+                                    title: 'Berhasil',
+                                    message: data.message || 'Purchasing draft dihapus'
+                                });
+                                loadPurchasings();
+                            } else {
+                                showToast({
+                                    type: 'danger',
+                                    title: 'Gagal',
+                                    message: data.message || 'Gagal menghapus purchasing draft'
+                                });
+                            }
+                        });
                         return;
                     }
 

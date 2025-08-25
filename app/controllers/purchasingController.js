@@ -1,4 +1,5 @@
 const {
+    sequelize,
     Purchasing,
     Supplier,
     Product,
@@ -31,6 +32,31 @@ exports.index = (req, res) => {
         }
     });
 };
+
+async function generateTrxNumber() {
+    const today = new Date();
+    const yyyymmdd = today.toISOString().slice(0, 10).replace(/-/g, '');
+
+    // cari transaksi terakhir hari ini
+    const lastPurchasing = await Purchasing.findOne({
+        where: {
+            trxNumber: {
+                [Op.like]: `PC-${yyyymmdd}%`
+            }
+        },
+        order: [
+            ['createdAt', 'DESC']
+        ]
+    });
+
+    let counter = 1;
+    if (lastPurchasing) {
+        const lastCounter = parseInt(lastPurchasing.trxNumber.slice(-4));
+        counter = lastCounter + 1;
+    }
+
+    return `PC-${yyyymmdd}-${String(counter).padStart(4,'0')}`;
+}
 
 // Halaman create
 exports.createPage = async (req, res) => {
@@ -92,57 +118,81 @@ exports.listJSON = async (req, res) => {
         const supplierId = req.query.supplier || '';
         const status = req.query.status || '';
 
-        // Filter utama
         const where = {};
         if (status) where.status = status;
         if (supplierId) where.supplierId = supplierId;
 
-        // Include supplier & items
-        const include = [{
-                model: Supplier,
-                as: 'supplier',
-                attributes: ['name'],
-                required: false,
-                where: search && isNaN(search) ? {
-                    name: {
-                        [Op.like]: `%${search}%`
+        let ids = [];
+
+        // --- kalau ada search ---
+        if (search) {
+            // Cari id dari notaNumber / trxNumber
+            const byNumber = await Purchasing.findAll({
+                attributes: ['id'],
+                where: {
+                    [Op.or]: [{
+                            notaNumber: {
+                                [Op.like]: `%${search}%`
+                            }
+                        },
+                        {
+                            trxNumber: {
+                                [Op.like]: `%${search}%`
+                            }
+                        }
+                    ]
+                }
+            });
+            ids.push(...byNumber.map(p => p.id));
+
+            // Cari id dari supplier.name
+            const bySupplier = await Purchasing.findAll({
+                attributes: ['id'],
+                include: [{
+                    model: Supplier,
+                    as: 'supplier',
+                    where: {
+                        name: {
+                            [Op.like]: `%${search}%`
+                        }
                     }
-                } : undefined
-            },
-            {
-                model: PurchasingItem,
-                as: 'items',
-                include: {
-                    model: Product,
-                    as: 'product',
-                    attributes: ['name']
-                }
+                }]
+            });
+            ids.push(...bySupplier.map(p => p.id));
+
+            ids = [...new Set(ids)]; // unik
+            if (ids.length > 0) {
+                where.id = {
+                    [Op.in]: ids
+                };
+            } else {
+                // kalau tidak ada hasil, paksa kosong
+                where.id = null;
             }
-        ];
-
-        // Jika search berupa angka, kita search notaNumber
-        if (search && !isNaN(search)) {
-            where.notaNumber = {
-                [Op.like]: `%${search}%`
-            };
         }
 
-        // Jika search bukan angka, kita biarkan filter supplier di include
-        // OR notaNumber tetap bisa ditambahkan
-        if (search && isNaN(search)) {
-            where[Op.or] = [{
-                notaNumber: {
-                    [Op.like]: `%${search}%`
-                }
-            }];
-        }
-
+        // Query utama
         const {
             count,
             rows
         } = await Purchasing.findAndCountAll({
             where,
-            include,
+            include: [{
+                    model: Supplier,
+                    as: 'supplier',
+                    attributes: ['name'],
+                    required: false
+                },
+                {
+                    model: PurchasingItem,
+                    as: 'items',
+                    include: {
+                        model: Product,
+                        as: 'product',
+                        attributes: ['name']
+                    }
+                }
+            ],
             distinct: true,
             order: [
                 ['date', 'DESC']
@@ -187,7 +237,6 @@ exports.listJSON = async (req, res) => {
     }
 };
 
-
 // JSON daftar supplier untuk dropdown AJAX
 exports.listSuppliersJSON = async (req, res) => {
     try {
@@ -208,6 +257,7 @@ exports.listSuppliersJSON = async (req, res) => {
 
 // Create purchasing (draft)
 exports.create = async (req, res) => {
+    const t = await sequelize.transaction();
     try {
         const {
             notaNumber,
@@ -224,9 +274,15 @@ exports.create = async (req, res) => {
             });
         }
 
-        const total = itemsParsed.reduce((sum, i) => sum + (i.qty || 0) * (i.price || 0), 0);
+        const total = itemsParsed.reduce(
+            (sum, i) => sum + (i.qty || 0) * (i.price || 0),
+            0
+        );
 
-        // === Handle upload nota ===
+        // Generate kode transaksi internal
+        const trxNumber = await generateTrxNumber();
+
+        // === Upload nota (inline) ===
         let notaFilePath = null;
         if (req.file) {
             const uploadDir = path.join(__dirname, '../../public/uploads/notas');
@@ -240,23 +296,25 @@ exports.create = async (req, res) => {
             const fileName = `nota-${Date.now()}${ext}`;
             const targetPath = path.join(uploadDir, fileName);
 
-            // Simpan file dari buffer
             fs.writeFileSync(targetPath, req.file.buffer);
-
             notaFilePath = `/uploads/notas/${fileName}`;
         }
 
         // Buat draft purchasing
         const purchasing = await Purchasing.create({
-            notaNumber,
+            trxNumber, // kode sistem internal
+            notaNumber, // nomor nota dari supplier
             notaFile: notaFilePath,
             supplierId,
             total,
             date: new Date(),
             status: 'draft',
             note
+        }, {
+            transaction: t
         });
 
+        // Simpan items
         const purchasingItems = itemsParsed.map(i => ({
             purchasingId: purchasing.id,
             productId: i.productId,
@@ -264,15 +322,22 @@ exports.create = async (req, res) => {
             price: i.price,
             updateCost: i.updateCost
         }));
-        await PurchasingItem.bulkCreate(purchasingItems);
+
+        await PurchasingItem.bulkCreate(purchasingItems, {
+            transaction: t
+        });
+
+        await t.commit();
 
         res.json({
             success: true,
             message: 'Purchasing berhasil dibuat',
-            purchasingId: purchasing.id
+            purchasingId: purchasing.id,
+            trxNumber: purchasing.trxNumber
         });
 
     } catch (err) {
+        await t.rollback();
         console.error(err);
         res.status(500).json({
             success: false,
@@ -315,7 +380,7 @@ exports.complete = async (req, res) => {
                     purchasingId: purchasing.id,
                     type: 'purchase',
                     qty: item.qty,
-                    note: `Pembelian #${purchasing.id}`,
+                    note: `Pembelian #${purchasing.trxNumber}`,
                     createdBy: req.user?.name || 'admin'
                 });
             }
@@ -368,7 +433,7 @@ exports.cancel = async (req, res) => {
                         purchasingId: purchasing.id, // <-- tambahan
                         type: 'cancel',
                         qty: -item.qty,
-                        note: `Pembatalan Pembelian #${purchasing.id}`,
+                        note: `Pembatalan Pembelian #${purchasing.trxNumber}`,
                         createdBy: req.user?.name || 'admin'
                     });
                 }
@@ -381,6 +446,63 @@ exports.cancel = async (req, res) => {
         res.json({
             success: true,
             message: 'Purchasing dibatalkan'
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Terjadi kesalahan server'
+        });
+    }
+};
+
+// Delete purchasing (hanya untuk draft)
+exports.delete = async (req, res) => {
+    try {
+        const purchasing = await Purchasing.findByPk(req.params.id, {
+            include: [{
+                model: PurchasingItem,
+                as: 'items'
+            }]
+        });
+
+        if (!purchasing) {
+            return res.status(404).json({
+                success: false,
+                message: 'Purchasing tidak ditemukan'
+            });
+        }
+
+        // Cek status harus draft
+        if (purchasing.status !== 'draft') {
+            return res.status(400).json({
+                success: false,
+                message: 'Hanya purchasing dengan status draft yang bisa dihapus'
+            });
+        }
+
+        // Hapus items dulu biar rapi
+        await PurchasingItem.destroy({
+            where: {
+                purchasingId: purchasing.id
+            }
+        });
+
+        // Hapus file nota jika ada
+        if (purchasing.notaFile) {
+            const filePath = path.join(__dirname, '../../public', purchasing.notaFile);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        // Hapus purchasing utama
+        await purchasing.destroy();
+
+        res.json({
+            success: true,
+            message: 'Purchasing draft berhasil dihapus'
         });
 
     } catch (err) {
@@ -416,7 +538,7 @@ exports.return = async (req, res) => {
                     purchasingId: purchasing.id, // <-- tambahan
                     type: 'return',
                     qty: i.qty,
-                    note: `Pengembalian Pembelian #${purchasing.id} | ${note || ''}`,
+                    note: `Pengembalian Pembelian #${purchasing.trxNumber} | ${note || ''}`,
                     createdBy: req.user?.name || 'admin'
                 });
             }

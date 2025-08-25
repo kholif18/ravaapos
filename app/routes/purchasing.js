@@ -30,5 +30,6 @@ router.get('/view/:id', purchasingController.view);
 router.post('/complete/:id', purchasingController.complete);
 router.post('/cancel/:id', purchasingController.cancel);
 router.post('/return/:id', purchasingController.return);
+router.delete('/:id', purchasingController.delete);
 
 module.exports = router;

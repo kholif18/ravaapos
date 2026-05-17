@@ -202,6 +202,16 @@ function handleProductTypeChange(typeSelect, context = 'create') {
         priceChangeAllowed.checked = true;
         priceChangeAllowed.disabled = true;
 
+        let hiddenInput = document.getElementById('priceChangeAllowedHidden');
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'priceChangeAllowed';
+            hiddenInput.id = 'priceChangeAllowedHidden';
+            hiddenInput.value = 'true';
+            priceChangeAllowed.parentNode.appendChild(hiddenInput);
+        }
+
         // Pajak optional, default disable
         lowStockWarning.checked = false;
         lowStockWarning.disabled = true;
@@ -227,6 +237,10 @@ function handleProductTypeChange(typeSelect, context = 'create') {
 
         serviceCheckbox.disabled = false;
         priceChangeAllowed.disabled = false;
+
+        const hiddenInput = document.getElementById('priceChangeAllowedHidden');
+        if (hiddenInput) hiddenInput.remove();
+
         lowStockWarning.disabled = false;
         taxCheckbox.disabled = false;
     }
@@ -482,7 +496,13 @@ formCreate.addEventListener('submit', async (e) => {
     // kalau mau set nilai boolean secara manual:
     formData.set('defaultQty', formData.get('defaultQty') === 'on');
     formData.set('service', formData.get('isService') === 'on');
-    formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
+
+    const priceChangeHidden = document.getElementById('priceChangeAllowedHidden');
+    if (priceChangeHidden && priceChangeHidden.value === 'true') {
+        formData.set('priceChangeAllowed', 'true');
+    } else {
+        formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
+    }
 
     try {
         const res = await fetch('/products', {
@@ -572,6 +592,14 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
         taxInput.value = '';
         taxInput.disabled = true;
     }
+
+    const priceChangeAllowed = document.getElementById('priceChangeAllowed');
+    const priceChangeHidden = document.getElementById('priceChangeAllowedHidden');
+    if (priceChangeAllowed) {
+        priceChangeAllowed.checked = false;
+        priceChangeAllowed.disabled = false;
+    }
+    if (priceChangeHidden) priceChangeHidden.remove();
 });
 
 modalEdit.addEventListener('hidden.bs.modal', () => {
@@ -593,6 +621,11 @@ modalCreate.addEventListener('shown.bs.modal', () => {
 
     const categorySelect = document.getElementById('categorySelect');
     categorySelect.dispatchEvent(new Event('change'));
+
+    const typeSelect = document.getElementById('productType');
+    if (typeSelect) {
+        handleProductTypeChange(typeSelect, 'create');
+    }
 });
 
 function sortTableBy(column, ascending = true) {

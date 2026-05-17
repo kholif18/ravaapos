@@ -14,6 +14,38 @@ let currentPage = 1;
 let currentLimit = 10;
 let currentSearch = '';
 
+function clearValidationErrors(form) {
+
+    form.querySelectorAll('.is-invalid').forEach(el => {
+        el.classList.remove('is-invalid');
+    });
+
+    form.querySelectorAll('.invalid-feedback').forEach(el => {
+        el.textContent = '';
+    });
+}
+
+function showValidationErrors(form, errors) {
+
+    clearValidationErrors(form);
+
+    errors.forEach(err => {
+
+        const input = form.querySelector(`[name="${err.path}"]`);
+
+        if (!input) return;
+
+        input.classList.add('is-invalid');
+
+        const feedback =
+            input.parentElement.querySelector('.invalid-feedback');
+
+        if (feedback) {
+            feedback.textContent = err.msg;
+        }
+    });
+}
+
 async function loadSuppliers(page = 1, limit = 10, search = '') {
     try {
         const htmlRes = await fetch(`/suppliers/partial?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
@@ -47,7 +79,7 @@ function bindEvents() {
             try {
                 const res = await fetch(`/suppliers/${id}/json`);
                 const result = await res.json();
-
+                clearValidationErrors(formEdit);
                 if (!res.ok || !result.success) {
                     return showToast({
                         type: 'danger',
@@ -204,7 +236,9 @@ document.getElementById('resetFilter')?.addEventListener('click', () => {
 // Create Supplier
 const formCreate = document.getElementById('formCreateSupplier');
 formCreate?.addEventListener('submit', async function (e) {
+
     e.preventDefault();
+
     const formData = Object.fromEntries(new FormData(this).entries());
 
     for (const key in formData) {
@@ -212,8 +246,9 @@ formCreate?.addEventListener('submit', async function (e) {
             formData[key] = null;
         }
     }
-    
+
     try {
+
         const res = await fetch('/suppliers', {
             method: 'POST',
             headers: {
@@ -222,29 +257,49 @@ formCreate?.addEventListener('submit', async function (e) {
             },
             body: JSON.stringify(formData)
         });
+
         const result = await res.json();
 
+        // reset validasi lama
+        clearValidationErrors(formCreate);
+
         if (res.ok && result.success) {
-            bootstrap.Modal.getInstance(document.getElementById('modalCreate')).hide();
+
+            bootstrap.Modal
+                .getInstance(document.getElementById('modalCreate'))
+                .hide();
+
             showToast({
                 type: 'success',
                 title: 'Berhasil',
                 message: result.message
             });
+
             resetModalForm(document.getElementById('modalCreate'));
+
             loadSuppliers(currentPage, currentLimit, currentSearch);
+
         } else {
+
+            if (result.errors) {
+                showValidationErrors(formCreate, result.errors);
+            }
+
             showToast({
                 type: 'danger',
-                title: 'Gagal',
-                message: result.message
+                title: 'Validasi Gagal',
+                message: result.message || 'Periksa kembali input.'
             });
         }
-    } catch {
+
+    } catch (err) {
+
+        console.error(err);
+
         showToast({
             type: 'danger',
             title: 'Error',
-            message: 'Gagal menyimpan supplier.'
+            message: 'Terjadi kesalahan server.'
         });
     }
 });
@@ -283,6 +338,9 @@ formEdit?.addEventListener('submit', async function (e) {
             resetModalForm(document.getElementById('modalEdit'));
             loadSuppliers(currentPage, currentLimit, currentSearch);
         } else {
+            if (result.errors) {
+                showValidationErrors(formEdit, result.errors);
+            }
             showToast({
                 type: 'danger',
                 title: 'Gagal',

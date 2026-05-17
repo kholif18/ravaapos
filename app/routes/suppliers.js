@@ -21,7 +21,7 @@ const handleValidation = (req, res, next) => {
     if (!errors.isEmpty()) {
         return res.status(422).json({
             success: false,
-            errors: errors.mapped()
+            errors: errors.array()
         });
     }
     next();
@@ -42,20 +42,16 @@ router.get('/generate-code', supplierController.generateSupplierCode);
 // GET API check kode unik
 router.get('/check-code', supplierController.checkCode);
 
+router.get('/export-csv', supplierController.exportCSV);
+
 // POST create supplier (pakai validasi)
 router.post('/', validateCreateSupplier, handleValidation, supplierController.create);
 
 // POST update supplier (pakai validasi)
 router.post('/:id/update', validateUpdateSupplier, handleValidation, supplierController.update);
 
-// GET /suppliers/:id/json
-router.get('/:id/json', supplierController.getByIdJSON);
-
 // POST delete supplier
 router.post('/:id/delete', supplierController.delete);
-
-router.get('/:id/detail', supplierController.getDetail);
-router.get('/export-csv', supplierController.exportCSV);
 
 router.post(
     '/import-csv',
@@ -66,6 +62,11 @@ router.post(
     upload.single('csv'),
     supplierController.importCSV
 );
+
+// GET /suppliers/:id/json
+router.get('/:id/json', supplierController.getByIdJSON);
+
+router.get('/:id/detail', supplierController.getDetail);
 
 router.get('/template-csv', supplierController.downloadTemplate);
 

@@ -17,13 +17,13 @@ app.use(express.json());
 app.use(express.urlencoded({
   extended: false
 }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(methodOverride('_method'));
 
 // ===== Cookie & Session =====
 app.use(cookieParser());
 app.use(session({
-  secret: 'rahasia-super-aman',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {

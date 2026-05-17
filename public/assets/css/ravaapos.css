@@ -249,3 +249,89 @@ body.swal2-shown .layout-menu {
 .status-returned {
   background-color: #0dcaf0; /* biru */
 }
+
+/* Button extra small */
+.btn-xs {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    border-radius: 0.2rem;
+}
+
+/* Cart item improvements */
+.cart-item {
+    transition: all 0.2s;
+}
+
+.cart-item .btn-xs {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+}
+
+.cart-item .btn-group-sm .btn {
+    padding: 0.2rem 0.5rem;
+}
+
+/* Toast positioning */
+.toast {
+    min-width: 250px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Product card image */
+.product-image {
+    height: 150px;
+    object-fit: cover;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .product-image {
+        height: 120px;
+    }
+    
+    .cart-item .d-flex {
+        flex-direction: column;
+    }
+    
+    .cart-item .text-end {
+        text-align: left !important;
+        margin-top: 8px;
+    }
+}
+
+/* Smooth scroll untuk cart */
+.cart-scroll-area {
+    flex: 1;
+    overflow-y: auto !important;
+    min-height: 0;
+    padding: 0.5rem 1rem;
+    max-height: calc(100vh - 350px);
+}
+/* Custom scrollbar Webkit */
+.cart-scroll-area::-webkit-scrollbar {
+    width: 6px;
+}
+
+.cart-scroll-area::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.cart-scroll-area::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.cart-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Smooth transition untuk cart items */
+.cart-item {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cart-item:hover {
+    transform: translateX(-2px);
+}

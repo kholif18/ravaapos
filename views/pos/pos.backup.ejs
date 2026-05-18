@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" class="light-style" dir="ltr" data-theme="theme-default">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>POS System | <%= title %></title>
+
+    <meta name="csrf-token" content="<%= csrfToken %>">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico" />
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/vendor/fonts/boxicons.css" />
+    
+    <!-- Core CSS (Sneat) -->
+    <link rel="stylesheet" href="/assets/vendor/css/core.css" />
+    <link rel="stylesheet" href="/assets/vendor/css/theme-default.css" />
+    
+    <!-- POS Custom CSS (Terpisah) -->
+    <link rel="stylesheet" href="/assets/css/pos.css" />
+    
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="pos-body" data-tax-rate="<%= taxRate %>">
+    
+    <!-- LAYOUT 2 KOLOM -->
+    <div class="pos-layout">
+        
+        <!-- KOLOM KIRI: Products -->
+        <div class="pos-products">
+            
+            <!-- Header -->
+            <div class="pos-products-header">
+                <a class="pos-brand" href="#">
+                    <i class="bx bx-store"></i>
+                    <span>POS System</span>
+                </a>
+                
+                <small class="text-muted">Press <kbd>F1</kbd> to search</small>
+                <div class="pos-search-group">
+                  <div class="input-group" w-100>
+                    <span class="input-group-text border-end-0 bg-white">
+                      <i class="bx bx-search"></i>
+                    </span>
+                    <input type="text" 
+                    class="form-control border-start-0" 
+                    id="searchProduct" 
+                    placeholder="Cari produk (nama, kode, atau barcode)..." 
+                            autocomplete="off">
+                  </div>
+                  
+                  <!-- Dropdown hasil pencarian -->
+                  <div id="searchDropdown" class="search-dropdown" style="display: none;">
+                      <div class="search-dropdown-header">
+                          <small>Hasil pencarian - Gunakan ↑ ↓ Enter untuk memilih</small>
+                      </div>
+                      <div id="searchResultsList" class="search-dropdown-list"></div>
+                  </div>
+                </div>
+                
+                <a href="/" class="btn btn-outline-secondary btn-sm">
+                    <i class="bx bx-arrow-back"></i> Dashboard
+                </a>
+            </div>
+            
+            <!-- Products Area -->
+            <div class="pos-products-container">
+                
+                <!-- Category Filters -->
+                <div class="pos-category-filters">
+                    <button class="btn btn-sm btn-primary pos-category-btn active" data-category="all">
+                        All Products
+                    </button>
+                    <% if (categories && categories.length > 0) { %>
+                        <% categories.forEach(category => { %>
+                            <button class="btn btn-sm btn-outline-primary pos-category-btn" data-category="<%= category.id %>">
+                                <%= category.name %>
+                            </button>
+                        <% }) %>
+                    <% } %>
+                </div>
+                
+                <!-- Products Grid - Biarkan kosong, JS yang akan mengisi -->
+                <div class="pos-products-grid" id="productsGrid">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Memuat produk...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- KOLOM KANAN: Cart -->
+        <div class="pos-cart">
+            <div class="pos-cart-top">
+                <div class="pos-cart-title">
+                    <span><i class="bx bx-cart"></i> Shopping Cart</span>
+                </div>
+                
+                <div>
+                    <label class="form-label small fw-bold mb-1">Customer</label>
+                    <small class="text-muted">Press <kbd>F2</kbd> to search customer</small>
+                    
+                    <div class="input-group">
+                        <input type="hidden" id="customerId" value="">
+                        
+                        <div class="position-relative flex-grow-1">
+                            <input type="text"
+                                  class="form-control"
+                                  id="customerSearchInput"
+                                  placeholder="Cari customer (nama atau telepon)..."
+                                  autocomplete="off"
+                                  value="Walk-in Customer">
+                            
+                            <!-- Dropdown hasil pencarian customer -->
+                            <div id="customerDropdown" class="customer-dropdown" style="display: none;">
+                                <div class="customer-dropdown-header">
+                                    <small>Hasil pencarian - Gunakan ↑ ↓ Enter untuk memilih</small>
+                                </div>
+                                <div id="customerResultsList" class="customer-dropdown-list"></div>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-outline-danger"
+                                id="clearCustomerBtn"
+                                type="button"
+                                style="display: none;"
+                                title="Reset ke Walk-in Customer">
+                            <i class="bx bx-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cart Scroll Area -->
+            <div class="pos-cart-scroll">
+                <span class="pos-cart-items-label">Items</span>
+                <div id="cartItems">
+                    <div class="text-center py-5 text-muted">
+                        <i class="bx bx-cart-alt bx-lg mb-2"></i>
+                        <p class="mb-0">Cart is empty</p>
+                        <small>Click "Add to Cart" to start</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cart Bottom Fixed -->
+            <div class="pos-cart-bottom">
+                
+                <!-- Summary -->
+                <div class="pos-summary-card">
+                    <div class="pos-summary-row">
+                        <span class="text-muted">Subtotal</span>
+                        <span id="subtotal">Rp 0</span>
+                    </div>
+                    
+                    <div class="pos-summary-row">
+                        <span class="text-muted">Tax (<span id="taxRate"><%= taxRate %></span>%)</span>
+                        <span id="taxAmount">Rp 0</span>
+                    </div>
+                    
+                    <div class="pos-summary-row">
+                        <span class="text-muted d-flex align-items-center gap-1">
+                            Discount
+                            <span class="badge bg-label-primary">Ctrl + D</span>
+                        </span>
+                        <div class="pos-discount-input">
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control text-end" id="discountInput" value="0" min="0" step="1000">
+                                <span class="input-group-text">Rp</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pos-summary-row pos-summary-total">
+                        <span>Total</span>
+                        <span id="total">Rp 0</span>
+                    </div>
+                </div>
+                                
+                <!-- Action Buttons -->
+                <div class="row g-2 mt-3">
+                  <div class="col-12 col-md-6">
+                      <button class="btn btn-primary btn-lg w-100" id="completeOrderBtn">
+                          <i class="bx bx-check-circle"></i>
+                          Payment
+                          <span class="badge bg-label-info ms-1">F4</span>
+                      </button>
+                  </div>
+                  <div class="col-12 col-md-6">
+                      <button class="btn btn-success btn-lg w-100" id="cashPaymentBtn">
+                          <i class="bx bx-money"></i>
+                          Cash
+                          <span class="badge bg-light text-success ms-1">F9</span>
+                      </button>
+                  </div>
+                  <div class="col-12">
+                      <button class="btn btn-outline-secondary w-100" id="clearCartBtn">
+                          <i class="bx bx-trash"></i>
+                          Clear Cart
+                          <span class="badge bg-label-primary ms-1">F3</span>
+                      </button>
+                  </div>
+              </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="/assets/vendor/libs/popper/popper.js"></script>
+    <script src="/assets/vendor/js/bootstrap.js"></script>
+    <script src="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    
+    <!-- POS JavaScript -->
+    <script src="/assets/js/pages/pos.js"></script>
+</body>
+</html>

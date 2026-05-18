@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="/assets/vendor/css/core.css" />
     <link rel="stylesheet" href="/assets/vendor/css/theme-default.css" />
     
-    <!-- POS Custom CSS (Terpisah) -->
+    <!-- POS Custom CSS -->
     <link rel="stylesheet" href="/assets/css/pos.css" />
     
     <!-- Vendors CSS -->
@@ -31,148 +31,64 @@
 </head>
 <body class="pos-body" data-tax-rate="<%= taxRate %>">
     
-    <!-- LAYOUT 2 KOLOM -->
-    <div class="pos-layout">
+    <!-- DESKTOP LAYOUT: 2 KOLOM -->
+    <div class="pos-desktop-layout">
         
-        <!-- KOLOM KIRI: Products -->
-        <div class="pos-products">
-            
-            <!-- Header -->
-            <div class="pos-products-header">
-                <a class="pos-brand" href="#">
-                    <i class="bx bx-store"></i>
-                    <span>POS System</span>
-                </a>
-                
-                <small class="text-muted">Press <kbd>F1</kbd> to search</small>
-                <div class="pos-search-group">
-                  <div class="input-group" w-100>
-                    <span class="input-group-text border-end-0 bg-white">
-                      <i class="bx bx-search"></i>
-                    </span>
-                    <input type="text" 
-                    class="form-control border-start-0" 
-                    id="searchProduct" 
-                    placeholder="Cari produk (nama, kode, atau barcode)..." 
-                            autocomplete="off">
-                  </div>
-                  
-                  <!-- Dropdown hasil pencarian -->
-                  <div id="searchDropdown" class="search-dropdown" style="display: none;">
-                      <div class="search-dropdown-header">
-                          <small>Hasil pencarian - Gunakan ↑ ↓ Enter untuk memilih</small>
-                      </div>
-                      <div id="searchResultsList" class="search-dropdown-list"></div>
-                  </div>
-                </div>
-                
-                <a href="/" class="btn btn-outline-secondary btn-sm">
-                    <i class="bx bx-arrow-back"></i> Dashboard
-                </a>
-            </div>
-            
-            <!-- Products Area -->
-            <div class="pos-products-container">
-                
-                <!-- Category Filters -->
-                <div class="pos-category-filters">
-                    <button class="btn btn-sm btn-primary pos-category-btn active" data-category="all">
-                        All Products
-                    </button>
-                    <% if (categories && categories.length > 0) { %>
-                        <% categories.forEach(category => { %>
-                            <button class="btn btn-sm btn-outline-primary pos-category-btn" data-category="<%= category.id %>">
-                                <%= category.name %>
-                            </button>
-                        <% }) %>
-                    <% } %>
-                </div>
-                
-                <!-- Products Grid - Biarkan kosong, JS yang akan mengisi -->
-                <div class="pos-products-grid" id="productsGrid">
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Memuat produk...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- KOLOM KANAN: Cart -->
+        <!-- KOLOM KIRI: Cart Section -->
         <div class="pos-cart">
-            <div class="pos-cart-top">
+            <div class="pos-cart-header">
                 <div class="pos-cart-title">
-                    <span><i class="bx bx-cart"></i> Shopping Cart</span>
+                    <i class="bx bx-cart"></i>
+                    <span>Shopping Cart</span>
+                    <span class="cart-badge" id="cartItemCount">0</span>
                 </div>
-                
-                <div>
-                    <label class="form-label small fw-bold mb-1">Customer</label>
-                    <small class="text-muted">Press <kbd>F2</kbd> to search customer</small>
-                    
+                <!-- Search Product -->
+                <div class="pos-search-group">
                     <div class="input-group">
-                        <input type="hidden" id="customerId" value="">
-                        
-                        <div class="position-relative flex-grow-1">
-                            <input type="text"
-                                  class="form-control"
-                                  id="customerSearchInput"
-                                  placeholder="Cari customer (nama atau telepon)..."
-                                  autocomplete="off"
-                                  value="Walk-in Customer">
-                            
-                            <!-- Dropdown hasil pencarian customer -->
-                            <div id="customerDropdown" class="customer-dropdown" style="display: none;">
-                                <div class="customer-dropdown-header">
-                                    <small>Hasil pencarian - Gunakan ↑ ↓ Enter untuk memilih</small>
-                                </div>
-                                <div id="customerResultsList" class="customer-dropdown-list"></div>
-                            </div>
-                        </div>
-                        
-                        <button class="btn btn-outline-danger"
-                                id="clearCustomerBtn"
-                                type="button"
-                                style="display: none;"
-                                title="Reset ke Walk-in Customer">
-                            <i class="bx bx-x"></i>
-                        </button>
+                        <span class="input-group-text bg-primary text-white border-0">
+                            <i class="bx bx-barcode"></i>
+                        </span>
+                        <input type="text" 
+                            class="form-control form-control-lg" 
+                            id="searchProduct" 
+                            placeholder="Scan barcode atau cari produk..." 
+                            autocomplete="off">
                     </div>
-                </div>
+                    <div id="searchDropdown" class="search-dropdown" style="display: none;">
+                        <div class="search-dropdown-header">
+                            <small>↑ ↓ pilih &nbsp;&nbsp; Enter tambah &nbsp;&nbsp; Esc tutup</small>
+                        </div>
+                        <div id="searchResultsList" class="search-dropdown-list"></div>
+                    </div>
+                </div>                
             </div>
             
             <!-- Cart Scroll Area -->
             <div class="pos-cart-scroll">
-                <span class="pos-cart-items-label">Items</span>
                 <div id="cartItems">
                     <div class="text-center py-5 text-muted">
                         <i class="bx bx-cart-alt bx-lg mb-2"></i>
                         <p class="mb-0">Cart is empty</p>
-                        <small>Click "Add to Cart" to start</small>
+                        <small>Search product to start <kbd>F1</kbd></small>
                     </div>
                 </div>
             </div>
             
-            <!-- Cart Bottom Fixed -->
-            <div class="pos-cart-bottom">
-                
-                <!-- Summary -->
+            <!-- Cart Summary -->
+            <div class="pos-cart-summary">
                 <div class="pos-summary-card">
                     <div class="pos-summary-row">
                         <span class="text-muted">Subtotal</span>
                         <span id="subtotal">Rp 0</span>
                     </div>
-                    
                     <div class="pos-summary-row">
                         <span class="text-muted">Tax (<span id="taxRate"><%= taxRate %></span>%)</span>
                         <span id="taxAmount">Rp 0</span>
                     </div>
-                    
                     <div class="pos-summary-row">
                         <span class="text-muted d-flex align-items-center gap-1">
                             Discount
-                            <span class="badge bg-label-primary">Ctrl + D</span>
+                            <span class="badge bg-label-primary">Ctrl+D</span>
                         </span>
                         <div class="pos-discount-input">
                             <div class="input-group input-group-sm">
@@ -181,48 +97,323 @@
                             </div>
                         </div>
                     </div>
-                    
                     <div class="pos-summary-row pos-summary-total">
                         <span>Total</span>
                         <span id="total">Rp 0</span>
                     </div>
                 </div>
-                                
-                <!-- Action Buttons -->
-                <div class="row g-2 mt-3">
-                  <div class="col-12 col-md-6">
-                      <button class="btn btn-primary btn-lg w-100" id="completeOrderBtn">
-                          <i class="bx bx-check-circle"></i>
-                          Payment
-                          <span class="badge bg-label-info ms-1">F4</span>
-                      </button>
-                  </div>
-                  <div class="col-12 col-md-6">
-                      <button class="btn btn-success btn-lg w-100" id="cashPaymentBtn">
-                          <i class="bx bx-money"></i>
-                          Cash
-                          <span class="badge bg-light text-success ms-1">F9</span>
-                      </button>
-                  </div>
-                  <div class="col-12">
-                      <button class="btn btn-outline-secondary w-100" id="clearCartBtn">
-                          <i class="bx bx-trash"></i>
-                          Clear Cart
-                          <span class="badge bg-label-primary ms-1">F3</span>
-                      </button>
-                  </div>
-              </div>
+            </div>
+        </div>
+        
+        <!-- KOLOM KANAN: Action Panel Desktop -->
+        <div class="pos-actions-desktop">
+            <!-- Customer Section -->
+            <div class="pos-customer-section">
+                <div class="customer-section">
+                    <label class="form-label small fw-bold mb-1">
+                        <i class="bx bx-user"></i> Customer
+                        <small class="text-muted"><kbd>F2</kbd> to search </small>
+                    </label>
+                    <div class="input-group">
+                        <input type="hidden" id="customerId" value="">
+                        <div class="position-relative flex-grow-1">
+                            <input type="text"
+                                class="form-control"
+                                id="customerSearchInput"
+                                placeholder="Cari customer (nama atau telepon)..."
+                                autocomplete="off"
+                                value="Walk-in Customer">
+                            <div id="customerDropdown" class="customer-dropdown" style="display: none;">
+                                <div class="customer-dropdown-header">
+                                    <small>↑ ↓ pilih &nbsp;&nbsp; Enter pilih &nbsp;&nbsp; Esc tutup</small>
+                                </div>
+                                <div id="customerResultsList" class="customer-dropdown-list"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" id="clearCustomerBtn" type="button" style="display: none;">
+                            <i class="bx bx-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Payment Section - Utama -->
+            <div class="pos-payment-section">
+                <button class="btn-checkout-large" id="completeOrderBtn">
+                    <i class="bx bx-check-circle"></i>
+                    <span>CHECKOUT / PAY</span>
+                    <kbd>F4</kbd>
+                </button>
+                
+                <div class="payment-methods">
+                    <button class="btn-payment" id="cashPaymentBtn">
+                        <i class="bx bx-money"></i>
+                        <span>Cash</span>
+                        <kbd>F9</kbd>
+                    </button>
+                    <button class="btn-payment" id="cardPaymentBtn">
+                        <i class="bx bx-credit-card"></i>
+                        <span>Card</span>
+                    </button>
+                    <button class="btn-payment" id="qrisPaymentBtn">
+                        <i class="bx bx-qr"></i>
+                        <span>QRIS</span>
+                    </button>
+                    <button class="btn-payment" id="transferPaymentBtn">
+                        <i class="bx bx-transfer"></i>
+                        <span>Transfer</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Action Grid (tanpa Navigation/Dashboard) -->
+            <div class="pos-actions-grid">
+                <div class="action-group">
+                    <div class="action-group-title">
+                        <i class="bx bx-receipt"></i> Transaction
+                    </div>
+                    <div class="action-buttons">
+                        <button class="action-btn" id="saveTransactionBtn">
+                            <i class="bx bx-save"></i>
+                            <span>Save / Hold</span>
+                        </button>
+                        <button class="action-btn" id="lockTransactionBtn">
+                            <i class="bx bx-lock"></i>
+                            <span>Lock</span>
+                        </button>
+                        <button class="action-btn" id="unlockTransactionBtn" style="display: none;">
+                            <i class="bx bx-lock-open"></i>
+                            <span>Unlock</span>
+                        </button>
+                        <button class="action-btn btn-outline-warning" id="voidItemBtn">
+                            <i class="bx bx-x-circle"></i>
+                            <span>Void Item</span>
+                        </button>
+                        <button class="action-btn btn-outline-danger" id="voidTransactionBtn">
+                            <i class="bx bx-trash"></i>
+                            <span>Void Order</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="action-group">
+                    <div class="action-group-title">
+                        <i class="bx bx-cart"></i> Cart
+                    </div>
+                    <div class="action-buttons">
+                        <button class="action-btn" id="clearCartBtn">
+                            <i class="bx bx-trash"></i>
+                            <span>Clear Cart</span>
+                            <kbd>F3</kbd>
+                        </button>
+                        <button class="action-btn" id="refreshCartBtn">
+                            <i class="bx bx-refresh"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Status Bar Desktop -->
+            <div class="pos-status-bar">
+                <div class="pos-status-left">
+                    <div class="status-item">
+                        <i class="bx bx-user-circle"></i>
+                        <span id="cashierName">Kasir: Admin</span>
+                    </div>
+                    <div class="status-item">
+                        <i class="bx bx-time"></i>
+                        <span id="currentTime"></span>
+                    </div>
+                    <div class="status-item" id="transactionStatus">
+                        <i class="bx bx-check-circle text-success"></i>
+                        <span>Active</span>
+                    </div>
+                </div>
+                <div class="pos-status-right">
+                    <button class="btn-menu-in-status" id="openSlidePanelBtn" title="Menu (Reports, Settings, dll)">
+                        <i class="bx bx-menu"></i>
+                        <span>Menu</span>
+                        <kbd>F8</kbd>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-
+    
+    <!-- ==================== MOBILE LAYOUT ==================== -->
+    <div class="pos-mobile-layout">
+        <!-- Mobile Header dengan Search -->
+        <div class="mobile-header">
+            <div class="mobile-search">
+                <div class="input-group">
+                    <span class="input-group-text bg-primary text-white border-0">
+                        <i class="bx bx-barcode"></i>
+                    </span>
+                    <input type="text" 
+                        class="form-control" 
+                        id="mobileSearchProduct" 
+                        placeholder="Scan barcode atau cari produk..." 
+                        autocomplete="off">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Cart List -->
+        <div class="mobile-cart-list" id="mobileCartItems">
+            <div class="text-center py-5 text-muted">
+                <i class="bx bx-cart-alt bx-lg mb-2"></i>
+                <p class="mb-0">Cart is empty</p>
+                <small>Search product to start</small>
+            </div>
+        </div>
+        
+        <!-- Mobile Cart Summary -->
+        <div class="mobile-cart-summary">
+            <div class="mobile-summary-row">
+                <span>Total</span>
+                <span id="mobileTotal">Rp 0</span>
+            </div>
+        </div>
+        
+        <!-- Mobile Bottom Navigation -->
+        <div class="mobile-bottom-nav">
+            <button class="nav-item" id="mobileCartBtn">
+                <i class="bx bx-cart"></i>
+                <span>Cart</span>
+                <span class="nav-badge" id="mobileCartCount">0</span>
+            </button>
+            <button class="nav-item" id="mobileCashBtn">
+                <i class="bx bx-money"></i>
+                <span>Cash</span>
+            </button>
+            <button class="nav-item" id="mobilePaymentBtn">
+                <i class="bx bx-credit-card"></i>
+                <span>Pay</span>
+            </button>
+            <button class="nav-item" id="mobileMenuNavBtn">
+                <i class="bx bx-menu"></i>
+                <span>Menu</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Slide Panel (Desktop & Mobile) dengan Dashboard di dalamnya -->
+    <div class="pos-slide-overlay" id="slideOverlay"></div>
+    <div class="pos-slide-panel" id="slidePanel">
+        <div class="pos-slide-panel-header">
+            <h5><i class="bx bx-cog"></i> Menu</h5>
+            <button type="button" class="btn-close btn-close-white" id="closeSlidePanel"></button>
+        </div>
+        <div class="pos-slide-panel-body">
+            <!-- Navigation / Dashboard (DIPINDAHKAN KE SINI) -->
+            <div class="action-group mb-3">
+                <div class="action-group-title">
+                    <i class="bx bx-navigation"></i> Navigation
+                </div>
+                <div class="action-buttons">
+                    <a href="/" class="action-btn" style="text-decoration: none;">
+                        <i class="bx bx-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Reports -->
+            <div class="action-group mb-3">
+                <div class="action-group-title">
+                    <i class="bx bx-chart"></i> Reports
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn" id="dailyReportBtnSlide">
+                        <i class="bx bx-calendar"></i>
+                        <span>Daily Report</span>
+                    </button>
+                    <button class="action-btn" id="xReadingBtnSlide">
+                        <i class="bx bx-line-chart"></i>
+                        <span>X-Reading</span>
+                    </button>
+                    <button class="action-btn" id="zReadingBtnSlide">
+                        <i class="bx bx-bar-chart"></i>
+                        <span>Z-Reading</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Transaction -->
+            <div class="action-group mb-3">
+                <div class="action-group-title">
+                    <i class="bx bx-receipt"></i> Transaction
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn" id="saveTransactionBtnSlide">
+                        <i class="bx bx-save"></i>
+                        <span>Save Sale</span>
+                    </button>
+                    <button class="action-btn" id="lockTransactionBtnSlide">
+                        <i class="bx bx-lock"></i>
+                        <span>Lock</span>
+                    </button>
+                    <button class="action-btn" id="unlockTransactionBtnSlide" style="display: none;">
+                        <i class="bx bx-lock-open"></i>
+                        <span>Unlock</span>
+                    </button>
+                    <button class="action-btn btn-outline-warning" id="voidItemBtnSlide">
+                        <i class="bx bx-x-circle"></i>
+                        <span>Void Item</span>
+                    </button>
+                    <button class="action-btn btn-outline-danger" id="voidTransactionBtnSlide">
+                        <i class="bx bx-trash"></i>
+                        <span>Void Order</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Cart Management -->
+            <div class="action-group mb-3">
+                <div class="action-group-title">
+                    <i class="bx bx-cart"></i> Cart
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn" id="clearCartBtnSlide">
+                        <i class="bx bx-trash"></i>
+                        <span>Clear Cart</span>
+                    </button>
+                    <button class="action-btn" id="refreshCartBtnSlide">
+                        <i class="bx bx-refresh"></i>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Settings -->
+            <div class="action-group mb-3">
+                <div class="action-group-title">
+                    <i class="bx bx-cog"></i> Settings
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn" id="printerSettingsBtn">
+                        <i class="bx bx-printer"></i>
+                        <span>Printer</span>
+                    </button>
+                    <button class="action-btn" id="shiftSettingsBtn">
+                        <i class="bx bx-briefcase"></i>
+                        <span>Shift</span>
+                    </button>
+                    <button class="action-btn" id="logoutBtn">
+                        <i class="bx bx-log-out"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Scripts -->
     <script src="/assets/vendor/libs/jquery/jquery.js"></script>
     <script src="/assets/vendor/libs/popper/popper.js"></script>
     <script src="/assets/vendor/js/bootstrap.js"></script>
     <script src="/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-    
-    <!-- POS JavaScript -->
     <script src="/assets/js/pages/pos.js"></script>
 </body>
 </html>

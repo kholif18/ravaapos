@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeScrollbars();
     initializeModals();
     
+    await loadFavoriteProducts('all');
+
     // Focus ke search product
     if (elements.searchProduct) elements.searchProduct.focus(); 
 });
@@ -146,8 +148,10 @@ function initializeScrollbars() {
     if (productGrid && typeof PerfectScrollbar !== 'undefined') {
         new PerfectScrollbar(productGrid);
     }
-    if (cartContainer && typeof PerfectScrollbar !== 'undefined') {
-        new PerfectScrollbar(cartContainer);
+    if (cartContainer) {
+        // Pastikan overflow auto
+        cartContainer.style.overflowY = 'auto';
+        cartContainer.style.overflowX = 'hidden';
     }
 }
 
@@ -1208,22 +1212,38 @@ async function handleCategoryFilter(button) {
     });
     button.classList.add('active', 'btn-primary');
     button.classList.remove('btn-outline-primary');
-    
-    // Filter produk favorit berdasarkan kategori
+
     const categoryId = button.dataset.category;
     await loadFavoriteProducts(categoryId);
 }
 
 async function loadFavoriteProducts(categoryId = 'all') {
+    // Cek apakah sudah ada data produk dari EJS
+    const existingProducts = document.querySelectorAll('.pos-product-card');
+
+    // Jika kategori 'all' dan sudah ada produk dari EJS, gunakan itu
+    if (categoryId === 'all' && existingProducts.length > 0) {
+        // Filter berdasarkan favorite? Atau biarkan saja
+        // Tapi kita tetap perlu filter favorite jika diperlukan
+        const favoriteProducts = Array.from(existingProducts)
+            .filter(card => card.dataset.favorite === 'true'); // Butuh tambahan data favorite di HTML
+
+        if (favoriteProducts.length > 0) {
+            // Gunakan existing DOM, jangan render ulang
+            return;
+        }
+    }
+
+    // Jika tidak ada, baru fetch dari API
     try {
         const params = new URLSearchParams();
         if (categoryId !== 'all') params.append('categoryId', categoryId);
         params.append('favorite', 'true');
         params.append('limit', '8');
-        
+
         const response = await fetch(`/pos/api/products/favorite?${params}`);
         const data = await response.json();
-        
+
         if (data.success && data.products) {
             updateProductsGrid(data.products);
         } else {
@@ -1233,6 +1253,12 @@ async function loadFavoriteProducts(categoryId = 'all') {
         console.error('Error loading favorite products:', error);
         updateProductsGrid([]);
     }
+}
+
+async function refreshProductsGrid() {
+    const activeCategoryBtn = document.querySelector('.pos-category-btn.active');
+    const categoryId = activeCategoryBtn ? activeCategoryBtn.dataset.category : 'all';
+    await loadFavoriteProducts(categoryId);
 }
 
 function updateProductsGrid(products) {
@@ -1260,23 +1286,23 @@ function updateProductsGrid(products) {
 
         html += `
             <div class="pos-product-card" 
-                 data-id="${product.id}"
-                 data-name="${escapeHtml(product.name)}"
-                 data-price="${product.salePrice}"
-                 data-stock="${product.stock || 999999}"
-                 data-code="${product.code || ''}"
-                 data-tax="${product.tax || 0}"
-                 data-enable-input-tax="${enableInputTax}"
-                 data-enable-alt-desc="${enableAltDesc}"
-                 data-price-change-allowed="${priceChangeAllowed}"
-                 data-type="${product.type || 'fisik'}"
-                 data-service="${product.service || false}">
+                data-id="${product.id}"
+                data-name="${escapeHtml(product.name)}"
+                data-price="${product.salePrice}"
+                data-stock="${product.stock || 999999}"
+                data-code="${product.code || ''}"
+                data-tax="${product.tax || 0}"
+                data-enable-input-tax="${enableInputTax}"
+                data-enable-alt-desc="${enableAltDesc}"
+                data-price-change-allowed="${priceChangeAllowed}"
+                data-type="${product.type || 'fisik'}"
+                data-service="${product.service || false}">
                 
                 <img class="pos-product-image" 
-                     src="${product.image || '/assets/img/elements/images.png'}" 
-                     alt="${escapeHtml(product.name)}"
-                     loading="lazy"
-                     onerror="this.src='/assets/img/elements/images.png'">
+                    src="${product.image || '/assets/img/elements/images.png'}" 
+                    alt="${escapeHtml(product.name)}"
+                    loading="lazy"
+                    onerror="this.src='/assets/img/elements/images.png'">
                 
                 <div class="pos-product-body">
                     <div class="pos-product-title">
@@ -1284,13 +1310,20 @@ function updateProductsGrid(products) {
                         ${isPPOB ? '<span class="pos-badge-ppob">PPOB</span>' : ''}
                         ${isService ? '<span class="pos-badge-service">Service</span>' : ''}
                     </div>
+
                     ${product.code ? `<div class="pos-product-code"><i class="bx bx-barcode"></i> ${product.code}</div>` : ''}
+
                     ${!isService && !isPPOB ? `<div class="pos-product-stock">Stock: ${product.stock} ${product.unit || ''}</div>` : ''}
+
                     ${product.tax > 0 && enableInputTax ? `<div class="pos-product-stock">Tax: ${product.tax}%</div>` : ''}
-                    <div class="pos-product-price">${formatRupiah(product.salePrice)}</div>
-                    <button class="btn btn-primary btn-sm w-100 btn-add-cart">
-                        <i class="bx bx-cart-add"></i> Add to Cart
-                    </button>
+
+                    <div class="pos-product-footer">
+                        <div class="pos-product-price">${formatRupiah(product.salePrice)}</div>
+
+                        <button class="btn btn-primary btn-sm w-100 btn-add-cart">
+                            <i class="bx bx-cart-add"></i> Add to Cart
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -2073,4 +2106,4 @@ function showError(title, message) {
 }
 
 // Load favorite products on start
-loadFavoriteProducts();
+// loadFavoriteProducts();

@@ -167,6 +167,8 @@
     transition: all 0.2s ease;
     cursor: pointer;
     height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .pos-product-card:hover {
@@ -183,6 +185,14 @@
 
 .pos-product-body {
     padding: 0.6rem;
+
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.pos-product-footer {
+    margin-top: auto;
 }
 
 .pos-product-title {

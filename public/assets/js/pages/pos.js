@@ -923,121 +923,334 @@ function handleClearCart() {
     }
 }
 
+// ========================================
+// HELPER FUNCTIONS
+// ========================================
+
+// fungsi ini untuk format input rupiah
+function formatRupiahInput(angka) {
+    if (!angka && angka !== 0) return '0';
+    return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+// fungsi untuk parse rupiah dari input
+function parseRupiahInput(value) {
+    if (!value) return 0;
+    return parseInt(value.toString().replace(/\./g, '')) || 0;
+}
+
+// Helper function to find cart item by cartId
+function findCartItem(cartId) {
+    return POS.cart.find(item => item.cartId == cartId);
+}
+
+// ========================================
+// CART UPDATE FUNCTIONS (Keep existing backend integration)
+// ========================================
+
+function updateCartItemPrice(cartId, newPrice) {
+    const item = findCartItem(cartId);
+    if (item && item.priceChangeAllowed && item.price !== newPrice) {
+        item.price = newPrice;
+        renderCart(); // Re-render to update totals
+    }
+}
+
+function updateCartItemQty(cartId, newQty) {
+    const item = findCartItem(cartId);
+    if (item && item.qty !== newQty) {
+        const noStockLimit = item.noStockLimit || item.isService || item.isPPOB;
+
+        // Validate stock
+        if (!noStockLimit && newQty > item.stock) {
+            showError('Stok Habis', `Stok ${item.name} hanya ${item.stock}`);
+            return false;
+        }
+
+        item.qty = newQty;
+        renderCart();
+        return true;
+    }
+    return false;
+}
+
+function updateCartItemDiscount(cartId, newDiscount) {
+    const item = findCartItem(cartId);
+    if (item && item.discount !== newDiscount) {
+        item.discount = newDiscount;
+        renderCart();
+    }
+}
+
+function updateCartItemDesc(cartId, newDesc) {
+    const item = findCartItem(cartId);
+    if (item && item.altDesc !== newDesc) {
+        item.altDesc = newDesc;
+        // Don't re-render for description to keep focus, just update totals
+        calculateAndDisplayTotals();
+    }
+}
+
+// ========================================
+// EVENT HANDLERS
+// ========================================
+
+function handlePriceChange(e) {
+    if (POS.isTransactionLocked) return;
+
+    const cartId = e.target.dataset.cartId;
+    let newPrice = parseRupiahInput(e.target.value);
+
+    if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
+
+    updateCartItemPrice(cartId, newPrice);
+    // Format ulang input (will be reformatted after re-render)
+}
+
+function handleQtyChange(e) {
+    if (POS.isTransactionLocked) return;
+
+    const cartId = e.target.dataset.cartId;
+    let newQty = parseInt(e.target.value);
+
+    if (isNaN(newQty) || newQty < 1) newQty = 1;
+
+    updateCartItemQty(cartId, newQty);
+}
+
+function handleDiscChange(e) {
+    if (POS.isTransactionLocked) return;
+
+    const cartId = e.target.dataset.cartId;
+    let newDisc = parseRupiahInput(e.target.value);
+
+    if (isNaN(newDisc) || newDisc < 0) newDisc = 0;
+
+    updateCartItemDiscount(cartId, newDisc);
+}
+
+function handleDescChange(e) {
+    if (POS.isTransactionLocked) return;
+
+    const cartId = e.target.dataset.cartId;
+    const newDesc = e.target.value;
+
+    updateCartItemDesc(cartId, newDesc);
+}
+
+// ========================================
+// BIND EVENTS (Called after each render)
+// ========================================
+
+function bindCartItemInputEvents() {
+    // Event untuk price input
+    document.querySelectorAll('.cart-item-price-input:not([disabled])').forEach(input => {
+        // Remove existing listener to prevent duplicates
+        input.removeEventListener('blur', handlePriceChange);
+        input.addEventListener('blur', handlePriceChange);
+
+        // Add focus event to show raw number for editing
+        input.removeEventListener('focus', handlePriceFocus);
+        input.addEventListener('focus', handlePriceFocus);
+    });
+
+    // Event untuk qty input
+    document.querySelectorAll('.cart-item-qty-input').forEach(input => {
+        input.removeEventListener('change', handleQtyChange);
+        input.addEventListener('change', handleQtyChange);
+    });
+
+    // Event untuk disc input
+    document.querySelectorAll('.cart-item-disc-input').forEach(input => {
+        input.removeEventListener('blur', handleDiscChange);
+        input.addEventListener('blur', handleDiscChange);
+
+        input.removeEventListener('focus', handleDiscFocus);
+        input.addEventListener('focus', handleDiscFocus);
+    });
+
+    // Event untuk desc input
+    document.querySelectorAll('.cart-item-desc-input').forEach(input => {
+        input.removeEventListener('blur', handleDescChange);
+        input.addEventListener('blur', handleDescChange);
+    });
+
+    // Event untuk remove buttons
+    document.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.removeEventListener('click', handleRemoveClick);
+        btn.addEventListener('click', handleRemoveClick);
+    });
+}
+
+// Focus handlers for price and discount inputs
+function handlePriceFocus(e) {
+    const rawValue = parseRupiahInput(e.target.value);
+    e.target.value = rawValue;
+}
+
+function handleDiscFocus(e) {
+    const rawValue = parseRupiahInput(e.target.value);
+    e.target.value = rawValue;
+}
+
+function handleRemoveClick(e) {
+    if (POS.isTransactionLocked) return;
+
+    const cartId = e.currentTarget.dataset.cartId;
+    const index = POS.cart.findIndex(item => item.cartId == cartId);
+    if (index !== -1) {
+        POS.cart.splice(index, 1);
+        renderCart();
+    }
+}
+
+// ========================================
+// MAIN RENDER FUNCTION (REFACTORED)
+// ========================================
+
 function renderCart() {
     // Update badges
     const cartCount = POS.cart.reduce((sum, item) => sum + item.qty, 0);
     if (DOM.cartItemCount) DOM.cartItemCount.textContent = cartCount;
     if (DOM.mobileCartCount) DOM.mobileCartCount.textContent = cartCount;
 
-    // Render desktop cart
+    // Render desktop cart dengan tabel header
     if (DOM.cartItems) {
         if (POS.cart.length === 0) {
-            DOM.cartItems.innerHTML = `...`;
+            DOM.cartItems.innerHTML = `
+                <div class="cart-empty">
+                    <i class="bx bx-shopping-bag"></i>
+                    <p class="mt-2">Keranjang belanja kosong</p>
+                    <small class="text-muted">Scan barcode atau cari produk untuk memulai</small>
+                </div>
+            `;
         } else {
-            let html = '';
-            POS.cart.forEach(item => {
-                const itemTotal = item.price * item.qty;
-                const isService = item.isService || item.service === true;
-                const isPPOB = item.isPPOB || item.type === 'ppob';
+            // Tambahkan header tabel
+            let html = `
+                <div class="cart-header">
+                    <div class="cart-header-product">Produk</div>
+                    <div class="cart-header-price">Harga</div>
+                    <div class="cart-header-qty">Qty</div>
+                    <div class="cart-header-disc">Diskon</div>
+                    <div class="cart-header-total">Total</div>
+                    <div class="cart-header-action"></div>
+                </div>
+            `;
 
-                let badgeHtml = '';
-                if (isService) badgeHtml = '<span class="badge bg-warning" style="font-size: 0.7rem;">SVC</span>';
-                if (isPPOB) badgeHtml = '<span class="badge bg-info" style="font-size: 0.7rem;">PPOB</span>';
-
-                html += `
-                    <div class="cart-item" data-cart-id="${item.cartId}">
-                        <div class="cart-item-left">
-                            <div class="cart-item-header">
-                                <div class="cart-item-name" title="${escapeHtml(item.name)}">
-                                    ${escapeHtml(item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name)}
-                                    ${badgeHtml}
-                                </div>
-
-                                <div class="cart-item-price">
-                                    ${formatRupiah(item.price)}
-                                </div>
-                            </div>
-
-                            <div class="cart-item-code">
-                                ${escapeHtml(item.code || '-')}
-                            </div>
-                        </div>
-                        <div class="cart-item-center">
-                            <div class="cart-item-qty">
-                                <button class="btn btn-outline-secondary btn-qty btn-qty-minus" data-cart-id="${item.cartId}"><i class="bx bx-minus"></i></button>
-                                <input type="number" class="qty-input" data-cart-id="${item.cartId}" value="${item.qty}" min="1" step="1" ${!isService && !isPPOB ? `max="${item.stock}"` : ''}>
-                                <button class="btn btn-outline-secondary btn-qty btn-qty-plus" data-cart-id="${item.cartId}"><i class="bx bx-plus"></i></button>
-                            </div>
-                        </div>
-                        <div class="cart-item-right">
-                            <div class="cart-item-total">${formatRupiah(itemTotal)}</div>
-                            <div class="cart-item-actions">
-                                ${item.priceChangeAllowed ? `<button class="btn btn-sm btn-outline-primary btn-edit-price" data-cart-id="${item.cartId}" title="Edit Harga"><i class="bx bx-edit"></i></button>` : ''}
-                                ${item.enableAltDesc ? `<button class="btn btn-sm btn-outline-secondary btn-edit-desc" data-cart-id="${item.cartId}" title="Tambah Deskripsi"><i class="bx bx-note"></i></button>` : ''}
-                                <button class="btn btn-sm btn-outline-danger btn-remove" data-cart-id="${item.cartId}" title="Hapus"><i class="bx bx-trash"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                `;
+            // Render items
+            POS.cart.forEach((item, index) => {
+                html += createCartItemRow(item, index);
             });
+
             DOM.cartItems.innerHTML = html;
-            document.querySelectorAll('.qty-input').forEach(input => {
-                // Hapus event listener lama dengan clone
-                const newInput = input.cloneNode(true);
-                input.parentNode.replaceChild(newInput, input);
 
-                newInput.addEventListener('change', (e) => {
-                    if (POS.isTransactionLocked) return;
-                    const cartId = e.target.dataset.cartId;
-                    let newQty = parseInt(e.target.value);
-                    const item = findCartItem(cartId);
-                    if (item) {
-                        const noStockLimit = item.noStockLimit || item.isService || item.isPPOB;
-                        if (isNaN(newQty) || newQty < 1) newQty = 1;
-                        if (!noStockLimit && newQty > item.stock) {
-                            showError('Stok Habis', `Stok ${item.name} hanya ${item.stock}`);
-                            newQty = item.stock;
-                            e.target.value = newQty;
-                        }
-                        if (item.qty !== newQty) {
-                            item.qty = newQty;
-                            renderCart();
-                        }
-                    }
-                });
-            });
+            // Bind events setelah render
+            bindCartGridEvents();
+
+            // Auto-focus pertama kali
+            if (POS.cart.length > 0 && !POS.activeRowIndex) {
+                setActiveRow(0);
+            }
         }
     }
 
-    // Render mobile cart - gunakan event delegation juga, tidak perlu attachMobileCartHandlers
+    // Render mobile cart (simplified)
     if (DOM.mobileCartItems) {
-        if (POS.cart.length === 0) {
-            DOM.mobileCartItems.innerHTML = `...`;
-        } else {
-            let html = '';
-            POS.cart.forEach(item => {
-                const itemTotal = item.price * item.qty;
-                html += `
-                    <div class="mobile-cart-item">
-                        <div class="mobile-cart-item-info">
-                            <div class="mobile-cart-item-name">${escapeHtml(item.name)}</div>
-                            <div class="mobile-cart-item-price">${formatRupiah(item.price)}</div>
-                        </div>
-                        <div class="mobile-cart-item-qty">
-                            <button class="btn-qty-minus-mobile" data-cart-id="${item.cartId}"><i class="bx bx-minus"></i></button>
-                            <span>${item.qty}</span>
-                            <button class="btn-qty-plus-mobile" data-cart-id="${item.cartId}"><i class="bx bx-plus"></i></button>
-                        </div>
-                        <div class="mobile-cart-item-total">${formatRupiah(itemTotal)}</div>
-                    </div>
-                `;
-            });
-            DOM.mobileCartItems.innerHTML = html;
-            // HAPUS baris ini: attachMobileCartHandlers();
-        }
+        renderMobileCart();
     }
 
     calculateAndDisplayTotals();
+}
+
+// Create single cart row dengan Grid
+function createCartItemRow(item, index) {
+    const itemTotal = item.price * item.qty - (item.discount || 0);
+    const isService = item.isService || item.service === true;
+    const isPPOB = item.isPPOB || item.type === 'ppob';
+    const hasStockLimit = !isService && !isPPOB;
+    const isPriceEditable = item.priceChangeAllowed && !isPPOB;
+
+    let badgeHtml = '';
+    if (isService) badgeHtml = '<span class="badge bg-warning">SVC</span>';
+    if (isPPOB) badgeHtml = '<span class="badge bg-info">PPOB</span>';
+
+    return `
+        <div class="cart-item" data-cart-id="${item.cartId}" data-row-index="${index}">
+            <div class="cart-row">
+                <!-- Product Column -->
+                <div class="cart-col product">
+                    <div class="cart-product-name" title="${escapeHtml(item.name)}">
+                        ${escapeHtml(truncateText(item.name, 30))}
+                        ${badgeHtml}
+                    </div>
+                    ${item.enableAltDesc ? `
+                        <input type="text"
+                            class="form-control form-control-sm cart-desc-input"
+                            data-cart-id="${item.cartId}"
+                            data-field="altDesc"
+                            placeholder="Deskripsi item..."
+                            value="${escapeHtml(item.altDesc || '')}"
+                            autocomplete="off">
+                    ` : ''}
+                </div>
+                
+                <!-- Price Column -->
+                <div class="cart-col price">
+                    <input type="number"
+                        class="form-control form-control-sm price-input ${isPriceEditable ? 'price-editable' : ''}"
+                        data-cart-id="${item.cartId}"
+                        data-field="price"
+                        value="${item.price}"
+                        step="1000"
+                        ${isPriceEditable ? '' : 'readonly'}
+                        ${isPriceEditable ? 'style="cursor: pointer;"' : ''}>
+                </div>
+                
+                <!-- Quantity Column -->
+                <div class="cart-col qty">
+                    <input type="number"
+                        class="form-control form-control-sm qty-input"
+                        data-cart-id="${item.cartId}"
+                        data-field="qty"
+                        value="${item.qty}"
+                        min="1"
+                        step="1"
+                        ${hasStockLimit ? `max="${item.stock}"` : ''}>
+                </div>
+                
+                <!-- Discount Column -->
+                <div class="cart-col disc">
+                    <input type="number"
+                        class="form-control form-control-sm disc-input"
+                        data-cart-id="${item.cartId}"
+                        data-field="discount"
+                        value="${item.discount || 0}"
+                        step="1000"
+                        min="0">
+                </div>
+                
+                <!-- Total Column -->
+                <div class="cart-col total">
+                    ${formatRupiah(itemTotal)}
+                </div>
+                
+                <!-- Action Column -->
+                <div class="cart-col action">
+                    <button class="btn btn-sm btn-remove"
+                            data-cart-id="${item.cartId}"
+                            title="Hapus item">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Helper truncate text
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
 }
 
 // ==================== CALCULATIONS ====================

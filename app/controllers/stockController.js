@@ -219,10 +219,10 @@ exports.addStock = async (req, res) => {
         }
 
         // Cegah tambah stok jika tipe jasa
-        if (product.service) {
+        if (product.type !== 'fisik') {
             return res.status(400).json({
                 success: false,
-                message: 'Produk jasa tidak bisa memiliki stok',
+                message: 'Produk non fisik tidak memiliki stok',
             });
         }
 
@@ -270,10 +270,10 @@ exports.adjustStock = async (req, res) => {
             });
         }
 
-        if (product.service) {
+        if (product.type !== 'fisik') {
             return res.status(400).json({
                 success: false,
-                message: 'Jasa tidak memiliki stok'
+                message: 'Produk non fisik tidak memiliki stok',
             });
         }
 
@@ -389,14 +389,22 @@ exports.exportCSV = async (req, res) => {
             ]
         });
 
-        if (filter === 'negative') products = products.filter(p => !p.service && p.stock < 0);
-        if (filter === 'zero') products = products.filter(p => p.service || p.stock === 0);
-        if (filter === 'nonzero') products = products.filter(p => p.service || p.stock !== 0);
+        if (filter === 'negative') {
+            products = products.filter(p => p.type === 'fisik' && p.stock < 0);
+        }
+
+        if (filter === 'zero') {
+            products = products.filter(p => p.type !== 'fisik' || p.stock === 0);
+        }
+
+        if (filter === 'nonzero') {
+            products = products.filter(p => p.type !== 'fisik' || p.stock !== 0);
+        }
 
         let csv = 'code,name,category,qty,unit,cost,salePrice,value\n';
         for (const p of products) {
-            const qtyCalc = p.service ? 1 : (p.stock ?? 0); // perhitungan value
-            const qtyDisplay = p.service ? 0 : (p.stock ?? 0); // ditampilkan di file
+            const qtyCalc = p.type !== 'fisik' ? 1 : (p.stock ?? 0);
+            const qtyDisplay = p.type !== 'fisik' ? 0 : (p.stock ?? 0);
             const cost = p.cost ?? 0;
             const salePrice = p.salePrice ?? 0;
             const value = qtyCalc * salePrice;
@@ -473,15 +481,15 @@ exports.exportPDF = async (req, res) => {
         });
 
         // Filter
-        if (filter === 'negative') products = products.filter(p => !p.service && p.stock < 0);
-        if (filter === 'zero') products = products.filter(p => p.service || p.stock === 0);
-        if (filter === 'nonzero') products = products.filter(p => p.service || p.stock !== 0);
+        if (filter === 'negative') products = products.filter(p => !p.type !== 'fisik' && p.stock < 0);
+        if (filter === 'zero') products = products.filter(p => p.type !== 'fisik' || p.stock === 0);
+        if (filter === 'nonzero') products = products.filter(p => p.type !== 'fisik' || p.stock !== 0);
 
         // Data & total
         let totalCostPrice = 0;
         let totalCost = 0;
         const tableData = products.map((p, idx) => {
-            const qty = p.service ? 0 : (p.stock ?? 0);
+            const qty = p.type !== 'fisik' ? 0 : (p.stock ?? 0);
             const cost = p.cost ?? 0;
             const total = qty * cost;
             totalCostPrice += cost;
@@ -683,15 +691,15 @@ exports.printStockReport = async (req, res) => {
         });
 
         // Filter qty sesuai jenis produk
-        if (filter === 'negative') products = products.filter(p => !p.service && p.stock < 0);
-        if (filter === 'zero') products = products.filter(p => p.service || p.stock === 0);
-        if (filter === 'nonzero') products = products.filter(p => p.service || p.stock !== 0);
+        if (filter === 'negative') products = products.filter(p => !p.type !== 'fisik' && p.stock < 0);
+        if (filter === 'zero') products = products.filter(p => p.type !== 'fisik' || p.stock === 0);
+        if (filter === 'nonzero') products = products.filter(p => p.type !== 'fisik' || p.stock !== 0);
 
         // Hitung total
         let totalCostPrice = 0;
         let totalCost = 0;
         const tableData = products.map((p, idx) => {
-            const qty = p.service ? 0 : (p.stock  ?? 0);
+            const qty = p.type !== 'fisik' ? 0 : (p.stock  ?? 0);
             const cost = p.cost  ?? 0;
             const total = qty * cost;
             totalCostPrice += cost;

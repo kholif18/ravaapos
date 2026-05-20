@@ -1,16 +1,16 @@
 <% products.forEach(p => { 
-     const isService = p.service === true || p.service === 'true'; // aman dari boolean dan string
+    const isNonStock = p.type === 'service' || p.type === 'ppob';
 %>
     <tr>
         <td><%= p.code %></td>
         <td><%= p.name %></td>
         <td>
             <% if (p.stock < 0) { %>
-            <span class="badge bg-danger px-3 float-end"><%= p.stock %></span>
+            <span class="badge bg-danger px-3 float-end"><%= isNonStock ? '-' : p.stock %></span>
             <% } else if (p.stock === 0) { %>
-            <span class="badge bg-info px-3 float-end"><%= p.stock %></span>
+            <span class="badge bg-info px-3 float-end"><%= isNonStock ? '-' : p.stock %></span>
             <% } else { %>
-            <span class="badge bg-success px-3 float-end"><%= p.stock %></span>
+            <span class="badge bg-success px-3 float-end"><%= isNonStock ? '-' : p.stock %></span>
             <% } %>
         </td>
         <td><%= p.unit %></td>
@@ -18,7 +18,7 @@
         
         <td><%= formatRupiah(p.nilai) %></td>
         <td class="text-center">
-            <% if (isService || p.type === 'ppob') { %>
+            <% if (isNonStock) { %>
                 <span class="text-muted small fst-italic text-nowrap">Tanpa stok</span>
             <% } else { %>
                 <button 
@@ -30,7 +30,7 @@
                 <button 
                     class="btn btn-sm btn-warning btn-adjust-stock" 
                     data-id="<%= p.id %>" 
-                    data-stock="<%= p.stock %>"
+                    data-stock="<%= isNonStock ? '-' : p.stock %>"
                     data-name="<%= p.name %>">
                     <i class="bx bx-clipboard"></i>
                 </button>

@@ -47,11 +47,6 @@ const DOM = {
     mobileCartCount: null
 };
 
-// ==================== HELPER: Get Unique Cart ID ====================
-function getUniqueCartId() {
-    return POS.nextCartId++;
-}
-
 // ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', async () => {
     initializeDOM();
@@ -64,11 +59,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set CSRF token
     POS.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     POS.taxRate = parseFloat(document.body.dataset.taxRate) || 11;
-    if (DOM.taxRateSpan) DOM.taxRateSpan.textContent = POS.taxRate;
     
     // Restore draft if exists
     loadDraftTransaction();
     
+    renderCart();
+
     // Focus ke search
     setTimeout(() => DOM.searchProduct?.focus(), 100);
 });
@@ -104,7 +100,6 @@ function initializeDOM() {
     DOM.clearCartBtn = document.getElementById('clearCartBtn');
     DOM.completeOrderBtn = document.getElementById('completeOrderBtn');
     DOM.cashPaymentBtn = document.getElementById('cashPaymentBtn');
-    DOM.taxRateSpan = document.getElementById('taxRate');
     DOM.cartItemCount = document.querySelector('.cart-badge');
     DOM.mobileCartCount = document.getElementById('mobileCartCount');
 }
@@ -124,9 +119,6 @@ function updateTime() {
 
 // ==================== MODALS ====================
 function initializeModals() {
-    createEditPriceModal();
-    createEditDescModal();
-    createPriceConfirmModal();
     createPaymentModal();
     createSuccessModal();
 }
@@ -431,20 +423,6 @@ function handleDocumentClick(e) {
         const cartId = btn.dataset.cartId; // LANGSUNG
         removeFromCart(cartId);
     }
-    // Tombol edit price
-    else if (btn.classList.contains('btn-edit-price')) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (POS.isTransactionLocked) return;
-        showEditPriceModal(btn);
-    }
-    // Tombol edit desc
-    else if (btn.classList.contains('btn-edit-desc')) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (POS.isTransactionLocked) return;
-        showEditDescModal(btn);
-    }
     // Tombol minus mobile
     else if (btn.classList.contains('btn-qty-minus-mobile')) {
         e.preventDefault();
@@ -527,15 +505,65 @@ function initializeSearch() {
     });
 }
 
+function handleSearchItemClick(e) {
+    const item = e.currentTarget;
+    const id = parseInt(item.dataset.id);
+    const product = POS.currentSearchResults.find(p => p.id === id);
+    if (product) {
+        addProductToCart(product);
+        clearSearchInput();
+        hideSearchDropdown();
+        setTimeout(() => {
+            if (DOM.searchProduct) DOM.searchProduct.focus();
+            if (DOM.mobileSearchProduct) DOM.mobileSearchProduct.focus();
+        }, 100);
+    }
+}
+
+function handleMobileSearchKeydown(e) {
+    const dropdown = document.getElementById('mobileSearchDropdown');
+    if (!dropdown || dropdown.style.display === 'none') return;
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectNextResult();
+        setTimeout(() => {
+            const selectedItem = document.querySelector('#mobileSearchResultsList .search-dropdown-item.selected');
+            if (selectedItem) {
+                selectedItem.scrollIntoView({
+                    block: 'nearest'
+                });
+            }
+        }, 50);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectPreviousResult();
+        setTimeout(() => {
+            const selectedItem = document.querySelector('#mobileSearchResultsList .search-dropdown-item.selected');
+            if (selectedItem) {
+                selectedItem.scrollIntoView({
+                    block: 'nearest'
+                });
+            }
+        }, 50);
+    } else if (e.key === 'Escape') {
+        hideSearchDropdown();
+    }
+}
+
 async function performSearch(keyword) {
     try {
         const response = await fetch(`/pos/api/products/search?q=${encodeURIComponent(keyword)}`);
         const data = await response.json();
-        
+
         if (data.success && data.products) {
             POS.currentSearchResults = data.products.slice(0, 10);
             POS.selectedSearchIndex = -1;
-            renderSearchDropdown(POS.currentSearchResults);
+
+            // Render untuk kedua dropdown
+            renderSearchDropdown(POS.currentSearchResults, 'searchResultsList');
+            renderSearchDropdown(POS.currentSearchResults, 'mobileSearchResultsList');
+
             showSearchDropdown();
         } else {
             hideSearchDropdown();
@@ -546,21 +574,21 @@ async function performSearch(keyword) {
     }
 }
 
-function renderSearchDropdown(products) {
-    const listContainer = document.getElementById('searchResultsList');
+function renderSearchDropdown(products, containerId) {
+    const listContainer = document.getElementById(containerId);
     if (!listContainer) return;
-    
+
     if (!products || products.length === 0) {
         listContainer.innerHTML = '<div class="text-center text-muted py-3"><small>Tidak ada produk ditemukan</small></div>';
         return;
     }
-    
+
     let html = '';
     products.forEach((product, index) => {
         const isService = product.service === true;
         const isPPOB = product.type === 'ppob';
         const stockClass = product.stock <= 0 ? 'low-stock' : (product.stock < 10 ? 'medium-stock' : 'high-stock');
-        
+
         html += `
             <div class="search-dropdown-item" data-index="${index}" data-id="${product.id}">
                 <div class="search-dropdown-info">
@@ -581,24 +609,13 @@ function renderSearchDropdown(products) {
             </div>
         `;
     });
-    
+
     listContainer.innerHTML = html;
-    
-    document.querySelectorAll('.search-dropdown-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const id = parseInt(item.dataset.id);
-            const product = POS.currentSearchResults.find(p => p.id === id);
-            if (product) {
-                addProductToCart(product);
-                clearSearchInput();
-                hideSearchDropdown();
-                setTimeout(() => DOM.searchProduct?.focus(), 100);
-            }
-        });
-        item.addEventListener('mouseenter', () => {
-            const index = parseInt(item.dataset.index);
-            setSelectedIndex(index);
-        });
+
+    // Attach click events untuk setiap item di container ini
+    document.querySelectorAll(`#${containerId} .search-dropdown-item`).forEach(item => {
+        item.removeEventListener('click', handleSearchItemClick);
+        item.addEventListener('click', handleSearchItemClick);
     });
 }
 
@@ -641,16 +658,26 @@ function selectPreviousResult() {
     updateSelectedItem();
 }
 
-function setSelectedIndex(index) {
-    POS.selectedSearchIndex = index;
-    updateSelectedItem();
-}
-
 function updateSelectedItem() {
-    document.querySelectorAll('.search-dropdown-item').forEach((item, i) => {
+    // Update desktop dropdown
+    document.querySelectorAll('#searchResultsList .search-dropdown-item').forEach((item, i) => {
         if (i === POS.selectedSearchIndex) {
             item.classList.add('selected');
-            item.scrollIntoView({ block: 'nearest' });
+            item.scrollIntoView({
+                block: 'nearest'
+            });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+
+    // Update mobile dropdown
+    document.querySelectorAll('#mobileSearchResultsList .search-dropdown-item').forEach((item, i) => {
+        if (i === POS.selectedSearchIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({
+                block: 'nearest'
+            });
         } else {
             item.classList.remove('selected');
         }
@@ -658,13 +685,35 @@ function updateSelectedItem() {
 }
 
 function showSearchDropdown() {
-    const dropdown = document.getElementById('searchDropdown');
-    if (dropdown) dropdown.style.display = 'block';
+    const desktopDropdown = document.getElementById('searchDropdown');
+    const mobileDropdown = document.getElementById('mobileSearchDropdown');
+
+    // Tentukan posisi dropdown berdasarkan viewport
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile && mobileDropdown) {
+        mobileDropdown.style.display = 'flex';
+        // Scroll ke dropdown
+        setTimeout(() => {
+            mobileDropdown.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        }, 50);
+    } else if (desktopDropdown) {
+        desktopDropdown.style.display = 'block';
+    }
 }
 
 function hideSearchDropdown() {
-    const dropdown = document.getElementById('searchDropdown');
-    if (dropdown) dropdown.style.display = 'none';
+    const desktopDropdown = document.getElementById('searchDropdown');
+    const mobileDropdown = document.getElementById('mobileSearchDropdown');
+    const backdrop = document.getElementById('searchDropdownBackdrop');
+
+    if (desktopDropdown) desktopDropdown.style.display = 'none';
+    if (mobileDropdown) mobileDropdown.style.display = 'none';
+    if (backdrop) backdrop.classList.remove('show');
+
     POS.currentSearchResults = [];
     POS.selectedSearchIndex = -1;
 }
@@ -699,65 +748,69 @@ function addProductToCart(product) {
         enableTax: product.enableInputTax || false,
         enableAltDesc: product.enableAltDesc || false,
         priceChangeAllowed: product.priceChangeAllowed || false,
+        requireQtyInput: product.requireQtyInput || false,
         type: product.type || 'fisik',
         service: product.service || false,
         isService: product.service === true,
         isPPOB: product.type === 'ppob',
         altDesc: ''
     };
-    
-    // Jika priceChangeAllowed = true, langsung tambah tanpa modal
-    if (cartProduct.priceChangeAllowed) {
-        showPriceConfirmModal(cartProduct);
-    } else {
-        // Langsung tambah
-        addToCart(cartProduct);
-        clearSearchInput();
-        hideSearchDropdown();
-        setTimeout(() => DOM.searchProduct?.focus(), 50);
-    }
+
+    // LANGSUNG TAMBAH KE CART, tanpa modal apapun
+    addToCart(cartProduct);
+    clearSearchInput();
+    hideSearchDropdown();
+
+    // Setelah cart render, auto-focus ke field yang sesuai
+    setTimeout(() => {
+        autoFocusNewItem(cartProduct);
+    }, 100);
 }
 
-function showPriceConfirmModal(product) {
-    // Simpan ke pendingProduct
-    POS.pendingProduct = {
-        ...product
-    };
+// Auto focus ke field yang perlu diedit
+function autoFocusNewItem(product) {
+    const cartItems = document.querySelectorAll('.cart-item');
+    if (cartItems.length === 0) return;
 
-    const confirmNameInput = document.getElementById('confirmProductName');
-    const confirmPriceInput = document.getElementById('confirmProductPrice');
-    const stockInfo = document.getElementById('confirmStockInfo');
-    const stockSpan = document.getElementById('confirmStock');
+    // Ambil item terakhir yang ditambahkan
+    const lastItem = cartItems[cartItems.length - 1];
+    const cartId = lastItem.dataset.cartId;
+    const item = findCartItem(cartId);
 
-    if (confirmNameInput) confirmNameInput.value = product.name;
-    if (confirmPriceInput) confirmPriceInput.value = product.price;
+    if (!item) return;
 
-    if (!product.isService && !product.isPPOB && stockInfo && stockSpan) {
-        stockInfo.classList.remove('d-none');
-        stockSpan.textContent = product.stock;
-    } else if (stockInfo) {
-        stockInfo.classList.add('d-none');
+    // Prioritas focus: Qty > Price
+    if (item.defaultQty || item.isService || item.isPPOB) {
+        // Jika defaultQty true atau service/PPOB, fokus ke qty
+        const qtyInput = lastItem.querySelector('.qty-input');
+        if (qtyInput && !qtyInput.disabled) {
+            qtyInput.focus();
+            qtyInput.select();
+            activeField = 'qty';
+            highlightActiveRow(lastItem);
+            return;
+        }
     }
 
-    const modalElement = document.getElementById('priceConfirmModal');
-    if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
+    if (item.priceChangeAllowed) {
+        // Jika price editable, fokus ke price
+        const priceInput = lastItem.querySelector('.price-input.price-editable');
+        if (priceInput && !priceInput.disabled) {
+            priceInput.focus();
+            priceInput.select();
+            activeField = 'price';
+            highlightActiveRow(lastItem);
+            return;
+        }
+    }
 
-        // Hapus event listener lama untuk mencegah duplikasi
-        modalElement.removeEventListener('shown.bs.modal', window._priceModalFocusHandler);
-
-        // Buat handler baru
-        window._priceModalFocusHandler = function () {
-            setTimeout(() => {
-                if (confirmPriceInput) {
-                    confirmPriceInput.focus();
-                    confirmPriceInput.select();
-                }
-            }, 50);
-        };
-
-        modalElement.addEventListener('shown.bs.modal', window._priceModalFocusHandler);
-        modal.show();
+    // Default: fokus ke qty
+    const qtyInput = lastItem.querySelector('.qty-input');
+    if (qtyInput && !qtyInput.disabled) {
+        qtyInput.focus();
+        qtyInput.select();
+        activeField = 'qty';
+        highlightActiveRow(lastItem);
     }
 }
 
@@ -818,8 +871,8 @@ function confirmAddToCart(e) {
 
 // ==================== CART MANAGEMENT ====================
 function addToCart(product) {
-    const canMerge = !product.priceChangeAllowed;
-    const existing = canMerge ? POS.cart.find(item => item.id === product.id && !item.priceChangeAllowed) : null;
+    const canMerge = !product.priceChangeAllowed && !product.defaultQty;
+    const existing = canMerge ? POS.cart.find(item => item.id === product.id && !item.priceChangeAllowed && !item.defaultQty) : null;
     const noStockLimit = product.isService || product.isPPOB;
 
     if (existing) {
@@ -832,7 +885,7 @@ function addToCart(product) {
         const newItem = {
             ...product,
             cartId: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '_' + Math.random(),
-            qty: 1,
+            qty: product.defaultQty ? 0 : 1, // Jika defaultQty true, qty = 0 (perlu input)
             noStockLimit: noStockLimit,
             altDesc: product.altDesc || ''
         };
@@ -841,11 +894,6 @@ function addToCart(product) {
 
     renderCart();
     return true;
-}
-
-function findCartItem(cartId) {
-    // cartId bisa berupa number (cartId) atau string (untuk backward compatibility)
-    return POS.cart.find(item => item.cartId == cartId);
 }
 
 function updateQuantity(cartId, delta) {
@@ -880,11 +928,6 @@ function removeFromCart(cartId) {
     }
     POS.cart = POS.cart.filter(item => item.cartId != cartId);
     renderCart();
-}
-
-function handleQuantityChange(button, delta) {
-    const cartId = parseInt(button.dataset.cartId);
-    updateQuantity(cartId, delta);
 }
 
 function voidItem() {
@@ -944,8 +987,14 @@ function findCartItem(cartId) {
     return POS.cart.find(item => item.cartId == cartId);
 }
 
+// Helper truncate text
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+}
+
 // ========================================
-// CART UPDATE FUNCTIONS (Keep existing backend integration)
+// CART UPDATE FUNCTIONS (PERTAHANKAN)
 // ========================================
 
 function updateCartItemPrice(cartId, newPrice) {
@@ -953,6 +1002,7 @@ function updateCartItemPrice(cartId, newPrice) {
     if (item && item.priceChangeAllowed && item.price !== newPrice) {
         item.price = newPrice;
         renderCart(); // Re-render to update totals
+        showNotification('Berhasil', `Harga ${item.name} berhasil diubah menjadi ${formatRupiah(newPrice)}`, 'success');
     }
 }
 
@@ -960,13 +1010,13 @@ function updateCartItemQty(cartId, newQty) {
     const item = findCartItem(cartId);
     if (item && item.qty !== newQty) {
         const noStockLimit = item.noStockLimit || item.isService || item.isPPOB;
-
+        
         // Validate stock
         if (!noStockLimit && newQty > item.stock) {
             showError('Stok Habis', `Stok ${item.name} hanya ${item.stock}`);
             return false;
         }
-
+        
         item.qty = newQty;
         renderCart();
         return true;
@@ -998,13 +1048,34 @@ function updateCartItemDesc(cartId, newDesc) {
 function handlePriceChange(e) {
     if (POS.isTransactionLocked) return;
 
-    const cartId = e.target.dataset.cartId;
-    let newPrice = parseRupiahInput(e.target.value);
+    const input = e.target;
+    if (input.readOnly || input.disabled) return;
 
-    if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
+    const cartId = input.dataset.cartId;
+    let newPrice = parseFloat(input.value);
+    const item = findCartItem(cartId);
 
-    updateCartItemPrice(cartId, newPrice);
-    // Format ulang input (will be reformatted after re-render)
+    if (!item) return;
+
+    if (isNaN(newPrice) || newPrice < 0) {
+        newPrice = 0;
+        input.value = 0;
+    }
+
+    if (item.price !== newPrice) {
+        item.price = newPrice;
+        renderCart();
+
+        // Focus kembali ke field berikutnya (discount)
+        setTimeout(() => {
+            const discInput = document.querySelector(`.cart-item[data-cart-id="${cartId}"] .disc-input`);
+            if (discInput) {
+                discInput.focus();
+                discInput.select();
+                activeField = 'disc';
+            }
+        }, 50);
+    }
 }
 
 function handleQtyChange(e) {
@@ -1012,100 +1083,461 @@ function handleQtyChange(e) {
 
     const cartId = e.target.dataset.cartId;
     let newQty = parseInt(e.target.value);
+    const item = findCartItem(cartId);
+
+    if (!item) return;
+
+    const noStockLimit = item.noStockLimit || item.isService || item.isPPOB;
+
+    // Jika qty 0, hapus item dari cart
+    if (newQty === 0) {
+        removeFromCart(cartId);
+        return;
+    }
 
     if (isNaN(newQty) || newQty < 1) newQty = 1;
 
-    updateCartItemQty(cartId, newQty);
+    if (!noStockLimit && newQty > item.stock) {
+        showError('Stok Habis', `Stok ${item.name} hanya ${item.stock}`);
+        e.target.value = item.qty;
+        return;
+    }
+
+    if (item.qty !== newQty) {
+        item.qty = newQty;
+        renderCart();
+
+        // Setelah render, focus ke price jika perlu
+        setTimeout(() => {
+            if (item.priceChangeAllowed) {
+                const priceInput = document.querySelector(`.cart-item[data-cart-id="${cartId}"] .price-input.price-editable`);
+                if (priceInput) {
+                    priceInput.focus();
+                    priceInput.select();
+                    activeField = 'price';
+                }
+            }
+        }, 50);
+    }
 }
 
 function handleDiscChange(e) {
     if (POS.isTransactionLocked) return;
-
+    
     const cartId = e.target.dataset.cartId;
-    let newDisc = parseRupiahInput(e.target.value);
-
+    let newDisc = parseFloat(e.target.value);
+    const item = findCartItem(cartId);
+    
     if (isNaN(newDisc) || newDisc < 0) newDisc = 0;
-
-    updateCartItemDiscount(cartId, newDisc);
+    
+    // Validasi diskon tidak melebihi total harga
+    if (item && newDisc > item.price * item.qty) {
+        newDisc = item.price * item.qty;
+        e.target.value = newDisc;
+    }
+    
+    if (item && item.discount !== newDisc) {
+        item.discount = newDisc;
+        renderCart();
+        // Kembalikan focus
+        setTimeout(() => {
+            const newInput = document.querySelector(`.cart-item[data-cart-id="${cartId}"] .disc-input`);
+            if (newInput) {
+                newInput.focus();
+                newInput.select();
+            }
+        }, 50);
+    }
 }
 
 function handleDescChange(e) {
     if (POS.isTransactionLocked) return;
-
+    
     const cartId = e.target.dataset.cartId;
     const newDesc = e.target.value;
-
-    updateCartItemDesc(cartId, newDesc);
-}
-
-// ========================================
-// BIND EVENTS (Called after each render)
-// ========================================
-
-function bindCartItemInputEvents() {
-    // Event untuk price input
-    document.querySelectorAll('.cart-item-price-input:not([disabled])').forEach(input => {
-        // Remove existing listener to prevent duplicates
-        input.removeEventListener('blur', handlePriceChange);
-        input.addEventListener('blur', handlePriceChange);
-
-        // Add focus event to show raw number for editing
-        input.removeEventListener('focus', handlePriceFocus);
-        input.addEventListener('focus', handlePriceFocus);
-    });
-
-    // Event untuk qty input
-    document.querySelectorAll('.cart-item-qty-input').forEach(input => {
-        input.removeEventListener('change', handleQtyChange);
-        input.addEventListener('change', handleQtyChange);
-    });
-
-    // Event untuk disc input
-    document.querySelectorAll('.cart-item-disc-input').forEach(input => {
-        input.removeEventListener('blur', handleDiscChange);
-        input.addEventListener('blur', handleDiscChange);
-
-        input.removeEventListener('focus', handleDiscFocus);
-        input.addEventListener('focus', handleDiscFocus);
-    });
-
-    // Event untuk desc input
-    document.querySelectorAll('.cart-item-desc-input').forEach(input => {
-        input.removeEventListener('blur', handleDescChange);
-        input.addEventListener('blur', handleDescChange);
-    });
-
-    // Event untuk remove buttons
-    document.querySelectorAll('.btn-remove').forEach(btn => {
-        btn.removeEventListener('click', handleRemoveClick);
-        btn.addEventListener('click', handleRemoveClick);
-    });
-}
-
-// Focus handlers for price and discount inputs
-function handlePriceFocus(e) {
-    const rawValue = parseRupiahInput(e.target.value);
-    e.target.value = rawValue;
-}
-
-function handleDiscFocus(e) {
-    const rawValue = parseRupiahInput(e.target.value);
-    e.target.value = rawValue;
-}
-
-function handleRemoveClick(e) {
-    if (POS.isTransactionLocked) return;
-
-    const cartId = e.currentTarget.dataset.cartId;
-    const index = POS.cart.findIndex(item => item.cartId == cartId);
-    if (index !== -1) {
-        POS.cart.splice(index, 1);
-        renderCart();
+    const item = findCartItem(cartId);
+    
+    if (item && item.altDesc !== newDesc) {
+        item.altDesc = newDesc;
+        calculateAndDisplayTotals(); // Update totals without re-render
     }
 }
 
 // ========================================
-// MAIN RENDER FUNCTION (REFACTORED)
+// GRID EVENT BINDING
+// ========================================
+
+let activeField = null;
+
+function bindCartGridEvents() {
+    bindPriceEvents();
+    bindQtyEvents();
+    bindDiscountEvents();
+    bindDescEvents();
+    bindRemoveEvents();
+    bindKeyboardNavigation();
+    bindRowActivation();
+}
+
+function bindPriceEvents() {
+    // Untuk price-input yang editable (priceChangeAllowed = true)
+    document.querySelectorAll('.price-input.price-editable').forEach(input => {
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+
+        // Focus: auto select all text
+        newInput.addEventListener('focus', (e) => {
+            e.target.select();
+            activeField = 'price';
+            highlightActiveRow(e.target.closest('.cart-item'));
+        });
+
+        // Enter: pindah ke qty
+        newInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+                moveToNextField(e.target.closest('.cart-item'), 'qty');
+            }
+        });
+
+        // Blur: update harga langsung
+        newInput.addEventListener('blur', (e) => {
+            handlePriceChange(e);
+        });
+
+        // Change: update harga langsung
+        newInput.addEventListener('change', (e) => {
+            handlePriceChange(e);
+        });
+    });
+
+    // Untuk price-input yang non-editable (readonly)
+    document.querySelectorAll('.price-input:not(.price-editable)').forEach(input => {
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+
+        newInput.addEventListener('focus', (e) => {
+            activeField = 'price';
+            highlightActiveRow(e.target.closest('.cart-item'));
+        });
+    });
+}
+
+function bindQtyEvents() {
+    document.querySelectorAll('.qty-input').forEach(input => {
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        
+        newInput.addEventListener('focus', (e) => {
+            e.target.select();
+            activeField = 'qty';
+            highlightActiveRow(e.target.closest('.cart-item'));
+        });
+        
+        newInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                moveToNextField(e.target.closest('.cart-item'), 'disc');
+            }
+        });
+        
+        newInput.addEventListener('change', (e) => {
+            handleQtyChange(e);
+        });
+    });
+}
+
+function bindDiscountEvents() {
+    document.querySelectorAll('.disc-input').forEach(input => {
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        
+        newInput.addEventListener('focus', (e) => {
+            e.target.select();
+            activeField = 'disc';
+            highlightActiveRow(e.target.closest('.cart-item'));
+        });
+        
+        newInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleDiscChange(e);
+                moveToNextRow(e.target.closest('.cart-item'), 'price');
+            }
+        });
+        
+        newInput.addEventListener('blur', (e) => {
+            handleDiscChange(e);
+        });
+    });
+}
+
+function bindDescEvents() {
+    document.querySelectorAll('.cart-desc-input').forEach(input => {
+        const newInput = input.cloneNode(true);
+        input.parentNode.replaceChild(newInput, input);
+        
+        newInput.addEventListener('blur', (e) => {
+            handleDescChange(e);
+        });
+        
+        newInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+                moveToNextRow(e.target.closest('.cart-item'), 'price');
+            }
+        });
+    });
+}
+
+function bindRemoveEvents() {
+    document.querySelectorAll('.btn-remove').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', (e) => {
+            if (POS.isTransactionLocked) return;
+            const cartId = newBtn.dataset.cartId;
+            const index = POS.cart.findIndex(item => item.cartId == cartId);
+            if (index !== -1) {
+                POS.cart.splice(index, 1);
+                renderCart();
+            }
+        });
+    });
+}
+
+// Keyboard Navigation
+function bindKeyboardNavigation() {
+    document.removeEventListener('keydown', handleKeyboardNavigation);
+    document.addEventListener('keydown', handleKeyboardNavigation);
+}
+
+function handleKeyboardNavigation(e) {
+    if (POS.isTransactionLocked) return;
+    
+    const activeElement = document.activeElement;
+    const isInputFocused = activeElement.classList?.contains('qty-input') || 
+                           activeElement.classList?.contains('price-input') || 
+                           activeElement.classList?.contains('disc-input') ||
+                           activeElement.classList?.contains('cart-desc-input');
+    
+    // Arrow Up/Down untuk navigasi row
+    if (isInputFocused && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        const currentRow = activeElement.closest('.cart-item');
+        const currentIndex = parseInt(currentRow?.dataset.rowIndex || -1);
+        
+        if (e.key === 'ArrowUp' && currentIndex > 0) {
+            moveToRow(currentIndex - 1, activeField);
+        } else if (e.key === 'ArrowDown' && currentIndex < POS.cart.length - 1) {
+            moveToRow(currentIndex + 1, activeField);
+        }
+    }
+    
+    // Tab dengan Shift untuk navigasi field
+    if (isInputFocused && e.key === 'Tab') {
+        e.preventDefault();
+        const currentRow = activeElement.closest('.cart-item');
+        const fields = ['price', 'qty', 'disc'];
+        let currentFieldIndex = fields.indexOf(activeField);
+        
+        if (e.shiftKey) {
+            currentFieldIndex--;
+        } else {
+            currentFieldIndex++;
+        }
+        
+        if (currentFieldIndex >= 0 && currentFieldIndex < fields.length) {
+            moveToField(currentRow, fields[currentFieldIndex]);
+        } else if (currentFieldIndex >= fields.length) {
+            const nextIndex = (parseInt(currentRow.dataset.rowIndex) + 1);
+            if (nextIndex < POS.cart.length) {
+                moveToRow(nextIndex, 'price');
+            }
+        } else if (currentFieldIndex < 0) {
+            const prevIndex = (parseInt(currentRow.dataset.rowIndex) - 1);
+            if (prevIndex >= 0) {
+                moveToRow(prevIndex, 'disc');
+            }
+        }
+    }
+}
+
+function moveToRow(rowIndex, fieldName) {
+    const row = document.querySelector(`.cart-item[data-row-index="${rowIndex}"]`);
+    if (row) {
+        moveToField(row, fieldName);
+    }
+}
+
+function moveToField(row, fieldName) {
+    if (!row) return;
+    
+    let fieldSelector = '';
+    switch(fieldName) {
+        case 'price': fieldSelector = '.price-input'; break;
+        case 'qty': fieldSelector = '.qty-input'; break;
+        case 'disc': fieldSelector = '.disc-input'; break;
+        default: fieldSelector = '.price-input';
+    }
+    
+    const field = row.querySelector(fieldSelector);
+    if (field && !field.disabled && !field.readOnly) {
+        field.focus();
+        field.select();
+        activeField = fieldName;
+    }
+}
+
+function moveToNextField(currentRow, nextField) {
+    moveToField(currentRow, nextField);
+}
+
+function moveToNextRow(currentRow, fieldName) {
+    const nextIndex = parseInt(currentRow.dataset.rowIndex) + 1;
+    if (nextIndex < POS.cart.length) {
+        moveToRow(nextIndex, fieldName);
+    }
+}
+
+function highlightActiveRow(rowElement) {
+    document.querySelectorAll('.cart-item').forEach(row => {
+        row.classList.remove('active-row');
+    });
+    if (rowElement) {
+        rowElement.classList.add('active-row');
+    }
+}
+
+function setActiveRow(index) {
+    const row = document.querySelector(`.cart-item[data-row-index="${index}"]`);
+    if (row) {
+        highlightActiveRow(row);
+        moveToField(row, 'price');
+    }
+}
+
+function bindRowActivation() {
+    document.querySelectorAll('.cart-item').forEach(row => {
+        row.addEventListener('click', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+            const index = parseInt(row.dataset.rowIndex);
+            setActiveRow(index);
+        });
+    });
+}
+
+// ========================================
+// RENDER MOBILE CART (PERTAHANKAN)
+// ========================================
+
+function renderMobileCart() {
+    if (!DOM.mobileCartItems) return;
+
+    if (POS.cart.length === 0) {
+        DOM.mobileCartItems.innerHTML = `<div class="text-center text-muted py-4">Keranjang kosong</div>`;
+        return;
+    }
+
+    let html = '';
+    POS.cart.forEach(item => {
+        const itemTotal = (item.price * item.qty) - (item.discount || 0);
+        const isService = item.isService || item.service === true;
+        const isPPOB = item.isPPOB || item.type === 'ppob';
+
+        let badgeHtml = '';
+        if (isService) badgeHtml = '<span class="badge bg-warning" style="font-size: 0.6rem;">SVC</span>';
+        if (isPPOB) badgeHtml = '<span class="badge bg-info" style="font-size: 0.6rem;">PPOB</span>';
+
+        html += `
+            <div class="mobile-cart-item" data-cart-id="${item.cartId}">
+                <div class="mobile-cart-item-info">
+                    <div class="mobile-cart-item-name">
+                        ${escapeHtml(item.name)}
+                        ${badgeHtml}
+                    </div>
+                    <div class="mobile-cart-item-price">${formatRupiah(item.price)}</div>
+                </div>
+                <div class="mobile-cart-item-actions">
+                    <div class="mobile-cart-item-qty">
+                        <button class="btn-qty-minus-mobile" data-cart-id="${item.cartId}">
+                            <i class="bx bx-minus"></i>
+                        </button>
+                        <span class="qty-value">${item.qty}</span>
+                        <button class="btn-qty-plus-mobile" data-cart-id="${item.cartId}">
+                            <i class="bx bx-plus"></i>
+                        </button>
+                    </div>
+                    <div class="mobile-cart-item-total">
+                        ${formatRupiah(itemTotal)}
+                    </div>
+                    <button class="btn-remove-mobile" data-cart-id="${item.cartId}" title="Hapus item">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </div>
+                ${item.enableAltDesc && item.altDesc ? `
+                    <div class="mobile-cart-item-desc">
+                        <small><i class="bx bx-note"></i> ${escapeHtml(item.altDesc)}</small>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    DOM.mobileCartItems.innerHTML = html;
+
+    // Attach event listeners untuk mobile cart
+    attachMobileCartEvents();
+}
+
+function attachMobileCartEvents() {
+    // Tombol minus mobile
+    document.querySelectorAll('.btn-qty-minus-mobile').forEach(btn => {
+        btn.removeEventListener('click', handleMobileMinusClick);
+        btn.addEventListener('click', handleMobileMinusClick);
+    });
+
+    // Tombol plus mobile
+    document.querySelectorAll('.btn-qty-plus-mobile').forEach(btn => {
+        btn.removeEventListener('click', handleMobilePlusClick);
+        btn.addEventListener('click', handleMobilePlusClick);
+    });
+
+    // Tombol hapus mobile
+    document.querySelectorAll('.btn-remove-mobile').forEach(btn => {
+        btn.removeEventListener('click', handleMobileRemoveClick);
+        btn.addEventListener('click', handleMobileRemoveClick);
+    });
+}
+
+function handleMobileMinusClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (POS.isTransactionLocked) return;
+    const cartId = e.currentTarget.dataset.cartId;
+    updateQuantity(cartId, -1);
+}
+
+function handleMobilePlusClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (POS.isTransactionLocked) return;
+    const cartId = e.currentTarget.dataset.cartId;
+    updateQuantity(cartId, 1);
+}
+
+function handleMobileRemoveClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (POS.isTransactionLocked) return;
+    const cartId = e.currentTarget.dataset.cartId;
+    removeFromCart(cartId);
+}
+
+// ========================================
+// RENDER CART - CSS GRID VERSION (UTAMA)
 // ========================================
 
 function renderCart() {
@@ -1116,8 +1548,21 @@ function renderCart() {
 
     // Render desktop cart dengan tabel header
     if (DOM.cartItems) {
+        // Header SELALU ditampilkan
+        let html = `
+            <div class="cart-header">
+                <div class="cart-header-product">Produk</div>
+                <div class="cart-header-price">Harga</div>
+                <div class="cart-header-qty">Qty</div>
+                <div class="cart-header-disc">Diskon</div>
+                <div class="cart-header-total">Total</div>
+                <div class="cart-header-action"></div>
+            </div>
+        `;
+
+        // Konten (items atau empty state)
         if (POS.cart.length === 0) {
-            DOM.cartItems.innerHTML = `
+            html += `
                 <div class="cart-empty">
                     <i class="bx bx-shopping-bag"></i>
                     <p class="mt-2">Keranjang belanja kosong</p>
@@ -1125,57 +1570,43 @@ function renderCart() {
                 </div>
             `;
         } else {
-            // Tambahkan header tabel
-            let html = `
-                <div class="cart-header">
-                    <div class="cart-header-product">Produk</div>
-                    <div class="cart-header-price">Harga</div>
-                    <div class="cart-header-qty">Qty</div>
-                    <div class="cart-header-disc">Diskon</div>
-                    <div class="cart-header-total">Total</div>
-                    <div class="cart-header-action"></div>
-                </div>
-            `;
-
-            // Render items
             POS.cart.forEach((item, index) => {
                 html += createCartItemRow(item, index);
             });
+        }
 
-            DOM.cartItems.innerHTML = html;
+        // Assignment SEKALI saja
+        DOM.cartItems.innerHTML = html;
 
-            // Bind events setelah render
+        // Bind events hanya jika ada items
+        if (POS.cart.length > 0) {
             bindCartGridEvents();
-
-            // Auto-focus pertama kali
-            if (POS.cart.length > 0 && !POS.activeRowIndex) {
-                setActiveRow(0);
-            }
+            setActiveRow(0);
         }
     }
 
-    // Render mobile cart (simplified)
-    if (DOM.mobileCartItems) {
-        renderMobileCart();
-    }
+    // Render mobile cart
+    renderMobileCart();
 
     calculateAndDisplayTotals();
 }
 
 // Create single cart row dengan Grid
 function createCartItemRow(item, index) {
-    const itemTotal = item.price * item.qty - (item.discount || 0);
+    const itemTotal = (item.price * item.qty) - (item.discount || 0);
     const isService = item.isService || item.service === true;
     const isPPOB = item.isPPOB || item.type === 'ppob';
     const hasStockLimit = !isService && !isPPOB;
     const isPriceEditable = item.priceChangeAllowed && !isPPOB;
+    const needQtyInput = item.defaultQty || isService || isPPOB;
 
     let badgeHtml = '';
     if (isService) badgeHtml = '<span class="badge bg-warning">SVC</span>';
     if (isPPOB) badgeHtml = '<span class="badge bg-info">PPOB</span>';
+    if (item.defaultQty) badgeHtml += '<span class="badge bg-secondary ms-1">Qty</span>';
 
     return `
-        <div class="cart-item" data-cart-id="${item.cartId}" data-row-index="${index}">
+        <div class="cart-item ${item.qty === 0 ? 'need-qty' : ''}" data-cart-id="${item.cartId}" data-row-index="${index}">
             <div class="cart-row">
                 <!-- Product Column -->
                 <div class="cart-col product">
@@ -1202,20 +1633,22 @@ function createCartItemRow(item, index) {
                         data-field="price"
                         value="${item.price}"
                         step="1000"
+                        min="0"
                         ${isPriceEditable ? '' : 'readonly'}
-                        ${isPriceEditable ? 'style="cursor: pointer;"' : ''}>
+                        ${isPriceEditable ? 'style="background-color: #fff3e0;"' : 'style="background-color: #f8f9fa;"'}>
                 </div>
                 
                 <!-- Quantity Column -->
                 <div class="cart-col qty">
                     <input type="number"
-                        class="form-control form-control-sm qty-input"
+                        class="form-control form-control-sm qty-input ${needQtyInput && item.qty === 0 ? 'highlight-qty' : ''}"
                         data-cart-id="${item.cartId}"
                         data-field="qty"
                         value="${item.qty}"
-                        min="1"
+                        min="${needQtyInput ? '0' : '1'}"
                         step="1"
-                        ${hasStockLimit ? `max="${item.stock}"` : ''}>
+                        ${hasStockLimit ? `max="${item.stock}"` : ''}
+                        placeholder="${needQtyInput ? 'Isi qty' : ''}">
                 </div>
                 
                 <!-- Discount Column -->
@@ -1247,119 +1680,53 @@ function createCartItemRow(item, index) {
     `;
 }
 
-// Helper truncate text
-function truncateText(text, maxLength) {
-    if (!text) return '';
-    return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
-}
-
 // ==================== CALCULATIONS ====================
 function calculateTotals() {
     let subtotal = 0;
     let taxAmount = 0;
     
     POS.cart.forEach(item => {
-        const itemTotal = item.price * item.qty;
+        // Hitung total per item (harga * qty)
+        let itemTotal = item.price * item.qty;
+        
+        // Kurangi dengan diskon per produk (jika ada)
+        const itemDiscount = item.discount || 0;
+        itemTotal = Math.max(0, itemTotal - itemDiscount);
+        
         subtotal += itemTotal;
+        
+        // Tax dihitung dari total setelah diskon (atau sebelum diskon? Sesuai kebutuhan)
+        // Biasanya tax dihitung dari harga sebelum diskon
+        // Sesuaikan dengan kebijakan toko Anda
         if (item.tax && item.tax > 0) {
-            taxAmount += itemTotal * (item.tax / 100);
+            // Opsi 1: Tax dari harga sebelum diskon
+            const itemSubtotalBeforeDiscount = item.price * item.qty;
+            taxAmount += itemSubtotalBeforeDiscount * (item.tax / 100);
+            
+            // Opsi 2: Tax dari harga setelah diskon (uncomment jika ingin)
+            // taxAmount += itemTotal * (item.tax / 100);
         }
     });
     
-    const discount = parseFloat(DOM.discountInput?.value) || 0;
-    const total = Math.max(0, subtotal + taxAmount - discount);
+    // Ambil diskon global (dari input form)
+    const globalDiscount = parseFloat(DOM.discountInput?.value) || 0;
     
-    return { subtotal, taxAmount, discount, total };
+    // Total akhir: subtotal + tax - diskon global
+    const total = Math.max(0, subtotal + taxAmount - globalDiscount);
+    
+    return { subtotal, taxAmount, globalDiscount, total };
 }
 
 function calculateAndDisplayTotals() {
-    const { subtotal, taxAmount, discount, total } = calculateTotals();
+    const { subtotal, taxAmount, globalDiscount, total } = calculateTotals();
     
     if (DOM.subtotal) DOM.subtotal.textContent = formatRupiah(subtotal);
     if (DOM.taxAmount) DOM.taxAmount.textContent = formatRupiah(taxAmount);
+    if (DOM.discountInput) DOM.discountInput.value = globalDiscount;
     if (DOM.total) DOM.total.textContent = formatRupiah(total);
     if (DOM.mobileTotal) DOM.mobileTotal.textContent = formatRupiah(total);
     
-    return { subtotal, taxAmount, discount, total };
-}
-
-// ==================== EDIT PRICE & DESCRIPTION ====================
-function showEditPriceModal(button) {
-    const cartId = button.dataset.cartId;
-    const item = findCartItem(cartId);
-    if (!item) return;
-    
-    if (!item.priceChangeAllowed) {
-        showError('Harga Tetap', 'Harga produk ini tidak dapat diubah');
-        return;
-    }
-    
-    document.getElementById('editPriceProductId').value = item.cartId;
-    document.getElementById('editPriceProductName').textContent = item.name;
-    document.getElementById('editPriceNewPrice').value = item.price;
-    
-    const modal = new bootstrap.Modal(document.getElementById('editPriceModal'));
-    modal.show();
-    setTimeout(() => {
-        const priceInput = document.getElementById('editPriceNewPrice');
-        if (priceInput) {
-            priceInput.focus();
-            priceInput.select();
-        }
-    }, 300);
-}
-
-function saveEditedPrice() {
-    const cartId = document.getElementById('editPriceProductId').value
-    const newPrice = parseFloat(document.getElementById('editPriceNewPrice').value);
-    const item = findCartItem(cartId);
-    
-    if (!item) return;
-    if (isNaN(newPrice) || newPrice <= 0) {
-        showError('Harga Tidak Valid', 'Masukkan harga yang valid');
-        return;
-    }
-    
-    item.price = newPrice;
-    renderCart();
-    bootstrap.Modal.getInstance(document.getElementById('editPriceModal'))?.hide();
-}
-
-function showEditDescModal(button) {
-    const cartId = button.dataset.cartId;
-    const item = findCartItem(cartId);
-    if (!item) return;
-    
-    if (!item.enableAltDesc) {
-        showError('Tidak Tersedia', 'Deskripsi alternatif tidak tersedia');
-        return;
-    }
-    
-    document.getElementById('editDescProductId').value = item.cartId;
-    document.getElementById('editDescProductName').textContent = item.name;
-    document.getElementById('editDescText').value = item.altDesc || '';
-    
-    const modal = new bootstrap.Modal(document.getElementById('editDescModal'));
-    modal.show();
-    setTimeout(() => {
-        const descInput = document.getElementById('editDescText');
-        if (descInput) {
-            descInput.focus();
-            descInput.select();
-        }
-    }, 300);
-}
-
-function saveEditedDescription() {
-    const cartId = document.getElementById('editDescProductId')?.value;
-    if (!cartId) return;
-    
-    const newDesc = document.getElementById('editDescText')?.value.trim() || '';
-    const item = findCartItem(cartId);
-    if (item) item.altDesc = newDesc;
-    
-    renderCart();
-    bootstrap.Modal.getInstance(document.getElementById('editDescModal'))?.hide();
+    return { subtotal, taxAmount, globalDiscount, total };
 }
 
 // ==================== CUSTOMER MANAGEMENT ====================
@@ -2049,10 +2416,6 @@ function syncSlidePanelButtons() {
 
 // ==================== HELPER FUNCTIONS ====================
 function formatRupiah(amount) {
-    return 'Rp ' + Math.round(amount).toLocaleString('id-ID');
-}
-
-function formatRupiahLarge(amount) {
     return 'Rp ' + Math.round(amount).toLocaleString('id-ID');
 }
 

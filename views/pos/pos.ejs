@@ -51,7 +51,7 @@
                         <input type="text" 
                             class="form-control form-control-lg" 
                             id="searchProduct" 
-                            placeholder="Scan barcode atau cari produk..." 
+                            placeholder="Scan barcode atau cari produk... " 
                             autocomplete="off">
                     </div>
                     <div id="searchDropdown" class="search-dropdown" style="display: none;">
@@ -66,11 +66,7 @@
             <!-- Cart Scroll Area -->
             <div class="pos-cart-scroll">
                 <div id="cartItems">
-                    <div class="text-center py-5 text-muted">
-                        <i class="bx bx-cart-alt bx-lg mb-2"></i>
-                        <p class="mb-0">Cart is empty</p>
-                        <small>Search product to start <kbd>F1</kbd></small>
-                    </div>
+                    <!-- Akan diisi oleh JavaScript -->
                 </div>
             </div>
             
@@ -82,7 +78,7 @@
                         <span id="subtotal">Rp 0</span>
                     </div>
                     <div class="pos-summary-row">
-                        <span class="text-muted">Tax (<span id="taxRate"><%= taxRate %></span>%)</span>
+                        <span class="text-muted">Tax</span>
                         <span id="taxAmount">Rp 0</span>
                     </div>
                     <div class="pos-summary-row">
@@ -245,7 +241,7 @@
     <div class="pos-mobile-layout">
         <!-- Mobile Header dengan Search -->
         <div class="mobile-header">
-            <div class="mobile-search">
+            <div class="mobile-search position-relative">
                 <div class="input-group">
                     <span class="input-group-text bg-primary text-white border-0">
                         <i class="bx bx-barcode"></i>
@@ -256,16 +252,19 @@
                         placeholder="Scan barcode atau cari produk..." 
                         autocomplete="off">
                 </div>
+                <!-- Mobile Search Dropdown -->
+                <div id="mobileSearchDropdown" class="search-dropdown-mobile" style="display: none;">
+                    <div class="search-dropdown-header">
+                        <small>↑ ↓ pilih &nbsp;&nbsp; Enter tambah &nbsp;&nbsp; Esc tutup</small>
+                    </div>
+                    <div id="mobileSearchResultsList" class="search-dropdown-list"></div>
+                </div>
             </div>
         </div>
         
         <!-- Mobile Cart List -->
         <div class="mobile-cart-list" id="mobileCartItems">
-            <div class="text-center py-5 text-muted">
-                <i class="bx bx-cart-alt bx-lg mb-2"></i>
-                <p class="mb-0">Cart is empty</p>
-                <small>Search product to start</small>
-            </div>
+            <!-- Akan diisi oleh JavaScript -->
         </div>
         
         <!-- Mobile Cart Summary -->

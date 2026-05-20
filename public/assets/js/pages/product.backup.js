@@ -38,39 +38,14 @@ async function loadMoreProducts() {
     const category = params.get('category') || '';
     const supplierId = params.get('supplierId') || '';
     const type = params.get('type') || '';
-    const requireQty = params.get('requireQty') || '';
-    const priceChange = params.get('priceChange') || '';
-    const altDesc = params.get('altDesc') || '';
     const search = currentSearch || '';
 
     try {
-        const url = new URL('/products/json', window.location.origin);
-        url.searchParams.set('offset', offset);
-        url.searchParams.set('limit', limit);
-        if (category) url.searchParams.set('category', category);
-        if (supplierId) url.searchParams.set('supplierId', supplierId);
-        if (type) url.searchParams.set('type', type);
-        if (requireQty) url.searchParams.set('requireQty', requireQty);
-        if (priceChange) url.searchParams.set('priceChange', priceChange);
-        if (altDesc) url.searchParams.set('altDesc', altDesc);
-        if (search) url.searchParams.set('q', search);
-
-        console.log('Fetching URL:', url.toString()); // <-- DEBUG
-
-        const res = await fetch(url.toString());
-        console.log('Response status:', res.status); // <-- DEBUG
-
-        const data = await res.json();
-        console.log('Data received:', data); // <-- DEBUG
-
+        const res = await fetch(`/products/json?offset=${offset}&limit=${limit}&category=${category}&supplierId=${supplierId}&type=${type}&q=${search}`);
         const {
             products,
             total
-        } = data;
-
-        if (!products || products.length === 0) {
-            console.log('No products found, but total:', total);
-        }
+        } = await res.json();
 
         if (offset === 0) {
             totalProductCount = total;
@@ -84,168 +59,35 @@ async function loadMoreProducts() {
         for (const product of products) {
             const row = document.createElement('tr');
             row.dataset.id = product.id;
-
-            // Tentukan badge untuk type produk
-            let typeBadge = '';
-            if (product.type === 'service') {
-                typeBadge = '<span class="badge badge-xs bg-warning text-warning-emphasis border border-warning ms-1">SVC</span>';
-            } else if (product.type === 'ppob') {
-                typeBadge = '<span class="badge badge-xs bg-info text-info-emphasis border border-info ms-1">PPOB</span>';
-            }
-
             row.innerHTML = `
-                <td data-column="code">
-                    ${escapeHtml(product.code)}
-                    ${typeBadge}
-                </td>
-
-                <td data-column="name">
-                    <div class="fw-semibold">
-                        ${escapeHtml(product.name)}
-                    </div>
-                </td>
-
-                <td data-column="category">
-                    ${escapeHtml(product.category?.name || '-')}
-                </td>
-
-                <td data-column="barcode">
-                    ${escapeHtml(product.barcode || '-')}
-                </td>
-
-                <td data-column="cost" data-value="${product.cost}">
-                    Rp ${Number(product.cost || 0).toLocaleString('id-ID')}
-                </td>
-
-                <td data-column="salePrice" data-value="${product.salePrice}">
-                    Rp ${Number(product.salePrice || 0).toLocaleString('id-ID')}
-                </td>
-
-                <td data-column="unit">
-                    ${escapeHtml(product.unit || '-')}
-                </td>
-
-                <td data-column="supplier">
-                    ${escapeHtml(product.supplier?.name || '-')}
-                </td>
-
-                <td class="text-nowrap">
-                    <button class="btn btn-sm btn-icon btn-warning btn-edit"
-                        data-bs-toggle="modal"
-                        data-bs-target="#modalEdit">
-                        <i class="bx bx-edit"></i>
-                    </button>
-
-                    <button class="btn btn-sm btn-icon btn-danger btn-delete">
-                        <i class="bx bx-trash"></i>
-                    </button>
-                </td>
-            `;
+          <td data-column="code">${product.code}</td>
+          <td data-column="name">${product.name}</td>
+          <td data-column="category">${product.category?.name || '-'}</td>
+          <td data-column="barcode">${product.barcode || '-'}</td>
+          <td data-column="cost" data-value="${product.cost}">Rp ${Number(product.cost).toLocaleString('id-ID')}</td>
+          <td data-column="salePrice" data-value="${product.salePrice}">Rp ${Number(product.salePrice).toLocaleString('id-ID')}</td>
+          <td data-column="unit">${product.unit}</td>
+          <td data-column="supplier">${product.supplier?.name || '-'}</td>
+          <td>
+            <button class="btn btn-sm btn-warning btn-edit" data-bs-toggle="modal" data-bs-target="#modalEdit"><i class="bx bx-edit"></i></button>
+            <button class="btn btn-sm btn-danger btn-delete"><i class="bx bx-trash"></i></button>
+          </td>`;
             fragment.appendChild(row);
         }
         tbody.appendChild(fragment);
 
         document.getElementById('loadingIndicator').textContent = done ? 'Semua Product dimuat' : '';
     } catch (err) {
-        console.error('Error in loadMoreProducts:', err);
+        console.error(err);
         showToast({
             type: 'danger',
             title: 'Error',
-            message: 'Gagal memuat data: ' + err.message
+            message: 'Gagal memuat data.'
         });
     } finally {
         loading = false;
     }
 }
-
-// Helper escapeHtml untuk keamanan
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Sinkronkan nilai filter dari URL ke select elements
-function syncFiltersFromURL() {
-    const params = new URLSearchParams(window.location.search);
-
-    const type = params.get('type');
-    if (type) {
-        const typeFilter = document.getElementById('typeFilter');
-        if (typeFilter) typeFilter.value = type;
-    }
-
-    const requireQty = params.get('requireQty');
-    if (requireQty) {
-        const requireQtyFilter = document.getElementById('requireQtyFilter');
-        if (requireQtyFilter) requireQtyFilter.value = requireQty;
-    }
-
-    const priceChange = params.get('priceChange');
-    if (priceChange) {
-        const priceChangeFilter = document.getElementById('priceChangeFilter');
-        if (priceChangeFilter) priceChangeFilter.value = priceChange;
-    }
-
-    const altDesc = params.get('altDesc');
-    if (altDesc) {
-        const altDescFilter = document.getElementById('altDescFilter');
-        if (altDescFilter) altDescFilter.value = altDesc;
-    }
-
-    const category = params.get('category');
-    if (category) {
-        const categoryFilter = document.querySelector('select[name="category"]');
-        if (categoryFilter) categoryFilter.value = category;
-    }
-
-    const supplierId = params.get('supplierId');
-    if (supplierId) {
-        const supplierFilter = document.querySelector('select[name="supplierId"]');
-        if (supplierFilter) supplierFilter.value = supplierId;
-    }
-
-    const search = params.get('q');
-    if (search) {
-        const searchInput = document.getElementById('searchProduct');
-        if (searchInput) searchInput.value = search;
-        currentSearch = search;
-    }
-}
-
-// Filter Kategori
-document.getElementById('categoryFilter')?.addEventListener('change', (e) => {
-    const params = new URLSearchParams(window.location.search);
-    if (e.target.value) {
-        params.set('category', e.target.value);
-    } else {
-        params.delete('category');
-    }
-    window.location.search = params.toString();
-});
-
-// Filter Supplier
-document.getElementById('supplierFilter')?.addEventListener('change', (e) => {
-    const params = new URLSearchParams(window.location.search);
-    if (e.target.value) {
-        params.set('supplierId', e.target.value);
-    } else {
-        params.delete('supplierId');
-    }
-    window.location.search = params.toString();
-});
-
-// Filter Tipe
-document.getElementById('typeFilter')?.addEventListener('change', (e) => {
-    const params = new URLSearchParams(window.location.search);
-    if (e.target.value) {
-        params.set('type', e.target.value);
-    } else {
-        params.delete('type');
-    }
-    window.location.search = params.toString();
-});
 
 // Saat klik Edit
 tbody.addEventListener('click', async (e) => {
@@ -270,21 +112,15 @@ tbody.addEventListener('click', async (e) => {
             document.getElementById('editInputBarcode').value = product.barcode || '';
             document.getElementById('editUnit').value = product.unit || '';
             document.getElementById('editSupplierSelect').value = product.supplierId || '';
-            const editRequireQtyInput = document.getElementById('editRequireQtyInput');
-            if (editRequireQtyInput) {
-                editRequireQtyInput.checked = !!product.requireQtyInput;
-            }
-
-            // Product type
-            const editType = document.getElementById('editProductType');
-
-            editType.value = product.type;
-            editType.disabled = true;
+            document.getElementById('editDefaultQty').checked = !!product.defaultQty;
+            document.getElementById('editIsService').checked = !!product.service;
+            document.getElementById('editProductType').value = product.type;
             document.getElementById('editInputCost').value = product.cost ?? '';
             document.getElementById('editInputMarkup').value = product.markup ?? '';
             document.getElementById('editInputSalePrice').value = product.salePrice || '';
             document.getElementById('editPriceChangeAllowed').checked = !!product.priceChangeAllowed;
             document.getElementById('editReorderPoint').value = product.reorderPoint || '';
+            document.getElementById('editPreferredQty').value = product.preferredQty || '';
             document.getElementById('editEnableLowStockWarning').checked = !!product.lowStockWarning;
             document.getElementById('editLowStockWarning').value = product.lowStockThreshold || '';
             document.getElementById('editLowStockWarning').disabled = !product.lowStockWarning;
@@ -317,7 +153,10 @@ tbody.addEventListener('click', async (e) => {
 
             setupEditMarkupSalePriceHandlers();
             // Jalankan handler untuk sembunyikan field sesuai type
-            handleProductTypeChange(editType, 'edit');
+            const typeSelect = {
+                value: product.type
+            };
+            handleProductTypeChange(typeSelect, 'edit');
 
             bootstrap.Modal.getOrCreateInstance(modalEdit).show();
 
@@ -337,301 +176,81 @@ function handleProductTypeChange(typeSelect, context = 'create') {
     const markupInput = document.getElementById(context === 'create' ? 'inputMarkup' : 'editInputMarkup');
     const salePriceInput = document.getElementById(context === 'create' ? 'inputSalePrice' : 'editInputSalePrice');
     const stockSection = document.getElementById(context === 'create' ? 'stockSectionCreate' : 'stockSectionEdit');
-    const requireQtyInput = document.getElementById(context === 'create' ? 'requireQtyInput' : 'editRequireQtyInput');
+    const serviceCheckbox = document.getElementById(context === 'create' ? 'isService' : 'editIsService');
     const priceChangeAllowed = document.getElementById(context === 'create' ? 'priceChangeAllowed' : 'editPriceChangeAllowed');
-    const reorderPointInput = document.getElementById(context === 'create' ? 'reorderPoint' : 'editReorderPoint');
-    const preferredQtyInput = document.getElementById(context === 'create' ? 'preferredQty' : 'editPreferredQty');
     const lowStockWarning = document.getElementById(context === 'create' ? 'enableLowStockWarning' : 'editEnableLowStockWarning');
     const inputLowStockWarning = document.getElementById(context === 'create' ? 'lowStockWarning' : 'editLowStockWarning');
     const taxCheckbox = document.getElementById(context === 'create' ? 'enableInputTax' : 'editEnableInputTax');
     const taxInput = document.getElementById(context === 'create' ? 'tax' : 'editTax');
 
     if (typeSelect.value === 'ppob') {
-        if (requireQtyInput) {
-            requireQtyInput.checked = false;
-            requireQtyInput.disabled = true;
-        }
-        if (priceChangeAllowed) {
-            priceChangeAllowed.checked = true;
-            priceChangeAllowed.disabled = true;
-        }
+        // hide / disable untuk PPOB
+        costInput.closest('.col-md-4').style.display = 'none';
+        markupInput.closest('.col-md-4').style.display = 'none';
+        salePriceInput.closest('.col-md-4').style.display = 'none';
 
-        if (costInput) {
-            costInput.closest('.col-md-4').style.display = 'none';
-            costInput.value = 0;
-            toggleRequired(costInput, false);
-        }
+        costInput.required = false;
+        markupInput.required = false;
+        salePriceInput.required = false;
 
-        if (markupInput) {
-            markupInput.closest('.col-md-4').style.display = 'none';
-            markupInput.value = 0;
-            toggleRequired(markupInput, false);
-        }
+        if (stockSection) stockSection.style.display = 'none';
 
-        if (salePriceInput) {
-            salePriceInput.closest('.col-md-4').style.display = 'none';
-            salePriceInput.value = 0;
-            toggleRequired(salePriceInput, false);
-        }
+        serviceCheckbox.checked = false;
+        serviceCheckbox.disabled = true;
 
-        if (stockSection) {
-            stockSection.style.display = 'none';
+        // PPOB selalu bisa ubah harga di POS
+        priceChangeAllowed.checked = true;
+        priceChangeAllowed.disabled = true;
+
+        let hiddenInput = document.getElementById('priceChangeAllowedHidden');
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'priceChangeAllowed';
+            hiddenInput.id = 'priceChangeAllowedHidden';
+            hiddenInput.value = 'true';
+            priceChangeAllowed.parentNode.appendChild(hiddenInput);
         }
 
-        if (reorderPointInput) {
-            reorderPointInput.value = 0;
-        }
+        // Pajak optional, default disable
+        lowStockWarning.checked = false;
+        lowStockWarning.disabled = true;
+        inputLowStockWarning.value = '';
+        inputLowStockWarning.disabled = true;
 
-        if (preferredQtyInput) {
-            preferredQtyInput.value = 0;
-            preferredQtyInput.disabled = true;
-        }
-        
-        // Disable low stock warning untuk PPOB
-        if (lowStockWarning) {
-            lowStockWarning.checked = false;
-            lowStockWarning.disabled = true;
-        }
-
-        if (inputLowStockWarning) {
-            inputLowStockWarning.value = '';
-            inputLowStockWarning.disabled = true;
-        }
-
-        // Tax optional, default disable untuk PPOB
-        if (taxCheckbox) {
-            taxCheckbox.checked = false;
-            taxCheckbox.disabled = true;
-        }
-        if (taxInput) {
-            taxInput.value = '';
-            taxInput.disabled = true;
-        }
-    } else {
-        // Kembalikan ke normal (fisik atau service)
-        if (costInput) costInput.closest('.col-md-4').style.display = '';
-        if (markupInput) markupInput.closest('.col-md-4').style.display = '';
-        if (salePriceInput) salePriceInput.closest('.col-md-4').style.display = '';
-        if (stockSection) stockSection.style.display = '';
-        
-        if (requireQtyInput) {
-            requireQtyInput.disabled = false;
-        }
-        if (priceChangeAllowed) {
-            priceChangeAllowed.disabled = false;
-        }
-        if (lowStockWarning) {
-            lowStockWarning.disabled = false;
-        }
-        if (inputLowStockWarning) {
-            inputLowStockWarning.disabled = !lowStockWarning.checked;
-        }
-        if (taxCheckbox) {
-            taxCheckbox.disabled = false;
-        }
-
-        if (taxInput) {
-            taxInput.disabled = !taxCheckbox.checked;
-        }
-
-        toggleRequired(costInput, true);
-        toggleRequired(markupInput, true);
-        toggleRequired(salePriceInput, true);
-    }
-
-    // Untuk service, stok bisa 0 atau tidak diurus
-    if (typeSelect.value === 'service') {
-        if (stockSection) {
-            stockSection.style.display = 'none';
-        }
-
-        if (reorderPointInput) {
-            reorderPointInput.value = 0;
-        }
-
-        if (preferredQtyInput) {
-            preferredQtyInput.value = 0;
-            preferredQtyInput.disabled = true;
-        }
-
-        if (lowStockWarning) {
-            lowStockWarning.checked = false;
-            lowStockWarning.disabled = true;
-        }
-
-        if (inputLowStockWarning) {
-            inputLowStockWarning.value = '';
-            inputLowStockWarning.disabled = true;
-        }
-
-    } else {
-        if (preferredQtyInput) {
-            preferredQtyInput.disabled = false;
-        }
-    }
-}
-
-function toggleRequired(input, required) {
-    if (!input) return;
-
-    input.required = required;
-
-    if (!required) {
-        input.removeAttribute('required');
-    } else {
-        input.setAttribute('required', 'required');
-    }
-}
-
-formCreate.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(formCreate);
-
-    // Set nilai boolean sesuai dengan model
-    formData.set('requireQtyInput', formData.get('requireQtyInput') === 'on');
-    formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
-    formData.set('enableAltDesc', formData.get('enableAltDesc') === 'on');
-    formData.set('enableInputTax', formData.get('enableInputTax') === 'on');
-    formData.set('lowStockWarning', formData.get('enableLowStockWarning') === 'on');
-    // Jika tax tidak aktif, kosongkan tax
-    if (formData.get('enableInputTax') === 'false') {
-        formData.set('tax', '');
-    }
-
-    // Jika low stock warning tidak aktif, kosongkan threshold
-    if (formData.get('lowStockWarning') === 'false') {
-        formData.set('lowStockThreshold', '');
-    }
-
-    // Type produk
-    const productType = formData.get('type');
-    if (productType === 'ppob') {
-        // PPOB: force priceChangeAllowed = true
-        formData.set('priceChangeAllowed', 'true');
-        // Stok tidak relevan untuk PPOB
-        formData.set('stock', 0);
-        formData.set('cost', 0);
-        formData.set('markup', 0);
-        formData.set('salePrice', 0);
-    }
-
-    if (productType === 'ppob' || productType === 'service') {
-        formData.set('stock', 0);
-        formData.set('reorderPoint', 0);
-        formData.set('preferredQty', 0);
-    }
-
-    try {
-        const res = await fetch('/products', {
-            method: 'POST',
-            headers: {
-                'CSRF-Token': csrfToken
-            },
-            body: formData
-        });
-
-        const result = await res.json();
-        if (res.ok && result.success) {
-            bootstrap.Modal.getInstance(modalCreate).hide();
-            showToast({
-                type: 'success',
-                title: 'Berhasil',
-                message: 'Product berhasil ditambahkan'
-            });
-
-            offset = 0;
-            done = false;
-            tbody.innerHTML = '';
-            await loadMoreProducts();
-            resetModalForm(modalCreate, {
-                defaults: {
-                    requireQtyInput: false,
-                    priceChangeAllowed: false,
-                    enableAltDesc: false
-                }
-            });
-        } else {
-            if (result.errors) {
-                showInputErrors(result.errors, formCreate);
-            } else {
-                showToast({
-                    type: 'danger',
-                    title: 'Gagal',
-                    message: result.message
-                });
-            }
-        }
-    } catch (err) {
-        showToast({
-            type: 'danger',
-            title: 'Error',
-            message: 'Gagal menyimpan data.'
-        });
-    }
-});
-
-modalCreate.addEventListener('hidden.bs.modal', () => {
-    resetModalForm(modalCreate, {
-        defaults: {
-            requireQtyInput: false,
-            priceChangeAllowed: false,
-            enableAltDesc: false
-        }
-    });
-    resetInputErrors(formCreate);
-
-    // Reset image preview
-    if (createPreviewEl) {
-        createPreviewEl.src = '';
-        createPreviewEl.style.display = 'none';
-    }
-    if (createFileInput) createFileInput.value = '';
-
-    // Reset Product Type ke default (fisik)
-    const typeSelect = document.getElementById('productType');
-    if (typeSelect) {
-        typeSelect.value = 'fisik';
-        handleProductTypeChange(typeSelect, 'create');
-    }
-
-    // Reset Low Stock Warning
-    const lowStockCheckbox = document.getElementById('enableLowStockWarning');
-    const lowStockInput = document.querySelector('input[name="lowStockThreshold"]');
-    if (lowStockCheckbox && lowStockInput) {
-        lowStockCheckbox.checked = false;
-        lowStockInput.value = '';
-        lowStockInput.disabled = true;
-    }
-
-    // Reset Tax Input
-    const taxCheckbox = document.getElementById('enableInputTax');
-    const taxInput = document.getElementById('tax');
-    if (taxCheckbox && taxInput) {
+        // Pajak optional, default disable
         taxCheckbox.checked = false;
+        taxCheckbox.disabled = true;
         taxInput.value = '';
         taxInput.disabled = true;
-    }
+    } else {
+        // kembali normal (fisik)
+        costInput.closest('.col-md-4').style.display = '';
+        markupInput.closest('.col-md-4').style.display = '';
+        salePriceInput.closest('.col-md-4').style.display = '';
 
-    // Reset priceChangeAllowed
-    const priceChangeAllowed = document.getElementById('priceChangeAllowed');
-    if (priceChangeAllowed) {
-        priceChangeAllowed.checked = false;
+        costInput.required = true;
+        markupInput.required = true;
+        salePriceInput.required = true;
+        
+        if (stockSection) stockSection.style.display = '';
+
+        serviceCheckbox.disabled = false;
         priceChangeAllowed.disabled = false;
-    }
 
-    // Reset requireQtyInput
-    const requireQtyInput = document.getElementById('requireQtyInput');
-    if (requireQtyInput) {
-        requireQtyInput.checked = false;
-        requireQtyInput.disabled = false;
+        const hiddenInput = document.getElementById('priceChangeAllowedHidden');
+        if (hiddenInput) hiddenInput.remove();
+
+        lowStockWarning.disabled = false;
+        taxCheckbox.disabled = false;
     }
-});
+}
 
 function setupEditMarkupSalePriceHandlers() {
     const editInputCost = document.getElementById('editInputCost');
     const editInputMarkup = document.getElementById('editInputMarkup');
     const editInputSalePrice = document.getElementById('editInputSalePrice');
-    const editProductType = document.getElementById('editProductType');
+    const editCheckboxService = document.getElementById('editIsService');
 
     let editLastChanged = null;
 
@@ -667,24 +286,11 @@ function setupEditMarkupSalePriceHandlers() {
         editUpdateMarkup();
     });
 
-    editProductType?.addEventListener('change', () => {
-        const type = editProductType.value;
-
-        // Jalankan handler UI
-        handleProductTypeChange(editProductType, 'edit');
-
-        // Service
-        if (type === 'service') {
-            if (!editInputCost.value) {
-                editInputCost.value = '0';
-            }
-        }
-
-        // PPOB
-        if (type === 'ppob') {
-            editInputCost.value = 0;
-            editInputMarkup.value = 0;
-            editInputSalePrice.value = 0;
+    editCheckboxService?.addEventListener('change', () => {
+        const isService = editCheckboxService.checked;
+        if (isService) {
+            if (!editInputCost.value) editInputCost.value = '0';
+            editInputMarkup.value = '';
         }
     });
 }
@@ -696,29 +302,19 @@ formEdit.addEventListener('submit', async (e) => {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
     const formData = new FormData(formEdit);
 
-    // Set nilai boolean sesuai model
-    formData.set('requireQtyInput', formData.get('requireQtyInput') === 'on');
+    // Checkbox → Boolean
+    formData.set('defaultQty', formData.get('defaultQty') === 'on');
+    formData.set('service', formData.get('isService') === 'on');
     formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
-    formData.set('enableAltDesc', formData.get('enableAltDesc') === 'on');
+    formData.set('enableLowStockWarning', formData.get('enableLowStockWarning') === 'on');
     formData.set('enableInputTax', formData.get('enableInputTax') === 'on');
-    formData.set('lowStockWarning', formData.get('enableLowStockWarning') === 'on');
-
-    const productType = formData.get('type');
-    if (productType === 'ppob') {
-        formData.set('priceChangeAllowed', 'true');
-    }
-
-    if (productType === 'ppob' || productType === 'service') {
-        formData.set('stock', 0);
-        formData.set('reorderPoint', 0);
-        formData.set('preferredQty', 0);
-    }
+    formData.set('enableAltDesc', formData.get('enableAltDesc') === 'on');
 
     try {
         const res = await fetch(formEdit.action, {
             method: 'PUT',
             headers: {
-                'CSRF-Token': csrfToken
+                'CSRF-Token': csrfToken 
             },
             body: formData
         });
@@ -893,6 +489,118 @@ if (createFileInput) {
     });
 }
 
+formCreate.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(formCreate);
+
+    // kalau mau set nilai boolean secara manual:
+    formData.set('defaultQty', formData.get('defaultQty') === 'on');
+    formData.set('service', formData.get('isService') === 'on');
+
+    const priceChangeHidden = document.getElementById('priceChangeAllowedHidden');
+    if (priceChangeHidden && priceChangeHidden.value === 'true') {
+        formData.set('priceChangeAllowed', 'true');
+    } else {
+        formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
+    }
+
+    try {
+        const res = await fetch('/products', {
+            method: 'POST',
+            headers: {
+                'CSRF-Token': csrfToken // jangan set Content-Type manual
+            },
+            body: formData
+        });
+
+        const result = await res.json();
+        if (res.ok && result.success) {
+            bootstrap.Modal.getInstance(modalCreate).hide();
+            showToast({
+                type: 'success',
+                title: 'Berhasil',
+                message: 'Product berhasil ditambahkan'
+            });
+
+            offset = 0;
+            done = false;
+            tbody.innerHTML = '';
+            await loadMoreProducts();
+            resetModalForm(modalCreate, {
+                defaults: {
+                    defaultQty: true
+                }
+            });
+        } else {
+            if (result.errors) {
+                showInputErrors(result.errors, formCreate);
+            } else {
+                showToast({
+                    type: 'danger',
+                    title: 'Gagal',
+                    message: result.message
+                });
+            }
+        }
+    } catch (err) {
+        showToast({
+            type: 'danger',
+            title: 'Error',
+            message: 'Gagal menyimpan data.'
+        });
+    }
+});
+
+modalCreate.addEventListener('hidden.bs.modal', () => {
+    resetModalForm(modalCreate, {
+        defaults: {
+            defaultQty: true
+        }
+    });
+    resetInputErrors(formCreate);
+
+    // Reset image preview
+    if (createPreviewEl) {
+        createPreviewEl.src = '';
+        createPreviewEl.style.display = 'none';
+    }
+
+    // Reset file input
+    if (createFileInput) createFileInput.value = '';
+
+    // Reset Product Type ke default (fisik)
+    const typeSelect = document.getElementById('productType');
+    if (typeSelect) {
+        typeSelect.value = 'fisik'; // default ke fisik
+        handleProductTypeChange(typeSelect, 'create');
+    }
+
+    // Reset Low Stock Warning
+    const lowStockCheckbox = document.getElementById('enableLowStockWarning');
+    const lowStockInput = document.querySelector('input[name="lowStockThreshold"]');
+    if (lowStockCheckbox && lowStockInput) {
+        lowStockCheckbox.checked = false;
+        lowStockInput.value = '';
+        lowStockInput.disabled = true;
+    }
+
+    // Reset Tax Input
+    const taxCheckbox = document.getElementById('enableInputTax');
+    const taxInput = document.getElementById('tax');
+    if (taxCheckbox && taxInput) {
+        taxCheckbox.checked = false;
+        taxInput.value = '';
+        taxInput.disabled = true;
+    }
+
+    const priceChangeAllowed = document.getElementById('priceChangeAllowed');
+    const priceChangeHidden = document.getElementById('priceChangeAllowedHidden');
+    if (priceChangeAllowed) {
+        priceChangeAllowed.checked = false;
+        priceChangeAllowed.disabled = false;
+    }
+    if (priceChangeHidden) priceChangeHidden.remove();
+});
 
 modalEdit.addEventListener('hidden.bs.modal', () => {
     resetInputErrors(formEdit);
@@ -920,54 +628,6 @@ modalCreate.addEventListener('shown.bs.modal', () => {
     }
 });
 
-// Filter berdasarkan type produk
-document.getElementById('typeFilter')?.addEventListener('change', (e) => {
-    const params = new URLSearchParams(window.location.search);
-    if (e.target.value) {
-        params.set('type', e.target.value);
-    } else {
-        params.delete('type');
-    }
-    window.location.search = params.toString();
-});
-
-// Filter berdasarkan requireQtyInput
-document.getElementById('requireQtyFilter')?.addEventListener('change', (e) => {
-    const params = new URLSearchParams(window.location.search);
-    if (e.target.value !== '') {
-        params.set('requireQty', e.target.value);
-    } else {
-        params.delete('requireQty');
-    }
-    window.location.search = params.toString();
-});
-
-// Filter berdasarkan priceChangeAllowed
-document.getElementById('priceChangeFilter')?.addEventListener('change', (e) => {
-    const params = new URLSearchParams(window.location.search);
-    if (e.target.value !== '') {
-        params.set('priceChange', e.target.value);
-    } else {
-        params.delete('priceChange');
-    }
-    window.location.search = params.toString();
-});
-
-// Filter berdasarkan enableAltDesc
-document.getElementById('altDescFilter')?.addEventListener('change', (e) => {
-    const params = new URLSearchParams(window.location.search);
-    if (e.target.value !== '') {
-        params.set('altDesc', e.target.value);
-    } else {
-        params.delete('altDesc');
-    }
-    window.location.search = params.toString();
-});
-
-// ========================================
-// SORTING
-// ========================================
-
 function sortTableBy(column, ascending = true) {
     const rows = Array.from(tbody.querySelectorAll('tr'));
 
@@ -978,14 +638,13 @@ function sortTableBy(column, ascending = true) {
         let aVal = aCell?.dataset.value || aCell?.textContent?.trim() || '';
         let bVal = bCell?.dataset.value || bCell?.textContent?.trim() || '';
 
-        // Hapus "Rp " dan titik untuk sorting harga
-        if (column === 'cost' || column === 'salePrice') {
-            aVal = parseFloat(aVal) || 0;
-            bVal = parseFloat(bVal) || 0;
-            return ascending ? aVal - bVal : bVal - aVal;
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return ascending ? aNum - bNum : bNum - aNum;
         }
 
-        // Default string comparison
         return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
     });
 
@@ -1163,4 +822,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 loadMoreProducts();
-syncFiltersFromURL();

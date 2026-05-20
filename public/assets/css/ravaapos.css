@@ -335,3 +335,20 @@ body.swal2-shown .layout-menu {
 .cart-item:hover {
     transform: translateX(-2px);
 }
+
+.badge-xs {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+    font-weight: 500;
+    border-radius: 0.35rem;
+}
+
+.product-name {
+    line-height: 1.2;
+}
+
+.product-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}

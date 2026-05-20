@@ -14,16 +14,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     unit: DataTypes.STRING,
-    defaultQty: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
-    service: {
+    requireQtyInput: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
     type: {
-      type: DataTypes.ENUM('fisik', 'ppob'),
+      type: DataTypes.ENUM('fisik', 'service', 'ppob'),
       allowNull: false,
       defaultValue: 'fisik'
     },

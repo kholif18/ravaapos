@@ -11,6 +11,17 @@ let done = false;
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
+export function resetTableState() {
+    offset = 0;
+    done = false;
+    loading = false;
+    currentSearch = document.getElementById('searchProduct')?.value?.trim() || '';
+}
+
+export function getCurrentSearch() {
+    return currentSearch;
+}
+
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -124,8 +135,7 @@ export function initSearch(tbody, scrollContainer) {
 
     searchInput.addEventListener('input', async (e) => {
         currentSearch = e.target.value.trim();
-        offset = 0;
-        done = false;
+        resetTableState();
         tbody.innerHTML = '';
         await loadMoreProducts(tbody, scrollContainer);
     });
@@ -243,6 +253,11 @@ export function initDelete(tbody) {
             if (res.ok && result.success) {
                 row.remove();
                 showToast({ type: 'success', title: 'Berhasil', message: result.message });
+                const totalCountEl = document.getElementById('totalProductCount');
+                if (totalCountEl) {
+                    const currentTotal = parseInt(totalCountEl.textContent) || 0;
+                    totalCountEl.textContent = currentTotal - 1;
+                }
             } else {
                 showToast({ type: 'danger', title: 'Gagal', message: result.message });
             }
@@ -267,16 +282,42 @@ export function initExports() {
         return params.toString();
     };
     
-    // Export CSV
-    document.getElementById('btnExportCSV')?.addEventListener('click', () => {
-        window.open(`/products/export/csv?${getFilterParams()}`, '_blank');
-    });
+    // Export CSV (dengan filter)
+    const btnExportCSV = document.getElementById('btnExportCSV');
+    if (btnExportCSV) {
+        const newBtn = btnExportCSV.cloneNode(true);
+        btnExportCSV.parentNode.replaceChild(newBtn, btnExportCSV);
+        
+        newBtn.addEventListener('click', () => {
+            const queryString = getFilterParams();
+            window.open(`/products/export/csv${queryString ? '?' + queryString : ''}`, '_blank');
+        });
+    }
     
-    // Print
-    document.getElementById('btnPrint')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.open(`/products/print?${getFilterParams()}`, '_blank');
-    });
+    // Export PDF (TAMBAHKAN INI)
+    const btnExportPDF = document.getElementById('btnExportPDF');
+    if (btnExportPDF) {
+        const newBtn = btnExportPDF.cloneNode(true);
+        btnExportPDF.parentNode.replaceChild(newBtn, btnExportPDF);
+        
+        newBtn.addEventListener('click', () => {
+            const queryString = getFilterParams();
+            window.open(`/products/export/pdf${queryString ? '?' + queryString : ''}`, '_blank');
+        });
+    }
+    
+    // Print (dengan filter)
+    const btnPrint = document.getElementById('btnPrint');
+    if (btnPrint) {
+        const newBtn = btnPrint.cloneNode(true);
+        btnPrint.parentNode.replaceChild(newBtn, btnPrint);
+        
+        newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const queryString = getFilterParams();
+            window.open(`/products/print${queryString ? '?' + queryString : ''}`, '_blank');
+        });
+    }
 }
 
 export function syncFiltersFromURL() {

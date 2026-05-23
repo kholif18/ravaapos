@@ -11,7 +11,8 @@ import {
     initSorting, 
     initDelete, 
     initExports,
-    syncFiltersFromURL 
+    syncFiltersFromURL,
+    resetTableState
 } from './productTableHandler.js';
 import { showToast } from '../utils/toast.js';
 
@@ -56,6 +57,7 @@ function initCreateModal() {
     // Initialize form submission
     initCreateForm(modalCreate, () => {
         // Refresh table after successful submit
+        resetTableState();
         tbody.innerHTML = '';
         loadMoreProducts(tbody, scrollContainer);
     });
@@ -93,6 +95,7 @@ function initEditModal() {
     // Initialize form submission
     initEditForm(modalEdit, () => {
         // Refresh table after successful submit
+        resetTableState();
         tbody.innerHTML = '';
         loadMoreProducts(tbody, scrollContainer);
     });

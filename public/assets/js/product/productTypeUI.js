@@ -6,7 +6,7 @@ import { PRODUCT_UI_RULES, getElement } from './productUIRules.js';
  * Apply UI rules based on product type
  * Single source of truth - no scattered logic
  */
-export function applyProductTypeRules(context = 'create') {
+export function applyProductTypeRules(context = 'create', preserveValues = false) {
     const typeSelect = getElement('type', context);
     if (!typeSelect) return;
 
@@ -38,8 +38,10 @@ export function applyProductTypeRules(context = 'create') {
     if (elements.cost) {
         elements.cost.disabled = !rule.costEnabled;
         elements.cost.required = rule.costEnabled;
-        if (!rule.costEnabled && rule.defaultValues?.cost !== undefined) {
-            elements.cost.value = rule.defaultValues.cost;
+        if (!preserveValues) {
+            if (rule.defaultValues?.cost !== undefined && context === 'create') {
+                elements.cost.value = rule.defaultValues.cost;
+            }
         }
     }
 
@@ -47,8 +49,10 @@ export function applyProductTypeRules(context = 'create') {
     if (elements.markup) {
         elements.markup.disabled = !rule.markupEnabled;
         elements.markup.required = rule.markupEnabled;
-        if (!rule.markupEnabled && rule.defaultValues?.markup !== undefined) {
-            elements.markup.value = rule.defaultValues.markup;
+        if (!preserveValues) {
+            if (rule.defaultValues?.markup !== undefined && context === 'create') {
+                elements.markup.value = rule.defaultValues.markup;
+            }
         }
     }
 
@@ -78,19 +82,11 @@ export function applyProductTypeRules(context = 'create') {
 
     // 7. Reorder Point
     if (elements.reorderPoint) {
-        const defaultValue = rule.defaultValues?.reorderPoint;
-        if (defaultValue !== undefined) {
-            elements.reorderPoint.value = defaultValue;
-        }
         elements.reorderPoint.disabled = !rule.reorderPointEnabled;
     }
 
     // 8. Preferred Quantity
     if (elements.preferredQty) {
-        const defaultValue = rule.defaultValues?.preferredQty;
-        if (defaultValue !== undefined) {
-            elements.preferredQty.value = defaultValue;
-        }
         elements.preferredQty.disabled = !rule.preferredQtyEnabled;
     }
 
@@ -141,11 +137,12 @@ export function initProductTypeListener(context = 'create') {
     typeSelect.parentNode.replaceChild(newTypeSelect, typeSelect);
 
     newTypeSelect.addEventListener('change', () => {
-        applyProductTypeRules(context);
+        applyProductTypeRules(context, false);
     });
 
     // Apply initial rules
-    applyProductTypeRules(context);
+    const isEditMode = context === 'edit';
+    applyProductTypeRules(context, !isEditMode);
 }
 
 /**

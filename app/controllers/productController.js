@@ -8,7 +8,9 @@ const {
   Category,
   Supplier
 } = require('../models');
-const PRODUCT_RULES = require('../rules/productRules');
+const {
+  PRODUCT_RULES
+} = require('../rules/productRules');
 const {
   normalizeProduct
 } = require('../rules/productNormalizer');
@@ -138,31 +140,28 @@ exports.createProduct = async (req, res) => {
             requireQtyInput,
             type,
             priceChangeAllowed,
-            reorderPoint,
-            preferredQty,
-            enableAltDesc
+            enableAltDesc,
+            enableInputTax
         } = req.body;
-
-        const rule = PRODUCT_RULES[type];
-        if (!rule) {
-            return res.status(400).json({ success: false, message: 'Type tidak valid' });
-        }
 
         const errors = {};
 
-        // BASIC VALIDATION (ONLY ONCE)
+        // BASIC VALIDATION
         if (!name?.trim()) errors.name = 'Nama harus diisi';
         if (!code?.trim()) errors.code = 'Kode harus diisi';
         if (!unit?.trim()) errors.unit = 'Unit harus diisi';
 
-        // NORMALIZE (SOURCE OF TRUTH)
+        // NORMALIZE (semua logic di sini)
         let normalized;
         try {
             normalized = normalizeProduct(type, req.body);
         } catch (err) {
-            const msg = handleNormalizeError(err);
-            if (msg) errors.salePrice = `Minimal ${msg}`;
-            else throw err;
+            if (err.message.startsWith('MIN_SALE_PRICE:')) {
+                const minPrice = err.message.split(':')[1];
+                errors.salePrice = `Harga jual minimal Rp ${Number(minPrice).toLocaleString('id-ID')}`;
+            } else {
+                return res.status(400).json({ success: false, message: err.message });
+            }
         }
 
         const {
@@ -171,22 +170,17 @@ exports.createProduct = async (req, res) => {
             salePrice,
             tax,
             lowStockWarning,
-            lowStockThreshold
+            lowStockThreshold,
+            reorderPoint,
+            preferredQty,
+            stock
         } = normalized;
-
-        // VALIDATION LOW STOCK (NO DUPLICATE LOGIC ANYWHERE ELSE)
-        if (
-            lowStockWarning &&
-            (lowStockThreshold === null || lowStockThreshold < 0)
-        ) {
-            errors.lowStockThreshold = 'Batas stok rendah tidak valid';
-        }
 
         if (Object.keys(errors).length) {
             return res.status(400).json({ success: false, errors });
         }
 
-        // IMAGE
+        // IMAGE HANDLING
         let imagePath = null;
         if (req.file) {
             const uploadDir = path.join(__dirname, '../../public/uploads/products');
@@ -199,43 +193,59 @@ exports.createProduct = async (req, res) => {
             imagePath = `/uploads/products/${fileName}`;
         }
 
+        // CREATE PRODUCT
         await Product.create({
-            name,
+            name: name?.trim(),
             categoryId: categoryId || null,
-            code,
+            code: code?.trim(),
             barcode: barcode?.trim() || null,
-            unit,
+            unit: unit?.trim(),
             supplierId: supplierId || null,
 
-            requireQtyInput: !!requireQtyInput,
-            type,
+            requireQtyInput: requireQtyInput === 'on' || requireQtyInput === true,
+            type: type,
 
-            cost,
-            markup,
-            salePrice,
+            cost: cost,
+            markup: markup,
+            salePrice: salePrice,
 
-            priceChangeAllowed: !!priceChangeAllowed,
+            priceChangeAllowed: priceChangeAllowed === 'on' || priceChangeAllowed === true,
 
-            reorderPoint: Number(reorderPoint) || 0,
-            preferredQty: Number(preferredQty) || 0,
+            reorderPoint: reorderPoint,
+            preferredQty: preferredQty,
+            stock: stock,
 
-            lowStockWarning,
-            lowStockThreshold,
+            lowStockWarning: lowStockWarning,
+            lowStockThreshold: lowStockThreshold,
 
-            enableInputTax: !!req.body.enableInputTax,
-            tax,
+            enableInputTax: enableInputTax === 'on' || enableInputTax === true,
+            tax: tax,
 
-            enableAltDesc: !!enableAltDesc,
+            enableAltDesc: enableAltDesc === 'on' || enableAltDesc === true,
 
-            image: imagePath,
-            stock: 0
+            image: imagePath
         });
 
         return res.json({ success: true });
 
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ success: false });
+        console.error('Error creating product:', err);
+        
+        // Handle unique constraint errors
+        if (err.name === 'SequelizeUniqueConstraintError') {
+            const errors = {};
+            err.errors.forEach(e => {
+                if (e.path === 'name') errors.name = 'Nama produk sudah ada';
+                if (e.path === 'code') errors.code = 'Kode produk sudah ada';
+                if (e.path === 'barcode') errors.barcode = 'Barcode sudah ada';
+            });
+            return res.status(400).json({ success: false, errors });
+        }
+        
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Terjadi kesalahan server: ' + err.message 
+        });
     }
 };
 
@@ -251,7 +261,7 @@ exports.updateProduct = async (req, res) => {
             });
         }
 
-        const type = product.type;
+        const type = String(product.type).trim().toLowerCase();
         const rule = PRODUCT_RULES[type];
 
         if (!rule) {
@@ -283,7 +293,9 @@ exports.updateProduct = async (req, res) => {
             salePrice,
             tax,
             lowStockWarning,
-            lowStockThreshold
+            lowStockThreshold,
+            reorderPoint,
+            preferredQty,
         } = normalized;
 
         if (
@@ -754,7 +766,8 @@ exports.exportPDF = async (req, res) => {
     } = req.query;
 
     const where = {};
-    if (search) {
+
+    if (search && search.trim()) {
       where[Op.or] = [{
           code: {
             [Op.like]: `%${search}%`
@@ -767,162 +780,229 @@ exports.exportPDF = async (req, res) => {
         }
       ];
     }
-    if (category) where.categoryId = category;
-    if (supplierId) where.supplierId = supplierId;
+    if (category && category !== '') where.categoryId = category;
+    if (supplierId && supplierId !== '') where.supplierId = supplierId;
     if (type && type !== '') where.type = type;
 
     const products = await Product.findAll({
       where,
-      include: [{
-          association: 'category',
-          attributes: ['name']
-        },
-        {
-          association: 'supplier',
-          attributes: ['name']
-        }
-      ],
       order: [
         ['name', 'ASC']
       ]
     });
 
-    const tableData = products.map((p, i) => ({
-      no: (i + 1).toString(),
-      code: p.code || '',
-      name: p.name || '',
-      unit: p.unit || '',
-      type: p.type || 'fisik',
-      cost: p.cost != null ? p.cost.toLocaleString('id-ID', {
-        minimumFractionDigits: 2
-      }) : '-',
-      salePrice: p.salePrice != null ? p.salePrice.toLocaleString('id-ID', {
-        minimumFractionDigits: 2
-      }) : '-',
-      tax: p.tax != null ? p.tax.toString() : '-'
-    }));
+    console.log(`Exporting PDF with ${products.length} products`);
 
+    const PDFDocument = require('pdfkit');
     const doc = new PDFDocument({
-      margin: 20,
-      size: 'A4',
-      layout: 'portrait'
+      margin: 30,
+      size: 'A4'
     });
-    res.setHeader('Content-Disposition', 'attachment; filename="product_report.pdf"');
+
     res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="product_report_${Date.now()}.pdf"`);
     doc.pipe(res);
 
-    doc.font('Helvetica-Bold').fontSize(16).text('Product Report', {
+    // Header
+    doc.fontSize(16).font('Helvetica-Bold').text('PRODUCT REPORT', {
       align: 'center'
     });
-    doc.moveDown(0.5);
-    doc.font('Helvetica').fontSize(10).text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, {
+    doc.fontSize(10).font('Helvetica').text(`Tanggal: ${new Date().toLocaleDateString('id-ID')}`, {
       align: 'left'
     });
-    doc.moveDown(1);
+    doc.moveDown();
 
-    const table = {
-      headers: [{
-          label: '#',
-          property: 'no',
-          width: 30,
-          headerColor: '#d9d9d9',
-          align: 'center',
-          border: true
-        },
-        {
-          label: 'Code',
-          property: 'code',
-          width: 70,
-          headerColor: '#d9d9d9',
-          align: 'left',
-          border: true
-        },
-        {
-          label: 'Product Name',
-          property: 'name',
-          width: 180,
-          headerColor: '#d9d9d9',
-          align: 'left',
-          border: true
-        },
-        {
-          label: 'Type',
-          property: 'type',
-          width: 50,
-          headerColor: '#d9d9d9',
-          align: 'center',
-          border: true
-        },
-        {
-          label: 'UOM',
-          property: 'unit',
-          width: 50,
-          headerColor: '#d9d9d9',
-          align: 'center',
-          border: true
-        },
-        {
-          label: 'Cost',
-          property: 'cost',
-          width: 80,
-          headerColor: '#d9d9d9',
-          align: 'right',
-          border: true
-        },
-        {
-          label: 'Unit Price',
-          property: 'salePrice',
-          width: 80,
-          headerColor: '#d9d9d9',
-          align: 'right',
-          border: true
-        },
-        {
-          label: 'Tax (%)',
-          property: 'tax',
-          width: 50,
-          headerColor: '#d9d9d9',
-          align: 'right',
-          border: true
-        }
-      ],
-      datas: tableData,
-      options: {
-        width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
-        prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9).fillColor('black'),
-        prepareRow: (row, i) => {
-          doc.font('Helvetica').fontSize(9).fillColor('black');
-          if (i % 2 === 0) {
-            const y = doc.y - 3;
-            doc.save()
-              .rect(doc.x, y, doc.page.width - doc.page.margins.left - doc.page.margins.right, 20)
-              .fill('#f5f5f5')
-              .restore();
-          }
-        },
-        padding: 4,
-        columnSpacing: 4,
-        border: {
-          top: '#ccc',
-          left: '#ccc',
-          bottom: '#ccc',
-          right: '#ccc',
-          horizontal: '#ccc',
-          vertical: '#ccc'
-        }
-      }
+    // Table header
+    const startX = 30;
+    let currentY = doc.y;
+    const colWidths = {
+      no: 30,
+      code: 70,
+      name: 130,
+      unit: 40,
+      cost: 70,
+      salePrice: 70,
+      tax: 40
     };
 
-    await doc.table(table);
+    // Simpan posisi awal header
+    const headerY = currentY;
+
+    // Draw header background
+    doc.rect(startX, currentY, doc.page.width - 60, 20).fill('#d9d9d9');
+    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9);
+
+    let x = startX;
+    doc.text('No', x + 5, currentY + 5, {
+      width: colWidths.no,
+      align: 'center'
+    });
+    x += colWidths.no;
+    doc.text('Kode', x + 5, currentY + 5, {
+      width: colWidths.code,
+      align: 'left'
+    });
+    x += colWidths.code;
+    doc.text('Nama Produk', x + 5, currentY + 5, {
+      width: colWidths.name,
+      align: 'left'
+    });
+    x += colWidths.name;
+    doc.text('Unit', x + 5, currentY + 5, {
+      width: colWidths.unit,
+      align: 'center'
+    });
+    x += colWidths.unit;
+    doc.text('Cost', x + 5, currentY + 5, {
+      width: colWidths.cost,
+      align: 'right'
+    });
+    x += colWidths.cost;
+    doc.text('Harga Jual', x + 5, currentY + 5, {
+      width: colWidths.salePrice,
+      align: 'right'
+    });
+    x += colWidths.salePrice;
+    doc.text('Pajak', x + 5, currentY + 5, {
+      width: colWidths.tax,
+      align: 'right'
+    });
+
+    currentY += 20;
+
+    // Simpan posisi setelah header
+    let afterHeaderY = currentY;
+
+    // Draw rows
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+
+      // Check page break (sisakan ruang untuk footer)
+      if (currentY > doc.page.height - 60) {
+        // Draw footer di halaman sebelum ganti
+        doc.fontSize(8).fillColor('#666666');
+        doc.text(`Total Produk: ${products.length} | Dicetak dari Sistem POS`, startX, doc.page.height - 40, {
+          align: 'center',
+          width: doc.page.width - 60
+        });
+
+        // Add new page
+        doc.addPage();
+
+        // Reset posisi untuk halaman baru
+        currentY = 30;
+
+        // Redraw header di halaman baru
+        doc.rect(startX, currentY, doc.page.width - 60, 20).fill('#d9d9d9');
+        doc.fillColor('#000000').font('Helvetica-Bold').fontSize(9);
+
+        x = startX;
+        doc.text('No', x + 5, currentY + 5, {
+          width: colWidths.no,
+          align: 'center'
+        });
+        x += colWidths.no;
+        doc.text('Kode', x + 5, currentY + 5, {
+          width: colWidths.code,
+          align: 'left'
+        });
+        x += colWidths.code;
+        doc.text('Nama Produk', x + 5, currentY + 5, {
+          width: colWidths.name,
+          align: 'left'
+        });
+        x += colWidths.name;
+        doc.text('Unit', x + 5, currentY + 5, {
+          width: colWidths.unit,
+          align: 'center'
+        });
+        x += colWidths.unit;
+        doc.text('Cost', x + 5, currentY + 5, {
+          width: colWidths.cost,
+          align: 'right'
+        });
+        x += colWidths.cost;
+        doc.text('Harga Jual', x + 5, currentY + 5, {
+          width: colWidths.salePrice,
+          align: 'right'
+        });
+        x += colWidths.salePrice;
+        doc.text('Pajak', x + 5, currentY + 5, {
+          width: colWidths.tax,
+          align: 'right'
+        });
+
+        currentY += 20;
+      }
+
+      // Alternating row background
+      if (i % 2 === 0) {
+        doc.rect(startX, currentY, doc.page.width - 60, 18).fill('#f5f5f5');
+        doc.fillColor('#000000');
+      }
+
+      doc.font('Helvetica').fontSize(8);
+
+      x = startX;
+      doc.text((i + 1).toString(), x + 5, currentY + 5, {
+        width: colWidths.no,
+        align: 'center'
+      });
+      x += colWidths.no;
+      doc.text(p.code || '-', x + 5, currentY + 5, {
+        width: colWidths.code,
+        align: 'left'
+      });
+      x += colWidths.code;
+      let name = p.name || '-';
+      if (name.length > 25) name = name.substring(0, 22) + '...';
+      doc.text(name, x + 5, currentY + 5, {
+        width: colWidths.name,
+        align: 'left'
+      });
+      x += colWidths.name;
+      doc.text(p.unit || '-', x + 5, currentY + 5, {
+        width: colWidths.unit,
+        align: 'center'
+      });
+      x += colWidths.unit;
+      doc.text(p.cost ? `Rp ${p.cost.toLocaleString('id-ID')}` : '-', x + 5, currentY + 5, {
+        width: colWidths.cost,
+        align: 'right'
+      });
+      x += colWidths.cost;
+      doc.text(p.salePrice ? `Rp ${p.salePrice.toLocaleString('id-ID')}` : '-', x + 5, currentY + 5, {
+        width: colWidths.salePrice,
+        align: 'right'
+      });
+      x += colWidths.salePrice;
+      doc.text(p.tax ? `${p.tax}%` : '-', x + 5, currentY + 5, {
+        width: colWidths.tax,
+        align: 'right'
+      });
+
+      currentY += 18;
+    }
+
+    // Draw footer di halaman terakhir
+    doc.fontSize(8).fillColor('#666666');
+    doc.text(`Total Produk: ${products.length} | Dicetak dari Sistem POS`, startX, doc.page.height - 40, {
+      align: 'center',
+      width: doc.page.width - 60
+    });
+
     doc.end();
 
   } catch (err) {
     console.error('Gagal export PDF:', err);
-    res.status(500).send('Gagal export PDF');
+    if (!res.headersSent) {
+      res.status(500).send('Gagal export PDF: ' + err.message);
+    }
   }
 };
 
 // Print view produk (HTML tabel striped)
+
 exports.printProducts = async (req, res) => {
   try {
     const products = await Product.findAll({
@@ -1000,9 +1080,10 @@ exports.exportCSV = async (req, res) => {
       altDesc,
       q
     } = req.query;
+
     const where = {};
 
-    if (q) {
+    if (q && q.trim()) {
       where[Op.or] = [{
           code: {
             [Op.like]: `%${q}%`
@@ -1021,58 +1102,52 @@ exports.exportCSV = async (req, res) => {
       ];
     }
 
-    if (category) where.categoryId = category;
-    if (supplierId) where.supplierId = supplierId;
+    if (category && category !== '') where.categoryId = category;
+    if (supplierId && supplierId !== '') where.supplierId = supplierId;
     if (type && type !== '') where.type = type;
-    if (requireQty !== '') where.requireQtyInput = requireQty === 'true';
-    if (priceChange !== '') where.priceChangeAllowed = priceChange === 'true';
-    if (altDesc !== '') where.enableAltDesc = altDesc === 'true';
+    if (requireQty && requireQty !== '') where.requireQtyInput = requireQty === 'true';
+    if (priceChange && priceChange !== '') where.priceChangeAllowed = priceChange === 'true';
+    if (altDesc && altDesc !== '') where.enableAltDesc = altDesc === 'true';
 
     const products = await Product.findAll({
       where,
+      include: [{
+          association: 'category',
+          attributes: ['name']
+        },
+        {
+          association: 'supplier',
+          attributes: ['name']
+        }
+      ],
       order: [
         ['name', 'ASC']
       ]
     });
 
-    const header = [
-      'name', 'categoryId', 'code', 'barcode', 'unit', 'supplierId',
-      'requireQtyInput', 'type', 'cost', 'markup', 'salePrice',
-      'priceChangeAllowed', 'reorderPoint', 'lowStockWarning',
-      'lowStockThreshold', 'enableInputTax', 'tax', 'enableAltDesc'
-    ];
+    // Header simpel seperti print
+    const headers = ['No', 'Kode', 'Nama Produk', 'Satuan', 'Tipe', 'Harga Beli', 'Harga Jual', 'Pajak'];
 
-    let csv = header.join(',') + '\n';
+    let csv = headers.join(',') + '\n';
 
-    products.forEach(p => {
+    products.forEach((p, index) => {
       const row = [
-        p.name || '',
-        p.categoryId || '',
-        p.code || '',
-        p.barcode || '',
-        p.unit || '',
-        p.supplierId || '',
-        p.requireQtyInput ? 'true' : 'false',
+        index + 1,
+        `"${(p.code || '').replace(/"/g, '""')}"`,
+        `"${(p.name || '').replace(/"/g, '""')}"`,
+        `"${(p.unit || '-').replace(/"/g, '""')}"`,
         p.type || 'fisik',
-        p.cost?.toFixed(2) || '0.00',
-        p.markup?.toFixed(2) || '0.00',
-        p.salePrice?.toFixed(2) || '0.00',
-        p.priceChangeAllowed ? 'true' : 'false',
-        p.reorderPoint || '0',
-        p.lowStockWarning ? 'true' : 'false',
-        p.lowStockThreshold || '0',
-        p.enableInputTax ? 'true' : 'false',
-        p.tax != null ? p.tax : '',
-        p.enableAltDesc ? 'true' : 'false'
+        p.cost || 0,
+        p.salePrice || 0,
+        p.tax || 0
       ];
-
-      const line = row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
-      csv += line + '\n';
+      csv += row.join(',') + '\n';
     });
 
-    res.header('Content-Type', 'text/csv');
-    res.attachment('products_export.csv');
+    res.header('Content-Type', 'text/csv; charset=utf-8');
+    res.attachment(`products_${Date.now()}.csv`);
     res.send(csv);
+
   } catch (err) {
     console.error('Gagal ekspor CSV produk:', err);
     res.status(500).send('Gagal mengekspor CSV produk');

@@ -48,7 +48,7 @@ function prepareFormData(formData) {
 export async function submitProductForm(form, method = 'POST', url = null) {
     const submitUrl = url || form.action;
     const formData = new FormData(form);
-    
+
     // Remove _method if exists for PUT
     if (method === 'PUT') {
         formData.delete('_method');
@@ -62,12 +62,12 @@ export async function submitProductForm(form, method = 'POST', url = null) {
             },
             body: formData
         });
-        
+
         const result = await response.json();
-        
         if (response.ok && result.success) {
             return { success: true, data: result };
         } else {
+            console.error('Validation errors:', result.errors);
             return { success: false, errors: result.errors, message: result.message };
         }
     } catch (error) {
@@ -96,6 +96,14 @@ export function resetForm(context = 'create', modalElement = null) {
         applyProductTypeRules(context);
     }
     
+    // Reset hidden type field untuk edit
+    if (context === 'edit') {
+        const hiddenTypeInput = document.getElementById('editProductTypeHidden');
+        if (hiddenTypeInput) {
+            hiddenTypeInput.value = 'fisik';
+        }
+    }
+
     // Reset image preview
     const previewEl = context === 'create'
         ? document.getElementById('createProductPreview')
@@ -179,11 +187,27 @@ export async function loadProductToEdit(productId) {
         }
         
         const product = result.product;
-        const form = document.getElementById('formEditProduct');
         
-        // Set form action
+        const cleanType = String(product.type || 'fisik').trim().toLowerCase();
+        
+        const form = document.getElementById('formEditProduct');
         form.action = `/products/${productId}`;
         
+        const hiddenTypeInput = document.getElementById('editProductTypeHidden');
+
+        if (hiddenTypeInput) {
+            hiddenTypeInput.value = cleanType;
+        }
+
+        const typeSelect = getElement('type', 'edit');
+        if (typeSelect) {
+            typeSelect.value = cleanType;
+            typeSelect.disabled = true;
+        }
+
+        // Apply rules dengan preserveValues = true
+        applyProductTypeRules('edit', true);
+
         // Basic fields
         getElement('name', 'edit').value = product.name ?? '';
         getElement('category', 'edit').value = product.categoryId ?? '';
@@ -201,23 +225,32 @@ export async function loadProductToEdit(productId) {
         // Enable Alt Desc checkbox (if exists)
         const enableAltDesc = document.getElementById('editEnableAltDesc');
         if (enableAltDesc) enableAltDesc.checked = !!product.enableAltDesc;
-        
-        // Type (disabled for edit)
-        const typeSelect = getElement('type', 'edit');
-        typeSelect.value = product.type ?? 'fisik';
-        typeSelect.disabled = true;
-        
+
         // Numeric fields
         getElement('cost', 'edit').value = product.cost ?? '';
         getElement('markup', 'edit').value = product.markup ?? '';
         getElement('salePrice', 'edit').value = product.salePrice ?? '';
-        getElement('reorderPoint', 'edit').value = product.reorderPoint ?? '';
-        getElement('preferredQty', 'edit').value = product.preferredQty ?? '';
+
+        const reorderPointInput = getElement('reorderPoint', 'edit');
+        if (reorderPointInput) {
+            reorderPointInput.value = product.reorderPoint ?? 0;
+        }
+        
+        const preferredQtyInput = getElement('preferredQty', 'edit');
+        if (preferredQtyInput) {
+            preferredQtyInput.value = product.preferredQty ?? 0;
+        }
+
         getElement('lowStockThreshold', 'edit').value = product.lowStockThreshold ?? '';
         getElement('taxInput', 'edit').value = product.tax ?? '';
         
+        const stockInput = document.getElementById('editStock');
+        if (stockInput) {
+            stockInput.value = product.stock ?? 0;
+        }
+
         // Apply UI rules
-        applyProductTypeRules('edit');
+        applyProductTypeRules('edit', true);
         initPriceSync('edit');
         initToggleListeners('edit');
         

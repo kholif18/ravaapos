@@ -23,13 +23,13 @@ export const PRODUCT_UI_RULES = {
 
     service: {
         stockVisible: false,
-        costEnabled: false,
-        markupEnabled: false,
+        costEnabled: true,
+        markupEnabled: true,
         salePriceEnabled: true,
-        requireQtyInput: false,
+        requireQtyInput: true,
         priceChangeAllowed: true,
         lowStock: false,
-        tax: false,
+        tax: true,
         reorderPointEnabled: false,
         preferredQtyEnabled: false,
         defaultValues: {

@@ -1,8 +1,21 @@
 // rules/productNormalizer.js
-const PRODUCT_RULES = require('./productRules');
+
+const {
+    PRODUCT_RULES,
+    isStockAllowed,
+    isTaxAllowed,
+    isLowStockAllowed,
+    shouldResetStock,
+    getMinSalePrice
+} = require('./productRules');
 
 function toNumber(v, fallback = 0) {
     const n = Number(v);
+    return isNaN(n) ? fallback : n;
+}
+
+function toInt(v, fallback = 0) {
+    const n = parseInt(v);
     return isNaN(n) ? fallback : n;
 }
 
@@ -10,26 +23,59 @@ function normalizeProduct(type, body) {
     const rule = PRODUCT_RULES[type];
     if (!rule) throw new Error('Invalid type');
 
+    // Pricing fields
     let cost = toNumber(body.cost);
     let markup = toNumber(body.markup);
     let salePrice = toNumber(body.salePrice);
-    let tax = body.tax !== undefined ? toNumber(body.tax, null) : null;
 
-    // RULE ENFORCEMENT (SATU TEMPAT SAJA)
-    if (rule.forceCost) cost = 0;
-    if (rule.forceMarkup) markup = 0;
+    // Stock fields (hanya untuk fisik)
+    let reorderPoint = 0;
+    let preferredQty = 0;
+    let stock = 0;
 
-    if (!rule.allowCost) cost = 0;
-    if (!rule.allowMarkup) markup = 0;
+    if (isStockAllowed(type)) {
+        reorderPoint = toInt(body.reorderPoint);
+        preferredQty = toInt(body.preferredQty);
+        stock = toInt(body.stock);
+    } else if (shouldResetStock(type)) {
+        // Untuk service & ppob, stock tetap 0
+        reorderPoint = 0;
+        preferredQty = 0;
+        stock = 0;
+    }
 
-    const lowStockWarning = body.lowStockWarning === true || body.lowStockWarning === 'true' || body.lowStockWarning === 'on';
-    const lowStockThreshold = lowStockWarning ? toNumber(body.lowStockThreshold, null) : null;
+    // Tax fields
+    let tax = null;
+    if (isTaxAllowed(type)) {
+        const taxEnabled = body.enableInputTax === true ||
+            body.enableInputTax === 'true' ||
+            body.enableInputTax === 'on';
+        if (taxEnabled) {
+            tax = toNumber(body.tax, null);
+        }
+    }
 
-    const taxEnabled = body.enableInputTax === true || body.enableInputTax === 'true' || body.enableInputTax === 'on';
-    tax = taxEnabled ? tax : null;
+    // Low stock warning
+    let lowStockWarning = false;
+    let lowStockThreshold = null;
 
-    if (salePrice < rule.minSalePrice) {
-        throw new Error(`MIN_SALE_PRICE:${rule.minSalePrice}`);
+    if (isLowStockAllowed(type)) {
+        lowStockWarning = body.lowStockWarning === true ||
+            body.lowStockWarning === 'true' ||
+            body.lowStockWarning === 'on';
+        lowStockThreshold = lowStockWarning ? toInt(body.lowStockThreshold, null) : null;
+    }
+
+    // Force values berdasarkan rules
+    if (rule.pricing.forceCost) cost = 0;
+    if (rule.pricing.forceMarkup) markup = 0;
+    if (!rule.pricing.allowCost) cost = 0;
+    if (!rule.pricing.allowMarkup) markup = 0;
+
+    // Validasi min sale price
+    const minSalePrice = getMinSalePrice(type);
+    if (salePrice < minSalePrice) {
+        throw new Error(`MIN_SALE_PRICE:${minSalePrice}`);
     }
 
     return {
@@ -38,7 +84,10 @@ function normalizeProduct(type, body) {
         salePrice,
         tax,
         lowStockWarning,
-        lowStockThreshold
+        lowStockThreshold,
+        reorderPoint,
+        preferredQty,
+        stock
     };
 }
 

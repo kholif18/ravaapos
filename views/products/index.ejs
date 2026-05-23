@@ -235,11 +235,11 @@
         <div class="row" id="stockSectionCreate">
           <div class="col-md-6 mb-3">
             <label>Reorder Point</label>
-            <input type="number" name="reorderPoint" min="0" class="form-control" placeholder="mis. 10">
+            <input type="number" id="reorderPoint" name="reorderPoint" min="0" class="form-control" placeholder="mis. 10">
           </div>
           <div class="col-md-6 mb-3">
             <label>Preferred Quantity</label>
-            <input type="number" name="preferredQty" min="0" class="form-control" placeholder="mis. 50">
+            <input type="number" id="preferredQty" name="preferredQty" min="0" class="form-control" placeholder="mis. 50">
           </div>
         </div>
 
@@ -247,11 +247,11 @@
         <div class="row">
           <div class="col-md-6">
             <div class="form-check form-switch mb-2">
-              <input class="form-check-input" type="checkbox" id="enableLowStockWarning" name="lowStockWarning">
-              <label class="form-check-label" for="enableLowStockWarning">Aktifkan peringatan stok rendah</label>
+              <input class="form-check-input" type="checkbox" id="lowStockWarning" name="lowStockWarning">
+              <label class="form-check-label" for="lowStockWarning">Aktifkan peringatan stok rendah</label>
             </div>
             <div class="mb-3">
-              <input type="number" name="lowStockThreshold" id="lowStockWarning" min="0" class="form-control" placeholder="Jumlah minimal sebelum peringatan" disabled>
+              <input type="number" name="lowStockThreshold" id="lowStockThreshold" min="0" class="form-control" placeholder="Jumlah minimal sebelum peringatan" disabled>
             </div>
           </div>
           <div class="col-md-6 mb-3">
@@ -288,243 +288,204 @@
   </div>
 </div>
 
+
 <!-- Modal Edit Product -->
 <div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down">    
+  <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down">
+
     <form id="formEditProduct" method="POST" class="modal-content" enctype="multipart/form-data">
+
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="_method" value="PUT">
       <!-- Header -->
       <div class="modal-header bg-warning">
-        <h5 class="modal-title text-white" id="modalEditLabel">
-          Edit Product
-        </h5>
+        <h5 class="modal-title text-white" id="modalEditLabel">Edit Product</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-
       <!-- Body -->
       <div class="modal-body">
-
         <!-- Basic Information -->
-        <div class="card border shadow-none mb-4">
-          <div class="card-body">
-            <h6 class="card-title mb-4">
-              Informasi Produk
-            </h6>
+        <div class="row">
+          <!-- Nama -->
+          <div class="col-md-6 mb-3">
+            <input type="text" name="name" class="form-control" id="editInputName" placeholder="Nama produk" required>
+          </div>
+          <!-- Kategori -->
+          <div class="col-md-6 mb-3">
+            <select name="categoryId" id="editCategorySelect" class="form-select">
+              <% categories.forEach(cat => { %>
+                <option value="<%= cat.id %>"
+                        data-prefix="<%= cat.prefix %>">
+                  <%= cat.name %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
 
-            <div class="row g-3">
-              <!-- Nama -->
-              <div class="col-md-6">
-                <label class="form-label">Nama Produk</label>
-                <input type="text" name="name" class="form-control" id="editInputName" placeholder="Nama produk" required>
-              </div>
-              <!-- Kategori -->
-              <div class="col-md-6">
-                <label class="form-label">Kategori</label>
+          <!-- Kode -->
+          <div class="col-md-6 mb-3">
+            <input type="text" name="code" class="form-control" id="editProductCode" placeholder="Product Code" required>
+          </div>
 
-                <select name="categoryId" id="editCategorySelect" class="form-select"> 
-                  <% categories.forEach(cat => { %>
-                    <option value="<%= cat.id %>"
-                            data-prefix="<%= cat.prefix %>">
-                      <%= cat.name %>
-                    </option>
-                  <% }) %>
-                </select>
-              </div>
-              <!-- Kode -->
-              <div class="col-md-6">
-                <label class="form-label">Kode Produk</label>
-                <input type="text" name="code" class="form-control" id="editProductCode" placeholder="Product code" required></div>
-              <!-- Barcode -->
-              <div class="col-md-6">
-                <label class="form-label">Barcode</label>
-                <div class="input-group">
-                  <input type="text" name="barcode" class="form-control" id="editInputBarcode" placeholder="Barcode (opsional)">
-                  <button class="btn btn-outline-secondary" type="button" id="btnGenerateEditBarcode">
-                    Generate
-                  </button>
-                </div>
-              </div>
-
-              <!-- Unit -->
-              <div class="col-md-6">
-                <label class="form-label">Unit</label>
-                <input type="text" name="unit" class="form-control" id="editUnit" placeholder="pcs, lbr, box" required>
-              </div>
-
-              <!-- Supplier -->
-              <div class="col-md-6">
-                <label class="form-label">Supplier</label>
-
-                <select name="supplierId" id="editSupplierSelect" class="form-select">
-                  <option value="">Pilih Supplier</option>
-                  <% suppliers.forEach(s => { %>
-                    <option value="<%= s.id %>">
-                      <%= s.name %>
-                    </option>
-                  <% }) %>
-                </select>
-              </div>
+          <!-- Barcode -->
+          <div class="col-md-6 mb-3">
+            <div class="input-group">
+              <input type="text" name="barcode" class="form-control" id="editInputBarcode" placeholder="Barcode (opsional)">
+              <button class="btn btn-outline-secondary" type="button" id="btnGenerateEditBarcode">Generate</button>
             </div>
           </div>
+
+          <!-- Unit -->
+          <div class="col-md-6 mb-3">
+            <input type="text" name="unit" id="editUnit" class="form-control" placeholder="Unit (mis. pcs, lbr)" required>
+          </div>
+
+          <!-- Supplier -->
+          <div class="col-md-6 mb-3">
+            <select name="supplierId" id="editSupplierSelect" class="form-select">
+              <option value="">Pilih Supplier</option>
+              <% suppliers.forEach(s => { %>
+                <option value="<%= s.id %>">
+                  <%= s.name %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
         </div>
+        <!-- POS & Type -->
+        <div class="row mb-3">
 
-        <!-- POS Settings -->
-        <div class="row g-4 mb-4">
-          <!-- POS -->
+          <!-- Pengaturan POS -->
           <div class="col-md-6">
-
-            <div class="card border shadow-none h-100">
+            <div class="card border shadow-none">
               <div class="card-body">
 
-                <h6 class="card-title mb-3">Pengaturan POS</h6>
+                <h6 class="card-title mb-3">
+                  Pengaturan POS
+                </h6>
 
                 <!-- Qty -->
                 <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" name="requireQtyInput" id="editRequireQtyInput"> 
-                  <label class="form-check-label" for="editRequireQtyInput">
-                    Minta Qty Saat Produk Dipilih
-                  </label>
-                  <div class="form-text">Qty otomatis fokus saat item masuk cart.</div>
+                  <input class="form-check-input" type="checkbox" name="requireQtyInput" id="editRequireQtyInput">
+                  <label class="form-check-label" for="editRequireQtyInput">Minta Qty Saat Produk Dipilih</label>
+                  <div class="form-text">Qty akan langsung fokus saat produk masuk ke cart.</div>
                 </div>
 
-                <!-- Price -->
+                <!-- Price Editable -->
                 <div class="form-check form-switch mb-3">
                   <input class="form-check-input" type="checkbox" name="priceChangeAllowed" id="editPriceChangeAllowed">
-                  <label class="form-check-label" for="editPriceChangeAllowed">
-                    Harga Bisa Diubah Saat Transaksi
-                  </label>
-                  <div class="form-text">Cocok untuk jasa atau PPOB.</div>
+                  <label class="form-check-label" for="editPriceChangeAllowed">Harga Bisa Diubah Saat Transaksi</label>
+                  <div class="form-text">Cocok untuk jasa, PPOB, atau harga fleksibel.</div>
                 </div>
 
                 <!-- Alt Desc -->
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="editEnableAltDesc" name="enableAltDesc">
-                  <label class="form-check-label" for="editEnableAltDesc">
-                    Izinkan Deskripsi Tambahan
-                  </label>
+                  <label class="form-check-label" for="editEnableAltDesc">Aktifkan deskripsi alternatif di POS</label>
                 </div>
+
               </div>
             </div>
           </div>
 
-          <!-- Type -->
+          <!-- Jenis Produk -->
           <div class="col-md-6">
-            <div class="card border shadow-none h-100">
+            <div class="card border shadow-none">
               <div class="card-body">
                 <h6 class="card-title mb-3">Jenis Produk</h6>
                 <div class="mb-3">
-                  <label class="form-label">Tipe Produk</label>
-                  <select name="type" id="editProductType" class="form-select" required>
+                  <label for="editProductType" class="form-label">Tipe Produk</label>
+                  <select name="type" id="editProductType" class="form-select">
                     <option value="fisik">Fisik</option>
                     <option value="service">Service / Jasa</option>
                     <option value="ppob">PPOB</option>
                   </select>
-                  <input type="hidden" name="type" id="editProductTypeHidden">
-                  <div class="form-text">Menentukan perilaku produk pada POS.</div>
+                  <div class="form-text">Menentukan perilaku produk di sistem POS dan stok.</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Pricing -->
-        <div class="card border shadow-none mb-4">
-          <div class="card-body">
-            <h6 class="card-title mb-4">Harga Produk</h6>
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">Harga Beli</label>
-                <input type="number" step="0.01" name="cost" min="0" id="editInputCost" class="form-control">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Markup (%)</label>
-                <input type="number" step="0.01" name="markup" min="0" id="editInputMarkup" class="form-control">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Harga Jual</label>
-                <input type="number" step="0.01" name="salePrice" min="0" id="editInputSalePrice" class="form-control">
-              </div>
-            </div>
+        <!-- Harga -->
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label>Harga Beli (Cost)</label>
+            <input type="number" step="0.01" name="cost" min="0" id="editInputCost" class="form-control" required>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label>Markup (%)</label>
+            <input type="number" step="0.01" name="markup" min="0" id="editInputMarkup" class="form-control" required>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label>Harga Jual</label>
+            <input type="number" step="0.01" name="salePrice" min="0" id="editInputSalePrice" class="form-control" required>
           </div>
         </div>
 
-        <!-- Stock -->
-        <div class="card border shadow-none mb-4" id="stockSectionEdit">
-          <div class="card-body">
-            <h6 class="card-title mb-4">Kontrol Stok</h6>
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Reorder Point</label>
-                <input type="number" name="reorderPoint" min="0" id="editReorderPoint" class="form-control">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Preferred Quantity</label>
-                <input type="number" name="preferredQty" min="0" id="editPreferredQty" class="form-control">
-              </div>
-            </div>
+        <hr>
+
+        <!-- Stock Control -->
+        <h6 class="fw-bold">Kontrol Stok</h6>
+        <div class="row" id="stockSectionEdit">
+          <div class="col-md-6 mb-3">
+            <label>Reorder Point</label>
+            <input type="number" id="editReorderPoint" name="reorderPoint" min="0" class="form-control" placeholder="mis. 10">
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label>Preferred Quantity</label>
+            <input type="number" id="editPreferredQty" name="preferredQty" min="0" class="form-control" placeholder="mis. 50">
           </div>
         </div>
 
-        <!-- Tax & Warning -->
-        <div class="row g-4 mb-4">
-          <!-- Low Stock -->
+        <!-- Low Stock Warning -->
+        <div class="row">
           <div class="col-md-6">
-            <div class="card border shadow-none h-100">
-              <div class="card-body">
-                <h6 class="card-title mb-3">Peringatan Stok</h6>
-
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="editEnableLowStockWarning" name="lowStockWarning">
-                  <label class="form-check-label" for="editEnableLowStockWarning">
-                    Aktifkan Warning
-                  </label>
-                </div>
-                <input type="number" name="lowStockThreshold" id="editLowStockWarning" min="0" class="form-control" placeholder="Minimal stok" disabled>
-              </div>
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="editEnableLowStockWarning" name="lowStockWarning">
+              <label class="form-check-label" for="editEnableLowStockWarning">Aktifkan peringatan stok rendah</label>
+            </div>
+            <div class="mb-3">
+              <input type="number" name="lowStockThreshold" id="editLowStockThreshold" min="0" class="form-control" placeholder="Jumlah minimal sebelum peringatan" disabled>
             </div>
           </div>
 
-          <!-- Tax -->
-          <div class="col-md-6">
-            <div class="card border shadow-none h-100">
-              <div class="card-body">
-                <h6 class="card-title mb-3">Pajak Produk</h6>
-
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" id="editEnableInputTax" name="enableInputTax">
-                  <label class="form-check-label" for="editEnableInputTax">
-                    Gunakan Pajak
-                  </label>
-                </div>
-                <input type="number" name="tax" step="0.01" id="editTax" min="0" class="form-control" placeholder="10%" disabled>
-              </div>
+          <div class="col-md-6 mb-3">
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="editEnableInputTax" name="enableInputTax">
+              <label class="form-check-label" for="editEnableInputTax">Produk menggunakan Pajak (%)</label>
+            </div>
+            <div class="mb-3">
+              <input type="number" name="tax" step="0.01" id="editTax" min="0" class="form-control" placeholder="10%" disabled>
             </div>
           </div>
         </div>
 
-        <!-- Image -->
-        <div class="card border shadow-none">
-          <div class="card-body">
-            <h6 class="card-title mb-3">Gambar Produk</h6>
-            <input class="form-control" type="file" id="editProductImage" name="image" accept="image/*">
-            <div class="form-text">
-              Kosongkan jika tidak ingin mengubah gambar.
-            </div>
-            <div class="mt-3">
-              <img id="editProductPreview" src="" alt="Preview" class="img-thumbnail" style="max-width: 180px; display: none;">
-            </div>
+        <!-- Upload Gambar -->
+        <div class="mb-3">
+          <label for="editProductImage" class="form-label">Upload Gambar Produk</label>
+          <input class="form-control" type="file" id="editProductImage" name="image" accept="image/*">
+          <div class="form-text">Kosongkan jika tidak ingin mengubah gambar.</div>
+
+          <div class="mt-2">
+            <img id="editProductPreview" src="" alt="Preview Gambar Produk" style="max-width: 150px; display: none;">
           </div>
         </div>
       </div>
+
       <!-- Footer -->
       <div class="modal-footer">
         <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Batal</button>
+
         <button type="submit" class="btn btn-warning">Update Product</button>
       </div>
     </form>
   </div>
 </div>
+
 
 <!-- Modal Import CSV -->
 <div class="modal fade" id="modalImportCSV" tabindex="-1" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
@@ -546,5 +507,5 @@
   </div>
 </div>
 
-<script type="module" src="/assets/js/pages/products.js"></script>
+<script type="module" src="/assets/js/product/productPage.js"></script>
 <script type="module" src="/assets/js/utils/shortcut.js"></script>

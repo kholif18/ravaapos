@@ -1,17 +1,23 @@
-// routes/pos.js
+// routes/posRoutes.js
 const express = require('express');
 const router = express.Router();
 const posController = require('../controllers/posController');
 
-// GET POS page
+// GET routes
 router.get('/', posController.index);
+router.get('/search', posController.searchProducts);
+router.get('/favorites', posController.getFavoriteProducts);
+router.get('/customers', posController.getCustomers);
+router.get('/transaction-history', posController.getTransactionHistory);
+router.get('/daily-report', posController.getDailySalesReport);
+router.get('/debug', posController.debug);
 
-// API Routes
-router.get('/api/products/search', posController.searchProducts);
-router.get('/api/products/favorite', posController.getFavoriteProducts);
-router.get('/api/products/barcode/:barcode', posController.getProductByBarcode);
-router.get('/api/customers/search', posController.searchCustomers);
-router.get('/api/customers', posController.getCustomers);
-router.post('/api/transaction', posController.saveTransaction);
+// POST routes
+router.post('/save-transaction', posController.saveTransaction);
+router.post('/void-transaction', posController.voidTransaction);
+
+// GET with params
+router.get('/product/:barcode', posController.getProductByBarcode);
+router.get('/search-customers', posController.searchCustomers);
 
 module.exports = router;

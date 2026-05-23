@@ -123,161 +123,6 @@ function initializeModals() {
     createSuccessModal();
 }
 
-function createEditPriceModal() {
-    if (document.getElementById('editPriceModal')) return;
-    
-    const modalHtml = `
-        <div class="modal modal-top fade" id="editPriceModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Ubah Harga</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="editPriceProductId">
-                        <div class="mb-3">
-                            <label class="form-label">Nama Produk</label>
-                            <div class="form-control bg-light" id="editPriceProductName"></div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Harga Baru</label>
-                            <input type="number" class="form-control" id="editPriceNewPrice" step="100" min="0">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="button" class="btn btn-primary" id="savePriceBtn">Simpan</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    document.getElementById('savePriceBtn')?.addEventListener('click', saveEditedPrice);
-}
-
-function createEditDescModal() {
-    if (document.getElementById('editDescModal')) return;
-    
-    const modalHtml = `
-        <div class="modal modal-top fade" id="editDescModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Tambah Deskripsi</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="editDescProductId">
-                        <div class="mb-3">
-                            <label class="form-label">Nama Produk</label>
-                            <div class="form-control bg-light" id="editDescProductName"></div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Deskripsi Alternatif</label>
-                            <input type="text" class="form-control" id="editDescText" placeholder="Contoh: Ukuran M, Warna Merah...">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="button" class="btn btn-primary" id="saveDescBtn">Simpan</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    document.getElementById('saveDescBtn')?.addEventListener('click', saveEditedDescription);
-}
-
-function createPriceConfirmModal() {
-    if (document.getElementById('priceConfirmModal')) return;
-
-    const modalHtml = `
-        <div class="modal modal-top fade" id="priceConfirmModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog">
-                <form id="formPriceConfirm" class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bx bx-dollar-circle text-primary me-2"></i>Konfirmasi Harga</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Produk</label>
-                            <input type="text" id="confirmProductName" class="form-control" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Harga Satuan</label>
-                            <div class="input-group">
-                                <span class="input-group-text">Rp</span>
-                                <input type="number" id="confirmProductPrice" class="form-control" step="100" min="0" autofocus>
-                            </div>
-                        </div>
-                        <div id="confirmStockInfo" class="d-none">
-                            <div class="alert alert-secondary py-2">
-                                <small>Stok tersedia: <span id="confirmStock"></span></small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cancelPriceConfirmBtn">Batal</button>
-                        <button type="submit" class="btn btn-primary">Tambah</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-    // Registrasi event listener submit
-    const form = document.getElementById('formPriceConfirm');
-    if (form) form.addEventListener('submit', confirmAddToCart);
-
-    // Registrasi tombol batal
-    const cancelBtn = document.getElementById('cancelPriceConfirmBtn');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', function () {
-            // Hapus pending product
-            POS.pendingProduct = null;
-            // Fokus ke search setelah modal tertutup
-            setTimeout(() => {
-                if (DOM.searchProduct) {
-                    DOM.searchProduct.focus();
-                    DOM.searchProduct.select();
-                }
-            }, 150);
-        });
-    }
-
-    // Event untuk modal tertutup (termasuk klik backdrop atau tombol close)
-    const modalElement = document.getElementById('priceConfirmModal');
-    if (modalElement) {
-        modalElement.addEventListener('hidden.bs.modal', function () {
-            // Jika pending product masih ada (tidak di-cancel melalui tombol batal),
-            // berarti modal ditutup dengan cara lain, tetap bersihkan pending product
-            if (POS.pendingProduct) {
-                POS.pendingProduct = null;
-            }
-            // Fokus ke search product
-            setTimeout(() => {
-                if (DOM.searchProduct) {
-                    DOM.searchProduct.focus();
-                    DOM.searchProduct.select();
-                }
-            }, 100);
-        });
-
-        modalElement.addEventListener('shown.bs.modal', function () {
-            const priceInput = document.getElementById('confirmProductPrice');
-            if (priceInput) {
-                priceInput.focus();
-                priceInput.select();
-            }
-        });
-    }
-}
-
 function createPaymentModal() {
     if (document.getElementById('paymentModal')) return;
     
@@ -399,22 +244,6 @@ function handleDocumentClick(e) {
     const btn = target.closest('button');
     if (!btn) return;
 
-    // Tombol quantity minus
-    if (btn.classList.contains('btn-qty-minus')) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (POS.isTransactionLocked) return;
-        const cartId = btn.dataset.cartId; // LANGSUNG, tanpa parseInt
-        updateQuantity(cartId, -1);
-    }
-    // Tombol quantity plus
-    else if (btn.classList.contains('btn-qty-plus')) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (POS.isTransactionLocked) return;
-        const cartId = btn.dataset.cartId; // LANGSUNG
-        updateQuantity(cartId, 1);
-    }
     // Tombol remove
     else if (btn.classList.contains('btn-remove')) {
         e.preventDefault();
@@ -553,7 +382,7 @@ function handleMobileSearchKeydown(e) {
 
 async function performSearch(keyword) {
     try {
-        const response = await fetch(`/pos/api/products/search?q=${encodeURIComponent(keyword)}`);
+        const response = await fetch(`/pos/search?q=${encodeURIComponent(keyword)}`);
         const data = await response.json();
 
         if (data.success && data.products) {
@@ -720,7 +549,7 @@ function hideSearchDropdown() {
 
 async function handleBarcodeScan(barcode) {
     try {
-        const response = await fetch(`/pos/api/products/barcode/${encodeURIComponent(barcode)}`);
+        const response = await fetch(`/pos/product/${encodeURIComponent(barcode)}`);
         const data = await response.json();
         
         if (data.success && data.product) {
@@ -737,6 +566,9 @@ async function handleBarcodeScan(barcode) {
 }
 
 function addProductToCart(product) {
+    const isService = product.type === 'service';
+    const isPPOB = product.type === 'ppob';
+
     const cartProduct = {
         id: product.id,
         name: product.name,
@@ -750,9 +582,8 @@ function addProductToCart(product) {
         priceChangeAllowed: product.priceChangeAllowed || false,
         requireQtyInput: product.requireQtyInput || false,
         type: product.type || 'fisik',
-        service: product.service || false,
-        isService: product.service === true,
-        isPPOB: product.type === 'ppob',
+        isService: isService,
+        isPPOB: isPPOB,
         altDesc: ''
     };
 
@@ -1445,8 +1276,8 @@ function renderMobileCart() {
     let html = '';
     POS.cart.forEach(item => {
         const itemTotal = (item.price * item.qty) - (item.discount || 0);
-        const isService = item.isService || item.service === true;
-        const isPPOB = item.isPPOB || item.type === 'ppob';
+        const isService = item.type === 'service';
+        const isPPOB = item.type === 'ppob';
 
         let badgeHtml = '';
         if (isService) badgeHtml = '<span class="badge bg-warning" style="font-size: 0.6rem;">SVC</span>';
@@ -1594,15 +1425,15 @@ function renderCart() {
 // Create single cart row dengan Grid
 function createCartItemRow(item, index) {
     const itemTotal = (item.price * item.qty) - (item.discount || 0);
-    const isService = item.isService || item.service === true;
-    const isPPOB = item.isPPOB || item.type === 'ppob';
+    const isService = item.type === 'service';
+    const isPPOB = item.type === 'ppob';
     const hasStockLimit = !isService && !isPPOB;
     const isPriceEditable = item.priceChangeAllowed && !isPPOB;
     const needQtyInput = item.defaultQty || isService || isPPOB;
 
     let badgeHtml = '';
-    if (isService) badgeHtml = '<span class="badge bg-warning">SVC</span>';
-    if (isPPOB) badgeHtml = '<span class="badge bg-info">PPOB</span>';
+    if (item.type === 'service') badgeHtml = '<span class="badge bg-warning">SVC</span>';
+    if (item.type === 'ppob') badgeHtml = '<span class="badge bg-info">PPOB</span>';
     if (item.defaultQty) badgeHtml += '<span class="badge bg-secondary ms-1">Qty</span>';
 
     return `
@@ -1772,7 +1603,7 @@ function resetToDefaultCustomer() {
 
 async function performCustomerSearch(keyword) {
     try {
-        const response = await fetch(`/pos/api/customers/search?q=${encodeURIComponent(keyword)}`);
+        const response = await fetch(`/pos/search-customers?q=${encodeURIComponent(keyword)}`);
         const data = await response.json();
         
         if (data.customers?.length > 0) {
@@ -1947,7 +1778,7 @@ function showPaymentModal(total) {
     let selectedMethod = 'cash';
     
     // Set total
-    if (totalSpan) totalSpan.textContent = formatRupiahLarge(total);
+    if (totalSpan) totalSpan.textContent = formatRupiah(total);
     if (amountInput) amountInput.value = total;
     
     // Payment method selection
@@ -2060,7 +1891,7 @@ async function processTransaction(paymentData) {
             productId: item.id,
             quantity: item.qty,
             price: item.price,
-            total: item.price * item.qty,
+            subtotal: item.price * item.qty,
             tax: item.tax || 0,
             altDesc: item.altDesc || null
         })),
@@ -2075,10 +1906,10 @@ async function processTransaction(paymentData) {
     };
     
     const headers = { 'Content-Type': 'application/json' };
-    if (POS.csrfToken) headers['CSRF-Token'] = POS.csrfToken;
+    // if (POS.csrfToken) headers['CSRF-Token'] = POS.csrfToken;
     
     try {
-        const response = await fetch('/pos/api/transaction', {
+        const response = await fetch('/pos/save-transaction', {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(transactionData)
@@ -2225,7 +2056,7 @@ function updateLockUI(isLocked) {
     }
     
     // Disable interactive elements
-    const selectors = ['.btn-qty-minus', '.btn-qty-plus', '.qty-input', '.btn-remove', '.btn-edit-price', '.btn-edit-desc', '#clearCartBtn', '#discountInput'];
+    const selectors = ['.qty-input', '.btn-remove', '#clearCartBtn', '#discountInput'];
     selectors.forEach(selector => {
         document.querySelectorAll(selector).forEach(el => {
             el.disabled = isLocked;
@@ -2330,6 +2161,14 @@ function handleKeyboardShortcuts(e) {
             hideSearchDropdown();
         }
     }
+}
+
+function openSlidePanel() {
+    const slidePanel = document.getElementById('slidePanel');
+    const slideOverlay = document.getElementById('slideOverlay');
+    if (slidePanel) slidePanel.classList.add('open');
+    if (slideOverlay) slideOverlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
 }
 
 // ==================== MOBILE SLIDE PANEL ====================

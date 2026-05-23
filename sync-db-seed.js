@@ -6,6 +6,7 @@ const db = require('./app/models');
 const customerSeeder = require('./seeders/20260517090419-default-customer');
 const supplierSeeder = require('./seeders/20260517090500-default-suppliers');
 const categorySeeder = require('./seeders/20260517090600-default-categories');
+const productsSeeder = require('./seeders/20260517090700-demo-products');
 
 async function setupDatabase() {
     try {
@@ -31,6 +32,10 @@ async function setupDatabase() {
 
         console.log('⏳ Running category seeder...');
         await categorySeeder.up(queryInterface, db.Sequelize);
+        console.log('✅ Category seeder done');
+
+        console.log('⏳ Running category seeder...');
+        await productsSeeder.up(queryInterface, db.Sequelize);
         console.log('✅ Category seeder done');
 
         console.log('\n🎉 Database setup completed');

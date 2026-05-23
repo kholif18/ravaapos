@@ -1,36 +1,57 @@
-const {
-    Product,
-    Category,
-    Customer,
-    Supplier
-} = require('../models');
-const {
-    Op
-} = require('sequelize');
+// controllers/posController.js
+const db = require('../models');
+const { Product, Category, Customer, Sale, SaleItem, StockMovement } = db;
+const { Op } = require('sequelize');
+
+// Constanta untuk available product where clause
+const availableProductWhere = {
+    [Op.or]: [{
+            type: 'fisik',
+            stock: {
+                [Op.gt]: 0
+            }
+        },
+        {
+            type: {
+                [Op.in]: ['service', 'ppob']
+            }
+        }
+    ]
+};
+
+// Reusable product attributes
+const productAttributes = [
+    'id',
+    'name',
+    'code',
+    'barcode',
+    'salePrice',
+    'stock',
+    'image',
+    'unit',
+    'categoryId',
+    'type',
+    'tax',
+    'enableInputTax',
+    'enableAltDesc',
+    'priceChangeAllowed'
+];
+
+// Helper: Generate Invoice Number
+function generateInvoiceNumber() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `INV-${year}${month}${day}-${random}`;
+}
 
 // GET POS page
 exports.index = async (req, res) => {
     try {
-        // Produk favorit: produk dengan stok > 0, limit 8
-        const whereClause = {
-            [Op.or]: [{
-                    type: 'fisik',
-                    service: false,
-                    stock: {
-                        [Op.gt]: 0
-                    }
-                },
-                {
-                    type: 'fisik',
-                    service: true
-                },
-                {
-                    type: 'ppob'
-                }
-            ]
-        };
+        const whereClause = { ...availableProductWhere };
 
-        // Ambil produk favorit (limit 8 untuk grid)
         const favoriteProducts = await Product.findAll({
             where: whereClause,
             include: [{
@@ -39,30 +60,22 @@ exports.index = async (req, res) => {
                 attributes: ['id', 'name']
             }],
             order: [
-                ['stock', 'DESC'], // Stok terbanyak dulu
+                ['stock', 'DESC'],
                 ['name', 'ASC']
             ],
-            limit: 8 // Hanya 8 produk favorit
+            limit: 8
         });
 
-        console.log(`📦 Favorite Products: ${favoriteProducts.length}`);
-
-        // Ambil semua kategori untuk filter
         const categories = await Category.findAll({
-            order: [
-                ['name', 'ASC']
-            ],
+            order: [['name', 'ASC']],
             attributes: ['id', 'name']
         });
 
-        // Ambil customer untuk dropdown
         let customers = [];
         try {
             if (Customer) {
                 let defaultCustomer = await Customer.findOne({
-                    where: {
-                        name: 'Walk-in Customer'
-                    }
+                    where: { name: 'Walk-in Customer' }
                 });
 
                 if (!defaultCustomer) {
@@ -74,19 +87,13 @@ exports.index = async (req, res) => {
                         memberDiscount: 0,
                         point: 0
                     });
-                    console.log('✅ Default customer created');
                 }
 
                 customers = await Customer.findAll({
-                    where: {
-                        status: 'active'
-                    },
-                    order: [
-                        ['name', 'ASC']
-                    ],
+                    where: { status: 'active' },
+                    order: [['name', 'ASC']],
                     attributes: ['id', 'name', 'phone', 'email', 'type', 'memberDiscount']
                 });
-                console.log(`👥 Customers found: ${customers.length}`);
             }
         } catch (err) {
             console.error('Error fetching customers:', err.message);
@@ -97,9 +104,9 @@ exports.index = async (req, res) => {
             title: 'Point of Sale',
             layout: false,
             activePage: 'pos',
-            products: favoriteProducts || [],
-            categories: categories || [],
-            customers: customers || [],
+            products: favoriteProducts,
+            categories,
+            customers,
             taxRate: 11,
             date: new Date().toISOString()
         });
@@ -117,126 +124,46 @@ exports.index = async (req, res) => {
 // API: Search products
 exports.searchProducts = async (req, res) => {
     try {
-        const {
-            q,
-            categoryId
-        } = req.query;
+        const { q, categoryId } = req.query;
+        const whereClause = { ...availableProductWhere };
 
-        const whereClause = {
-            [Op.or]: [{
-                    type: 'fisik',
-                    service: false,
-                    stock: {
-                        [Op.gt]: 0
-                    }
-                },
-                {
-                    type: 'fisik',
-                    service: true
-                },
-                {
-                    type: 'ppob'
-                }
-            ]
-        };
-
-        // Search by keyword
         if (q && q.trim()) {
-            whereClause[Op.and] = [{
-                    [Op.or]: [{
-                            type: 'fisik',
-                            service: false,
-                            stock: {
-                                [Op.gt]: 0
-                            }
-                        },
-                        {
-                            type: 'fisik',
-                            service: true
-                        },
-                        {
-                            type: 'ppob'
-                        }
-                    ]
-                },
+            whereClause[Op.and] = [
+                { ...availableProductWhere },
                 {
-                    [Op.or]: [{
-                            name: {
-                                [Op.like]: `%${q}%`
-                            }
-                        },
-                        {
-                            code: {
-                                [Op.like]: `%${q}%`
-                            }
-                        },
-                        {
-                            barcode: {
-                                [Op.like]: `%${q}%`
-                            }
-                        }
+                    [Op.or]: [
+                        { name: { [Op.like]: `%${q}%` } },
+                        { code: { [Op.like]: `%${q}%` } },
+                        { barcode: { [Op.like]: `%${q}%` } }
                     ]
                 }
             ];
             delete whereClause[Op.or];
         }
 
-        // Filter by category
         if (categoryId && categoryId !== 'all') {
             whereClause.categoryId = parseInt(categoryId);
         }
 
         const products = await Product.findAll({
             where: whereClause,
-            attributes: ['id', 'name', 'code', 'salePrice', 'stock', 'image', 'unit', 'categoryId', 'type', 'service', 'tax', 'enableInputTax',
-                'enableAltDesc', 'priceChangeAllowed'
-            ],
+            attributes: productAttributes,
             limit: 50,
-            order: [
-                ['name', 'ASC']
-            ]
+            order: [['name', 'ASC']]
         });
 
-        console.log(`🔍 Search found ${products.length} products`);
-
-        res.json({
-            success: true,
-            products: products || []
-        });
-
+        res.json({ success: true, products });
     } catch (err) {
         console.error('Error searching products:', err);
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
+// API: Get favorite products
 exports.getFavoriteProducts = async (req, res) => {
     try {
-        const {
-            categoryId,
-            limit = 8
-        } = req.query;
-
-        const whereClause = {
-            [Op.or]: [{
-                    type: 'fisik',
-                    service: false,
-                    stock: {
-                        [Op.gt]: 0
-                    }
-                },
-                {
-                    type: 'fisik',
-                    service: true
-                },
-                {
-                    type: 'ppob'
-                }
-            ]
-        };
+        const { categoryId, limit = 8 } = req.query;
+        const whereClause = { ...availableProductWhere };
 
         if (categoryId && categoryId !== 'all') {
             whereClause.categoryId = parseInt(categoryId);
@@ -244,11 +171,7 @@ exports.getFavoriteProducts = async (req, res) => {
 
         const products = await Product.findAll({
             where: whereClause,
-            attributes: [
-                'id', 'name', 'code', 'salePrice', 'stock', 'image', 'unit',
-                'categoryId', 'type', 'service', 'tax',
-                'enableInputTax', 'enableAltDesc', 'priceChangeAllowed'
-            ],
+            attributes: productAttributes,
             order: [
                 ['stock', 'DESC'],
                 ['name', 'ASC']
@@ -256,25 +179,17 @@ exports.getFavoriteProducts = async (req, res) => {
             limit: parseInt(limit)
         });
 
-        res.json({
-            success: true,
-            products: products || []
-        });
+        res.json({ success: true, products });
     } catch (err) {
         console.error('Error fetching favorite products:', err);
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
 // API: Get product by barcode or code
 exports.getProductByBarcode = async (req, res) => {
     try {
-        const {
-            barcode
-        } = req.params;
+        const { barcode } = req.params;
 
         if (!barcode) {
             return res.status(400).json({
@@ -285,32 +200,17 @@ exports.getProductByBarcode = async (req, res) => {
 
         const product = await Product.findOne({
             where: {
-                [Op.or]: [{
-                        barcode: barcode
-                    },
+                [Op.and]: [
                     {
-                        code: barcode
-                    }
-                ],
-                [Op.or]: [{
-                        type: 'fisik',
-                        service: false,
-                        stock: {
-                            [Op.gt]: 0
-                        }
+                        [Op.or]: [
+                            { barcode: barcode },
+                            { code: barcode }
+                        ]
                     },
-                    {
-                        type: 'fisik',
-                        service: true
-                    },
-                    {
-                        type: 'ppob'
-                    }
+                    { ...availableProductWhere }
                 ]
             },
-            attributes: ['id', 'name', 'code', 'barcode', 'salePrice', 'stock', 'unit', 'type', 'service', 'tax', 'enableInputTax',
-                'enableAltDesc', 'priceChangeAllowed'
-            ]
+            attributes: productAttributes
         });
 
         if (!product) {
@@ -320,80 +220,50 @@ exports.getProductByBarcode = async (req, res) => {
             });
         }
 
-        // Cek stok hanya untuk produk fisik non-jasa
-        if (product.type === 'fisik' && !product.service && product.stock <= 0) {
+        if (product.type === 'fisik' && product.stock <= 0) {
             return res.status(400).json({
                 success: false,
                 message: 'Stok produk habis'
             });
         }
 
-        res.json({
-            success: true,
-            product: product
-        });
-
+        res.json({ success: true, product });
     } catch (err) {
         console.error('Error finding product by barcode:', err);
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
+        res.status(500).json({ success: false, message: err.message });
     }
 };
 
 // API: Get customer by phone/email/name
 exports.searchCustomers = async (req, res) => {
     try {
-        const {
-            q
-        } = req.query;
+        const { q } = req.query;
 
         if (!q || q.length < 2) {
-            return res.json({
-                customers: []
-            });
+            return res.json({ customers: [] });
         }
 
         if (!Customer) {
-            return res.json({
-                customers: []
-            });
+            return res.json({ customers: [] });
         }
 
         const customers = await Customer.findAll({
             where: {
                 status: 'active',
-                [Op.or]: [{
-                        name: {
-                            [Op.like]: `%${q}%`
-                        }
-                    },
-                    {
-                        phone: {
-                            [Op.like]: `%${q}%`
-                        }
-                    },
-                    {
-                        email: {
-                            [Op.like]: `%${q}%`
-                        }
-                    }
+                [Op.or]: [
+                    { name: { [Op.like]: `%${q}%` } },
+                    { phone: { [Op.like]: `%${q}%` } },
+                    { email: { [Op.like]: `%${q}%` } }
                 ]
             },
             attributes: ['id', 'name', 'phone', 'email', 'type', 'memberDiscount'],
             limit: 10
         });
 
-        res.json({
-            customers: customers || []
-        });
-
+        res.json({ customers });
     } catch (err) {
         console.error('Error searching customers:', err);
-        res.status(500).json({
-            customers: []
-        });
+        res.status(500).json({ customers: [] });
     }
 };
 
@@ -401,36 +271,27 @@ exports.searchCustomers = async (req, res) => {
 exports.getCustomers = async (req, res) => {
     try {
         if (!Customer) {
-            return res.json({
-                customers: []
-            });
+            return res.json({ customers: [] });
         }
 
         const customers = await Customer.findAll({
-            where: {
-                status: 'active'
-            },
-            order: [
-                ['name', 'ASC']
-            ],
+            where: { status: 'active' },
+            order: [['name', 'ASC']],
             attributes: ['id', 'name', 'phone', 'email', 'type', 'memberDiscount'],
             limit: 100
         });
 
-        res.json({
-            customers: customers || []
-        });
-
+        res.json({ customers });
     } catch (err) {
         console.error('Error fetching customers:', err);
-        res.status(500).json({
-            customers: []
-        });
+        res.status(500).json({ customers: [] });
     }
 };
 
-// POST: Save transaction
+// POST: Save transaction (FULL VERSION)
 exports.saveTransaction = async (req, res) => {
+    const t = await db.sequelize.transaction();
+    
     try {
         const {
             customerId,
@@ -446,50 +307,313 @@ exports.saveTransaction = async (req, res) => {
         } = req.body;
 
         if (!items || items.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Keranjang belanja kosong'
-            });
+            throw new Error('Keranjang belanja kosong');
         }
 
-        // Validasi stok hanya untuk produk fisik non-jasa
+        if (!paymentMethod) {
+            throw new Error('Metode pembayaran harus dipilih');
+        }
+
+        // VALIDASI PEMBAYARAN
+        if (paymentMethod === 'cash') {
+            const received = parseFloat(amountReceived) || 0;
+            const totalAmount = parseFloat(total);
+            
+            if (received < totalAmount) {
+                throw new Error(`Uang pembayaran kurang: Rp ${totalAmount - received} yang harus dibayar`);
+            }
+        }
+
+        const invoiceNumber = generateInvoiceNumber();
+
+        // Create sale
+        const sale = await Sale.create({
+            invoiceNumber,
+            customerId: customerId || null,
+            subtotal: parseFloat(subtotal),
+            tax: parseFloat(tax),
+            discount: parseFloat(discount),
+            total: parseFloat(total),
+            paymentMethod,
+            amountReceived: parseFloat(amountReceived) || 0,
+            change: parseFloat(change) || 0,
+            notes: notes || null,
+            cashierId: req.user?.id || null,
+            status: 'paid'
+        }, { transaction: t });
+
+        // Process items
         for (const item of items) {
-            const product = await Product.findByPk(item.productId);
+            const product = await Product.findByPk(item.productId, { transaction: t });
+            
             if (!product) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Produk tidak ditemukan`
-                });
+                throw new Error(`Produk dengan ID ${item.productId} tidak ditemukan`);
             }
 
-            // Cek stok hanya untuk produk fisik yang BUKAN jasa (service = false)
-            if (product.type === 'fisik' && !product.service && product.stock < item.quantity) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Stok ${product.name} tidak mencukupi (tersedia: ${product.stock})`
+            if (product.type === 'fisik' && product.stock < item.quantity) {
+                throw new Error(`Stok ${product.name} tidak mencukupi (tersedia: ${product.stock})`);
+            }
+
+            await SaleItem.create({
+                saleId: sale.id,
+                productId: product.id,
+                qty: item.quantity,
+                price: parseFloat(item.price),
+                subtotal: parseFloat(item.subtotal),
+                tax: parseFloat(item.tax) || 0,
+                discount: parseFloat(item.discount) || 0,
+                notes: item.notes || null
+            }, { transaction: t });
+
+            // Update stock using decrement (atomic)
+            if (product.type === 'fisik') {
+                const beforeStock = product.stock;
+                await product.decrement('stock', {
+                    by: item.quantity,
+                    transaction: t
                 });
+                
+                // Reload to get after stock
+                await product.reload({ transaction: t });
+                
+                // Create stock movement record
+                await StockMovement.create({
+                    productId: product.id,
+                    qty: -item.quantity,
+                    type: 'sale',
+                    referenceId: sale.id,
+                    referenceType: 'Sale',
+                    beforeStock: beforeStock,
+                    afterStock: product.stock,
+                    notes: `Penjualan invoice ${invoiceNumber}`,
+                    createdBy: req.user?.id || null
+                }, { transaction: t });
             }
         }
 
-        // TODO: Simpan ke database
-        const orderNumber = 'INV-' + Date.now();
-
-        console.log('✅ Transaction saved:', {
-            orderNumber,
-            customerId,
-            itemsCount: items.length,
-            total,
-            paymentMethod
-        });
+        await t.commit();
 
         res.json({
             success: true,
-            message: 'Transaksi berhasil',
-            orderNumber: orderNumber
+            message: 'Transaksi berhasil disimpan',
+            invoiceNumber: sale.invoiceNumber,
+            saleId: sale.id
         });
 
     } catch (err) {
+        await t.rollback();
         console.error('Error saving transaction:', err);
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+
+// VOID Transaction (NEW)
+exports.voidTransaction = async (req, res) => {
+    const t = await db.sequelize.transaction();
+    
+    try {
+        const { saleId, reason } = req.body;
+        
+        if (!saleId) {
+            throw new Error('ID transaksi diperlukan');
+        }
+        
+        if (!reason) {
+            throw new Error('Alasan pembatalan harus diisi');
+        }
+        
+        // Find sale
+        const sale = await Sale.findByPk(saleId, {
+            include: [{
+                model: SaleItem,
+                as: 'items'
+            }],
+            transaction: t
+        });
+        
+        if (!sale) {
+            throw new Error('Transaksi tidak ditemukan');
+        }
+        
+        if (sale.status !== 'paid') {
+            throw new Error(`Transaksi dengan status ${sale.status} tidak dapat dibatalkan`);
+        }
+        
+        // Update sale status
+        await sale.update({
+            status: 'void',
+            voidReason: reason,
+            voidedBy: req.user?.id || null,
+            voidedAt: new Date()
+        }, { transaction: t });
+        
+        // Return stock for physical products
+        for (const item of sale.items) {
+            const product = await Product.findByPk(item.productId, { transaction: t });
+            
+            if (product && product.type === 'fisik') {
+                const beforeStock = product.stock;
+                await product.increment('stock', {
+                    by: item.qty,
+                    transaction: t
+                });
+                
+                await product.reload({ transaction: t });
+                
+                // Create stock movement record
+                await StockMovement.create({
+                    productId: product.id,
+                    qty: item.qty,
+                    type: 'void_return',
+                    referenceId: sale.id,
+                    referenceType: 'Sale',
+                    beforeStock: beforeStock,
+                    afterStock: product.stock,
+                    notes: `Pembatalan transaksi ${sale.invoiceNumber}. Alasan: ${reason}`,
+                    createdBy: req.user?.id || null
+                }, { transaction: t });
+            }
+        }
+        
+        await t.commit();
+        
+        res.json({
+            success: true,
+            message: 'Transaksi berhasil dibatalkan',
+            saleId: sale.id,
+            invoiceNumber: sale.invoiceNumber
+        });
+        
+    } catch (err) {
+        await t.rollback();
+        console.error('Error voiding transaction:', err);
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+
+// Get Transaction History with Pagination (UPDATED)
+exports.getTransactionHistory = async (req, res) => {
+    try {
+        const { limit = 50, offset = 0, status } = req.query;
+        
+        const whereClause = {};
+        if (status && status !== 'all') {
+            whereClause.status = status;
+        }
+        
+        const { count, rows: sales } = await Sale.findAndCountAll({
+            where: whereClause,
+            include: [
+                {
+                    model: Customer,
+                    as: 'customer',
+                    attributes: ['id', 'name', 'phone']
+                },
+                {
+                    model: SaleItem,
+                    as: 'items',
+                    include: [{
+                        model: Product,
+                        as: 'product',
+                        attributes: ['id', 'name', 'code', 'type']
+                    }]
+                }
+            ],
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+        
+        res.json({
+            success: true,
+            sales,
+            total: count,
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+    } catch (err) {
+        console.error('Error fetching transactions:', err);
+        res.status(500).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+
+// Get Daily Sales Report (NEW)
+exports.getDailySalesReport = async (req, res) => {
+    try {
+        const { date } = req.query;
+        const targetDate = date ? new Date(date) : new Date();
+        
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const sales = await Sale.findAll({
+            where: {
+                createdAt: {
+                    [Op.between]: [startOfDay, endOfDay]
+                },
+                status: 'paid'
+            },
+            include: [{
+                model: SaleItem,
+                as: 'items'
+            }]
+        });
+        
+        const totalSales = sales.length;
+        const totalRevenue = sales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
+        const totalTax = sales.reduce((sum, sale) => sum + parseFloat(sale.tax), 0);
+        const totalDiscount = sales.reduce((sum, sale) => sum + parseFloat(sale.discount), 0);
+        
+        // Top products
+        const productSales = {};
+        for (const sale of sales) {
+            for (const item of sale.items) {
+                const product = await Product.findByPk(item.productId);
+                if (product) {
+                    if (!productSales[product.id]) {
+                        productSales[product.id] = {
+                            name: product.name,
+                            qty: 0,
+                            revenue: 0
+                        };
+                    }
+                    productSales[product.id].qty += item.qty;
+                    productSales[product.id].revenue += parseFloat(item.subtotal);
+                }
+            }
+        }
+        
+        const topProducts = Object.values(productSales)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 10);
+        
+        res.json({
+            success: true,
+            date: startOfDay,
+            summary: {
+                totalSales,
+                totalRevenue,
+                totalTax,
+                totalDiscount,
+                averageTransactionValue: totalSales > 0 ? totalRevenue / totalSales : 0
+            },
+            topProducts
+        });
+        
+    } catch (err) {
+        console.error('Error generating daily report:', err);
         res.status(500).json({
             success: false,
             message: err.message
@@ -501,36 +625,29 @@ exports.saveTransaction = async (req, res) => {
 exports.debug = async (req, res) => {
     try {
         const allProducts = await Product.findAll({
-            attributes: ['id', 'name', 'type', 'service', 'stock', 'salePrice']
+            attributes: ['id', 'name', 'type', 'stock', 'salePrice']
         });
 
         const fisikProducts = await Product.findAll({
             where: {
                 type: 'fisik',
-                service: false,
-                stock: {
-                    [Op.gt]: 0
-                }
-            }
+                stock: { [Op.gt]: 0 }
+            },
+            attributes: ['id', 'name', 'type', 'stock', 'salePrice']
         });
 
         const serviceProducts = await Product.findAll({
-            where: {
-                type: 'fisik',
-                service: true
-            }
+            where: { type: 'service' },
+            attributes: ['id', 'name', 'type', 'stock', 'salePrice']
         });
 
         const ppobProducts = await Product.findAll({
-            where: {
-                type: 'ppob'
-            }
+            where: { type: 'ppob' },
+            attributes: ['id', 'name', 'type', 'stock', 'salePrice']
         });
 
         const customers = await Customer.findAll({
-            where: {
-                status: 'active'
-            },
+            where: { status: 'active' },
             attributes: ['id', 'name', 'type', 'phone']
         });
 
@@ -547,11 +664,9 @@ exports.debug = async (req, res) => {
                 ppob: ppobProducts,
                 all: allProducts
             },
-            customers: customers
+            customers
         });
     } catch (err) {
-        res.status(500).json({
-            error: err.message
-        });
+        res.status(500).json({ error: err.message });
     }
 };

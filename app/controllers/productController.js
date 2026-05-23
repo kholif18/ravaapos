@@ -8,6 +8,10 @@ const {
   Category,
   Supplier
 } = require('../models');
+const PRODUCT_RULES = require('../rules/productRules');
+const {
+  normalizeProduct
+} = require('../rules/productNormalizer');
 const {
   Op,
   Sequelize
@@ -114,303 +118,239 @@ exports.generateProductCode = async (req, res) => {
 
 const toBoolean = val => val === 'true' || val === true || val === 'on';
 
+function handleNormalizeError(err) {
+  if (err.message.startsWith('MIN_SALE_PRICE:')) {
+    return err.message.split(':')[1];
+  }
+  return null;
+}
+
 // POST create (AJAX)
 exports.createProduct = async (req, res) => {
-  try {
-    const {
-      name,
-      categoryId,
-      code,
-      barcode,
-      unit,
-      supplierId,
-      requireQtyInput,
-      type,
-      cost,
-      markup,
-      salePrice,
-      priceChangeAllowed,
-      reorderPoint,
-      preferredQty,
-      lowStockWarning,
-      lowStockThreshold,
-      enableInputTax,
-      enableAltDesc
-    } = req.body;
+    try {
+        const {
+            name,
+            categoryId,
+            code,
+            barcode,
+            unit,
+            supplierId,
+            requireQtyInput,
+            type,
+            priceChangeAllowed,
+            reorderPoint,
+            preferredQty,
+            enableAltDesc
+        } = req.body;
 
-    // Konversi boolean
-    const isRequireQtyInput = toBoolean(requireQtyInput);
-    const allowPriceChange = toBoolean(priceChangeAllowed);
-    const hasLowStockWarning = toBoolean(lowStockWarning);
-    const isEnableInputTax = toBoolean(enableInputTax);
-    const isEnableAltDesc = toBoolean(enableAltDesc);
+        const rule = PRODUCT_RULES[type];
+        if (!rule) {
+            return res.status(400).json({ success: false, message: 'Type tidak valid' });
+        }
 
-    const tax = parseFloat(req.body.tax);
-    const errors = {};
+        const errors = {};
 
-    // Validasi dasar
-    if (!name?.trim()) errors.name = 'Nama harus diisi';
-    if (!code?.trim()) errors.code = 'Kode harus diisi';
-    
-    if (req.body.tax && (isNaN(tax) || tax < 0 || tax > 100)) {
-      errors.tax = 'Pajak harus antara 0 - 100';
+        // BASIC VALIDATION (ONLY ONCE)
+        if (!name?.trim()) errors.name = 'Nama harus diisi';
+        if (!code?.trim()) errors.code = 'Kode harus diisi';
+        if (!unit?.trim()) errors.unit = 'Unit harus diisi';
+
+        // NORMALIZE (SOURCE OF TRUTH)
+        let normalized;
+        try {
+            normalized = normalizeProduct(type, req.body);
+        } catch (err) {
+            const msg = handleNormalizeError(err);
+            if (msg) errors.salePrice = `Minimal ${msg}`;
+            else throw err;
+        }
+
+        const {
+            cost,
+            markup,
+            salePrice,
+            tax,
+            lowStockWarning,
+            lowStockThreshold
+        } = normalized;
+
+        // VALIDATION LOW STOCK (NO DUPLICATE LOGIC ANYWHERE ELSE)
+        if (
+            lowStockWarning &&
+            (lowStockThreshold === null || lowStockThreshold < 0)
+        ) {
+            errors.lowStockThreshold = 'Batas stok rendah tidak valid';
+        }
+
+        if (Object.keys(errors).length) {
+            return res.status(400).json({ success: false, errors });
+        }
+
+        // IMAGE
+        let imagePath = null;
+        if (req.file) {
+            const uploadDir = path.join(__dirname, '../../public/uploads/products');
+            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+            const ext = path.extname(req.file.originalname);
+            const fileName = `product-${Date.now()}${ext}`;
+            fs.writeFileSync(path.join(uploadDir, fileName), req.file.buffer);
+
+            imagePath = `/uploads/products/${fileName}`;
+        }
+
+        await Product.create({
+            name,
+            categoryId: categoryId || null,
+            code,
+            barcode: barcode?.trim() || null,
+            unit,
+            supplierId: supplierId || null,
+
+            requireQtyInput: !!requireQtyInput,
+            type,
+
+            cost,
+            markup,
+            salePrice,
+
+            priceChangeAllowed: !!priceChangeAllowed,
+
+            reorderPoint: Number(reorderPoint) || 0,
+            preferredQty: Number(preferredQty) || 0,
+
+            lowStockWarning,
+            lowStockThreshold,
+
+            enableInputTax: !!req.body.enableInputTax,
+            tax,
+
+            enableAltDesc: !!enableAltDesc,
+
+            image: imagePath,
+            stock: 0
+        });
+
+        return res.json({ success: true });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false });
     }
-    
-    if (!['fisik', 'service', 'ppob'].includes(type)) {
-      errors.type = 'Jenis produk tidak valid';
-    }
-    
-    let parsedCost = parseFloat(cost);
-    let parsedMarkup = parseFloat(markup);
-    let parsedSalePrice = parseFloat(salePrice);
-    const parsedReorder = parseInt(reorderPoint) || 0;
-    const parsedPreferredQty = parseInt(preferredQty) || 0;
-    const parsedLowStockThreshold = parseInt(lowStockThreshold);
-
-    // Validasi sesuai type
-    if (type === 'fisik') {
-      if (isNaN(parsedCost) || parsedCost < 0) {
-        errors.cost = 'Harga modal harus valid';
-      }
-      if (isNaN(parsedMarkup) || parsedMarkup < 0) {
-        errors.markup = 'Markup harus valid';
-      }
-      if (isNaN(parsedSalePrice) || parsedSalePrice <= 0) {
-        errors.salePrice = 'Harga jual harus lebih dari 0';
-      }
-    }
-
-    if (type === 'service') {
-      if (isNaN(parsedCost)) parsedCost = 0;
-      if (isNaN(parsedMarkup)) parsedMarkup = 0;
-      if (isNaN(parsedSalePrice) || parsedSalePrice <= 0) {
-        errors.salePrice = 'Harga jual harus lebih dari 0';
-      }
-    }
-
-    if (type === 'ppob') {
-      // PPOB: harga bisa 0 atau diisi nanti saat transaksi
-      parsedCost = 0;
-      parsedMarkup = 0;
-      // Sale price boleh 0 untuk PPOB
-      if (isNaN(parsedSalePrice)) parsedSalePrice = 0;
-    }
-
-    if (hasLowStockWarning && (isNaN(parsedLowStockThreshold) || parsedLowStockThreshold < 0)) {
-      errors.lowStockThreshold = 'Batas stok rendah tidak valid';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return res.status(400).json({ success: false, errors });
-    }
-
-    // Handle gambar
-    let imagePath = null;
-    if (req.file) {
-      const uploadDir = path.join(__dirname, '../../public/uploads/products');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const ext = path.extname(req.file.originalname);
-      const fileName = `product-${Date.now()}${ext}`;
-      const targetPath = path.join(uploadDir, fileName);
-      fs.writeFileSync(targetPath, req.file.buffer);
-      imagePath = `/uploads/products/${fileName}`;
-    }
-
-    await Product.create({
-      name,
-      code,
-      barcode: barcode?.trim() || null,
-      unit,
-      categoryId: categoryId || null,
-      requireQtyInput: isRequireQtyInput,
-      type,
-      cost: parsedCost,
-      markup: parsedMarkup,
-      salePrice: parsedSalePrice,
-      priceChangeAllowed: allowPriceChange,
-      supplierId: supplierId || null,
-      reorderPoint: parsedReorder,
-      preferredQty: parsedPreferredQty,
-      lowStockWarning: hasLowStockWarning,
-      lowStockThreshold: hasLowStockWarning ? parsedLowStockThreshold : null,
-      enableInputTax: isEnableInputTax,
-      tax: isNaN(tax) ? null : tax,
-      enableAltDesc: isEnableAltDesc,
-      image: imagePath,
-      stock: 0
-    });
-
-    return res.json({ success: true });
-
-  } catch (err) {
-    console.error(err);
-
-    if (err instanceof Sequelize.UniqueConstraintError) {
-      const errors = {};
-      for (const e of err.errors) {
-        errors[e.path] = `${e.path} sudah digunakan`;
-      }
-      return res.status(400).json({ success: false, errors });
-    }
-
-    return res.status(500).json({ success: false, message: 'Gagal membuat produk' });
-  }
 };
 
 // Update (AJAX)
 exports.updateProduct = async (req, res) => {
-  try {
-    const product = await Product.findByPk(req.params.id);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Produk tidak ditemukan' });
-    }
+    try {
+        const product = await Product.findByPk(req.params.id);
 
-    const {
-      name,
-      categoryId,
-      code,
-      barcode,
-      unit,
-      supplierId,
-      requireQtyInput,
-      cost,
-      markup,
-      salePrice,
-      priceChangeAllowed,
-      reorderPoint,
-      preferredQty,
-      lowStockWarning,
-      lowStockThreshold,
-      enableInputTax,
-      enableAltDesc
-    } = req.body;
-
-    const tax = parseFloat(req.body.tax);
-
-    // Konversi boolean
-    const isRequireQtyInput = toBoolean(requireQtyInput);
-    const allowPriceChange = toBoolean(priceChangeAllowed);
-    const hasLowStockWarning = toBoolean(lowStockWarning);
-    const isEnableInputTax = toBoolean(enableInputTax);
-    const isEnableAltDesc = toBoolean(enableAltDesc);
-
-    // Parsing angka
-    let parsedCost = parseFloat(cost);
-    let parsedMarkup = parseFloat(markup);
-    let parsedSalePrice = parseFloat(salePrice);
-    const parsedReorder = parseInt(reorderPoint) || 0;
-    const parsedPreferredQty = parseInt(preferredQty) || 0;
-    const parsedLowStockThreshold = parseInt(lowStockThreshold);
-
-    // Type tidak boleh diubah (ambil dari DB)
-    const type = product.type;
-
-    const errors = {};
-    if (!name?.trim()) errors.name = 'Nama harus diisi';
-    if (!code?.trim()) errors.code = 'Kode harus diisi';
-    
-    if (req.body.tax && (isNaN(tax) || tax < 0 || tax > 100)) {
-      errors.tax = 'Pajak harus antara 0 - 100';
-    }
-
-    if (type === 'fisik') {
-      if (isNaN(parsedCost) || parsedCost < 0) {
-        errors.cost = 'Harga modal harus valid';
-      }
-      if (isNaN(parsedMarkup) || parsedMarkup < 0) {
-        errors.markup = 'Markup harus valid';
-      }
-      if (isNaN(parsedSalePrice) || parsedSalePrice <= 0) {
-        errors.salePrice = 'Harga jual harus lebih dari 0';
-      }
-    }
-
-    if (type === 'service') {
-      if (isNaN(parsedCost)) parsedCost = 0;
-      if (isNaN(parsedMarkup)) parsedMarkup = 0;
-
-      if (isNaN(parsedSalePrice) || parsedSalePrice <= 0) {
-        errors.salePrice = 'Harga jual harus lebih dari 0';
-      }
-
-      // service tidak pakai stok
-      product.stock = 0;
-    }
-
-    if (type === 'ppob') {
-      parsedCost = 0;
-      parsedMarkup = 0;
-      if (isNaN(parsedSalePrice)) parsedSalePrice = 0;
-      product.stock = 0;
-    }
-
-    if (hasLowStockWarning && (isNaN(parsedLowStockThreshold) || parsedLowStockThreshold < 0)) {
-      errors.lowStockThreshold = 'Batas stok rendah tidak valid';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return res.status(400).json({ success: false, errors });
-    }
-
-    // Handle gambar baru
-    if (req.file) {
-      if (product.image) {
-        const oldImagePath = path.join(__dirname, '../../public', product.image);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Produk tidak ditemukan'
+            });
         }
-      }
-      const uploadDir = path.join(__dirname, '../../public/uploads/products');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      const ext = path.extname(req.file.originalname);
-      const fileName = `product-${Date.now()}${ext}`;
-      const targetPath = path.join(uploadDir, fileName);
-      fs.writeFileSync(targetPath, req.file.buffer);
-      product.image = `/uploads/products/${fileName}`;
+
+        const type = product.type;
+        const rule = PRODUCT_RULES[type];
+
+        if (!rule) {
+            return res.status(400).json({
+                success: false,
+                message: 'Type tidak valid'
+            });
+        }
+
+        const errors = {};
+
+        // BASIC VALIDATION (SAMA DENGAN CREATE)
+        if (!req.body.name?.trim()) errors.name = 'Nama harus diisi';
+        if (!req.body.code?.trim()) errors.code = 'Kode harus diisi';
+        if (!req.body.unit?.trim()) errors.unit = 'Unit harus diisi';
+
+        let normalized;
+        try {
+            normalized = normalizeProduct(type, req.body);
+        } catch (err) {
+            const msg = handleNormalizeError(err);
+            if (msg) errors.salePrice = `Minimal ${msg}`;
+            else throw err;
+        }
+
+        const {
+            cost,
+            markup,
+            salePrice,
+            tax,
+            lowStockWarning,
+            lowStockThreshold
+        } = normalized;
+
+        if (
+            lowStockWarning &&
+            (lowStockThreshold === null || lowStockThreshold < 0)
+        ) {
+            errors.lowStockThreshold = 'Batas stok rendah tidak valid';
+        }
+
+        if (Object.keys(errors).length) {
+            return res.status(400).json({ success: false, errors });
+        }
+
+        // IMAGE
+        if (req.file) {
+            if (product.image) {
+                const oldPath = path.join(__dirname, '../../public', product.image);
+                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            }
+
+            const uploadDir = path.join(__dirname, '../../public/uploads/products');
+            if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+            const ext = path.extname(req.file.originalname);
+            const fileName = `product-${Date.now()}${ext}`;
+
+            fs.writeFileSync(path.join(uploadDir, fileName), req.file.buffer);
+            product.image = `/uploads/products/${fileName}`;
+        }
+
+        Object.assign(product, {
+            name: req.body.name,
+            code: req.body.code,
+            barcode: req.body.barcode?.trim() || null,
+            unit: req.body.unit,
+
+            categoryId: req.body.categoryId || null,
+            supplierId: req.body.supplierId || null,
+
+            requireQtyInput: !!req.body.requireQtyInput,
+
+            cost,
+            markup,
+            salePrice,
+
+            priceChangeAllowed: !!req.body.priceChangeAllowed,
+
+            reorderPoint: Number(req.body.reorderPoint) || 0,
+            preferredQty: Number(req.body.preferredQty) || 0,
+
+            lowStockWarning,
+            lowStockThreshold,
+
+            enableInputTax: !!req.body.enableInputTax,
+            tax,
+
+            enableAltDesc: !!req.body.enableAltDesc
+        });
+
+        await product.save();
+
+        return res.json({ success: true });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ success: false });
     }
-
-    // Update data
-    Object.assign(product, {
-      name,
-      code,
-      barcode: barcode?.trim() || null,
-      unit,
-      categoryId: categoryId || null,
-      requireQtyInput: isRequireQtyInput,
-      cost: parsedCost || 0,
-      markup: parsedMarkup || 0,
-      salePrice: parsedSalePrice || 0,
-      priceChangeAllowed: allowPriceChange,
-      supplierId: supplierId || null,
-      reorderPoint: parsedReorder,
-      lowStockWarning: hasLowStockWarning,
-      preferredQty: parsedPreferredQty,
-      lowStockThreshold: hasLowStockWarning ? parsedLowStockThreshold : null,
-      enableInputTax: isEnableInputTax,
-      tax: isNaN(tax) ? null : tax,
-      enableAltDesc: isEnableAltDesc
-    });
-
-    await product.save();
-
-    return res.json({ success: true });
-
-  } catch (err) {
-    console.error(err);
-    if (err instanceof Sequelize.UniqueConstraintError) {
-      const errors = {};
-      for (const e of err.errors) {
-        errors[e.path] = `${e.path} sudah digunakan`;
-      }
-      return res.status(400).json({ success: false, errors });
-    }
-    return res.status(500).json({ success: false, message: 'Gagal mengupdate produk' });
-  }
 };
 
 // JSON untuk tabel infinite scroll
@@ -428,6 +368,11 @@ exports.getProductJson = async (req, res) => {
         q
     } = req.query;
 
+    const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+    const parsedLimit = Math.min(Math.max(parseInt(limit) || 25, 1), 100);
+    const allowedTypes = ['fisik', 'service', 'ppob'];
+    const search = q?.trim();
+    
     const where = {};
 
     // Filter category
@@ -437,8 +382,8 @@ exports.getProductJson = async (req, res) => {
     if (supplierId) where.supplierId = supplierId;
 
     // Filter type - LANGSUNG pakai value dari query
-    if (type && type !== '') {
-      where.type = type; // nilai: 'fisik', 'service', 'ppob'
+    if (type && allowedTypes.includes(type)) {
+      where.type = type;
     }
 
     // Filter requireQtyInput
@@ -457,7 +402,7 @@ exports.getProductJson = async (req, res) => {
     }
 
     // Search
-    if (q) {
+    if (search) {
       where[Op.or] = [{
           name: {
             [Op.like]: `%${q}%`
@@ -476,8 +421,6 @@ exports.getProductJson = async (req, res) => {
       ];
     }
 
-    console.log('Where clause:', JSON.stringify(where, null, 2)); // DEBUG
-
     const {
       rows: products,
       count
@@ -492,14 +435,12 @@ exports.getProductJson = async (req, res) => {
           as: 'supplier'
         }
       ],
-      offset: parseInt(offset),
-      limit: parseInt(limit),
+      offset: parsedOffset,
+      limit: parsedLimit,
       order: [
         ['name', 'ASC']
       ]
     });
-
-    console.log(`Found ${products.length} products (total: ${count})`); // DEBUG
 
     res.json({
       products,
@@ -585,10 +526,15 @@ exports.getProductById = async (req, res) => {
       });
     }
 
-    res.json(product);
+    return res.json({
+      success: true,
+      product
+    });
+
   } catch (err) {
     console.error(err);
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: 'Gagal mengambil data produk'
     });

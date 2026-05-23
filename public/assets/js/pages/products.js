@@ -11,6 +11,9 @@ import {
     showInputErrors,
     resetInputErrors
 } from '/assets/js/utils/formError.js';
+import {
+    PRODUCT_UI_RULES
+} from './productUIRules.js';
 
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 const modalCreate = document.getElementById('modalCreate');
@@ -55,22 +58,15 @@ async function loadMoreProducts() {
         if (altDesc) url.searchParams.set('altDesc', altDesc);
         if (search) url.searchParams.set('q', search);
 
-        console.log('Fetching URL:', url.toString()); // <-- DEBUG
 
         const res = await fetch(url.toString());
-        console.log('Response status:', res.status); // <-- DEBUG
 
         const data = await res.json();
-        console.log('Data received:', data); // <-- DEBUG
 
         const {
             products,
             total
         } = data;
-
-        if (!products || products.length === 0) {
-            console.log('No products found, but total:', total);
-        }
 
         if (offset === 0) {
             totalProductCount = total;
@@ -247,91 +243,7 @@ document.getElementById('typeFilter')?.addEventListener('change', (e) => {
     window.location.search = params.toString();
 });
 
-// Saat klik Edit
-tbody.addEventListener('click', async (e) => {
-    if (e.target.closest('.btn-edit')) {
-        const row = e.target.closest('tr');
-        const productId = row.dataset.id;
-        if (!productId) return;
-
-        try {
-            const res = await fetch(`/products/json/${productId}`);
-            if (!res.ok) throw new Error('Failed to fetch product data');
-            const product = await res.json();
-
-            // Set form action untuk submit PUT
-            formEdit.action = `/products/${productId}`;
-            formEdit.reset();
-
-            // Isi semua field...
-            document.getElementById('editInputName').value = product.name || '';
-            document.getElementById('editCategorySelect').value = product.categoryId || '';
-            document.getElementById('editProductCode').value = product.code || '';
-            document.getElementById('editInputBarcode').value = product.barcode || '';
-            document.getElementById('editUnit').value = product.unit || '';
-            document.getElementById('editSupplierSelect').value = product.supplierId || '';
-            const editRequireQtyInput = document.getElementById('editRequireQtyInput');
-            if (editRequireQtyInput) {
-                editRequireQtyInput.checked = !!product.requireQtyInput;
-            }
-
-            // Product type
-            const editType = document.getElementById('editProductType');
-
-            editType.value = product.type;
-            editType.disabled = true;
-            document.getElementById('editInputCost').value = product.cost ?? '';
-            document.getElementById('editInputMarkup').value = product.markup ?? '';
-            document.getElementById('editInputSalePrice').value = product.salePrice || '';
-            document.getElementById('editPriceChangeAllowed').checked = !!product.priceChangeAllowed;
-            document.getElementById('editReorderPoint').value = product.reorderPoint || '';
-            document.getElementById('editEnableLowStockWarning').checked = !!product.lowStockWarning;
-            document.getElementById('editLowStockWarning').value = product.lowStockThreshold || '';
-            document.getElementById('editLowStockWarning').disabled = !product.lowStockWarning;
-            document.getElementById('editEnableInputTax').checked = !!product.enableInputTax;
-            document.getElementById('editTax').value = product.tax || '';
-            document.getElementById('editTax').disabled = !product.enableInputTax;
-            document.getElementById('editEnableAltDesc').checked = !!product.enableAltDesc;
-
-            // Preview image lama
-            const previewEl = document.getElementById('editProductPreview');
-            if (product.image) {
-                previewEl.src = product.image;
-                previewEl.style.display = 'block';
-            } else {
-                previewEl.src = '';
-                previewEl.style.display = 'none';
-            }
-
-            // Event listener untuk update preview saat pilih gambar baru
-            const fileInput = document.getElementById('editProductImage');
-            fileInput.addEventListener('change', function () {
-                if (this.files && this.files[0]) {
-                    previewEl.src = URL.createObjectURL(this.files[0]);
-                    previewEl.style.display = 'block';
-                } else {
-                    previewEl.src = product.image || '';
-                    previewEl.style.display = product.image ? 'block' : 'none';
-                }
-            });
-
-            setupEditMarkupSalePriceHandlers();
-            // Jalankan handler untuk sembunyikan field sesuai type
-            handleProductTypeChange(editType, 'edit');
-
-            bootstrap.Modal.getOrCreateInstance(modalEdit).show();
-
-        } catch (err) {
-            console.error(err);
-            showToast({
-                type: 'danger',
-                title: 'Error',
-                message: 'Gagal mengambil data produk'
-            });
-        }
-    }
-});
-
+// mengambil isi modal create
 function handleProductTypeChange(typeSelect, context = 'create') {
     const costInput = document.getElementById(context === 'create' ? 'inputCost' : 'editInputCost');
     const markupInput = document.getElementById(context === 'create' ? 'inputMarkup' : 'editInputMarkup');
@@ -341,8 +253,8 @@ function handleProductTypeChange(typeSelect, context = 'create') {
     const priceChangeAllowed = document.getElementById(context === 'create' ? 'priceChangeAllowed' : 'editPriceChangeAllowed');
     const reorderPointInput = document.getElementById(context === 'create' ? 'reorderPoint' : 'editReorderPoint');
     const preferredQtyInput = document.getElementById(context === 'create' ? 'preferredQty' : 'editPreferredQty');
-    const lowStockWarning = document.getElementById(context === 'create' ? 'enableLowStockWarning' : 'editEnableLowStockWarning');
-    const inputLowStockWarning = document.getElementById(context === 'create' ? 'lowStockWarning' : 'editLowStockWarning');
+    const lowStockWarning = document.getElementById(context === 'create' ? 'lowStockWarning' : 'editEnableLowStockWarning');
+    const inputLowStockWarning = document.getElementById(context === 'create' ? 'lowStockThreshold' : 'editLowStockThreshold');
     const taxCheckbox = document.getElementById(context === 'create' ? 'enableInputTax' : 'editEnableInputTax');
     const taxInput = document.getElementById(context === 'create' ? 'tax' : 'editTax');
 
@@ -357,21 +269,15 @@ function handleProductTypeChange(typeSelect, context = 'create') {
         }
 
         if (costInput) {
-            costInput.closest('.col-md-4').style.display = 'none';
-            costInput.value = 0;
-            toggleRequired(costInput, false);
+            toggleRequired(costInput, true);
         }
 
         if (markupInput) {
-            markupInput.closest('.col-md-4').style.display = 'none';
-            markupInput.value = 0;
-            toggleRequired(markupInput, false);
+            toggleRequired(markupInput, true);
         }
 
         if (salePriceInput) {
-            salePriceInput.closest('.col-md-4').style.display = 'none';
-            salePriceInput.value = 0;
-            toggleRequired(salePriceInput, false);
+            toggleRequired(salePriceInput, true);
         }
 
         if (stockSection) {
@@ -454,6 +360,14 @@ function handleProductTypeChange(typeSelect, context = 'create') {
             preferredQtyInput.disabled = true;
         }
 
+        if (costInput) {
+            costInput.value = 0;
+        }
+
+        if (markupInput) {
+            markupInput.value = 0;
+        }
+
         if (lowStockWarning) {
             lowStockWarning.checked = false;
             lowStockWarning.disabled = true;
@@ -483,6 +397,50 @@ function toggleRequired(input, required) {
     }
 }
 
+// =========================
+// LOW STOCK TOGGLE
+// =========================
+
+const lowStockCheckbox =
+    document.getElementById('lowStockWarning');
+
+const lowStockThreshold =
+    document.getElementById('lowStockThreshold');
+
+if (lowStockCheckbox && lowStockThreshold) {
+    lowStockCheckbox.addEventListener('change', () => {
+        lowStockThreshold.disabled = !lowStockCheckbox.checked;
+
+        if (!lowStockCheckbox.checked) {
+            lowStockThreshold.value = '';
+        }
+    });
+}
+
+// =========================
+// TAX TOGGLE
+// =========================
+
+const taxCheckbox =
+    document.getElementById('enableInputTax');
+
+const taxInput =
+    document.getElementById('tax');
+
+if (taxCheckbox && taxInput) {
+    taxCheckbox.addEventListener('change', () => {
+        taxInput.disabled = !taxCheckbox.checked;
+
+        if (!taxCheckbox.checked) {
+            taxInput.value = '';
+        }
+    });
+}
+
+// =========================
+// FORM SUBMIT
+// =========================
+
 formCreate.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(formCreate);
@@ -492,27 +450,23 @@ formCreate.addEventListener('submit', async (e) => {
     formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
     formData.set('enableAltDesc', formData.get('enableAltDesc') === 'on');
     formData.set('enableInputTax', formData.get('enableInputTax') === 'on');
-    formData.set('lowStockWarning', formData.get('enableLowStockWarning') === 'on');
+    formData.set('lowStockWarning', formData.get('lowStockWarning') === 'on');
+    
     // Jika tax tidak aktif, kosongkan tax
-    if (formData.get('enableInputTax') === 'false') {
+    if (formData.get('enableInputTax') !== 'true') {
         formData.set('tax', '');
     }
 
     // Jika low stock warning tidak aktif, kosongkan threshold
-    if (formData.get('lowStockWarning') === 'false') {
+    if (formData.get('lowStockWarning') !== 'true') {
         formData.set('lowStockThreshold', '');
     }
 
     // Type produk
     const productType = formData.get('type');
     if (productType === 'ppob') {
-        // PPOB: force priceChangeAllowed = true
         formData.set('priceChangeAllowed', 'true');
-        // Stok tidak relevan untuk PPOB
         formData.set('stock', 0);
-        formData.set('cost', 0);
-        formData.set('markup', 0);
-        formData.set('salePrice', 0);
     }
 
     if (productType === 'ppob' || productType === 'service') {
@@ -595,10 +549,11 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
     }
 
     // Reset Low Stock Warning
-    const lowStockCheckbox = document.getElementById('enableLowStockWarning');
+    const lowStockCheckbox = document.getElementById('lowStockWarning');
     const lowStockInput = document.querySelector('input[name="lowStockThreshold"]');
     if (lowStockCheckbox && lowStockInput) {
         lowStockCheckbox.checked = false;
+        lowStockCheckbox.disabled = false;
         lowStockInput.value = '';
         lowStockInput.disabled = true;
     }
@@ -608,6 +563,7 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
     const taxInput = document.getElementById('tax');
     if (taxCheckbox && taxInput) {
         taxCheckbox.checked = false;
+        taxCheckbox.disabled = false;
         taxInput.value = '';
         taxInput.disabled = true;
     }
@@ -624,6 +580,111 @@ modalCreate.addEventListener('hidden.bs.modal', () => {
     if (requireQtyInput) {
         requireQtyInput.checked = false;
         requireQtyInput.disabled = false;
+    }
+});
+
+// Saat klik Edit
+tbody.addEventListener('click', async (e) => {
+    if (!e.target.closest('.btn-edit')) return;
+
+    const row = e.target.closest('tr');
+    const productId = row.dataset.id;
+
+    if (!productId) return;
+
+    try {
+        const res = await fetch(`/products/json/${productId}`);
+
+        if (!res.ok) {
+            throw new Error('Failed to fetch product data');
+        }
+
+        const result = await res.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Gagal mengambil data produk');
+        }
+
+        const product = result.product;
+
+        // Set action
+        formEdit.action = `/products/${productId}`;
+
+        // Reset form
+        formEdit.reset();
+
+        // Basic fields
+        document.getElementById('editInputName').value = product.name ?? '';
+        document.getElementById('editCategorySelect').value = product.categoryId ?? '';
+        document.getElementById('editProductCode').value = product.code ?? '';
+        document.getElementById('editInputBarcode').value = product.barcode ?? '';
+        document.getElementById('editUnit').value = product.unit ?? '';
+        document.getElementById('editSupplierSelect').value = product.supplierId ?? '';
+
+        // Checkbox
+        document.getElementById('editRequireQtyInput').checked = !!product.requireQtyInput;
+        document.getElementById('editPriceChangeAllowed').checked = !!product.priceChangeAllowed;
+        document.getElementById('editEnableLowStockWarning').checked = !!product.lowStockWarning;
+        document.getElementById('editEnableInputTax').checked = !!product.enableInputTax;
+        document.getElementById('editEnableAltDesc').checked = !!product.enableAltDesc;
+
+        // Type
+        const editType = document.getElementById('editProductType');
+        editType.value = product.type ?? 'fisik';
+        editType.disabled = true;
+
+        // Numeric fields
+        document.getElementById('editInputCost').value = product.cost ?? '';
+        document.getElementById('editInputMarkup').value = product.markup ?? '';
+        document.getElementById('editInputSalePrice').value = product.salePrice ?? '';
+        document.getElementById('editReorderPoint').value = product.reorderPoint ?? '';
+        document.getElementById('editPreferredQty').value = product.preferredQty ?? '';
+        document.getElementById('editLowStockThreshold').value = product.lowStockThreshold ?? '';
+        document.getElementById('editTax').value = product.tax ?? '';
+
+        // Enable/disable field
+        document.getElementById('editLowStockThreshold').disabled = !product.lowStockWarning;
+        document.getElementById('editTax').disabled = !product.enableInputTax;
+
+        // Jalankan UI type handler
+        handleProductTypeChange(editType, 'edit');
+
+        // Preview image
+        const previewEl = document.getElementById('editProductPreview');
+
+        if (product.image) {
+            previewEl.src = product.image;
+            previewEl.style.display = 'block';
+        } else {
+            previewEl.src = '';
+            previewEl.style.display = 'none';
+        }
+
+        // Preview gambar baru
+        const fileInput = document.getElementById('editProductImage');
+
+        fileInput.onchange = function () {
+            if (this.files && this.files[0]) {
+                previewEl.src = URL.createObjectURL(this.files[0]);
+                previewEl.style.display = 'block';
+            } else {
+                previewEl.src = product.image || '';
+                previewEl.style.display = product.image ? 'block' : 'none';
+            }
+        };
+
+        setupEditMarkupSalePriceHandlers();
+
+        bootstrap.Modal.getOrCreateInstance(modalEdit).show();
+
+    } catch (err) {
+        console.error(err);
+
+        showToast({
+            type: 'danger',
+            title: 'Error',
+            message: err.message || 'Gagal mengambil data produk'
+        });
     }
 });
 
@@ -654,64 +715,94 @@ function setupEditMarkupSalePriceHandlers() {
         editInputMarkup.value = Number.isInteger(markup) ? markup : markup.toFixed(2);
     }
 
-    editInputCost?.addEventListener('input', () => {
+    // Remove old listeners first to avoid duplicates
+    const newCost = editInputCost.cloneNode(true);
+    const newMarkup = editInputMarkup.cloneNode(true);
+    const newSalePrice = editInputSalePrice.cloneNode(true);
+    
+    editInputCost.parentNode.replaceChild(newCost, editInputCost);
+    editInputMarkup.parentNode.replaceChild(newMarkup, editInputMarkup);
+    editInputSalePrice.parentNode.replaceChild(newSalePrice, editInputSalePrice);
+    
+    // Re-assign variables
+    const finalEditInputCost = document.getElementById('editInputCost');
+    const finalEditInputMarkup = document.getElementById('editInputMarkup');
+    const finalEditInputSalePrice = document.getElementById('editInputSalePrice');
+
+    finalEditInputCost?.addEventListener('input', () => {
         editLastChanged = null;
         editUpdateSalePrice();
     });
-    editInputMarkup?.addEventListener('input', () => {
+    
+    finalEditInputMarkup?.addEventListener('input', () => {
         editLastChanged = null;
         editUpdateSalePrice();
     });
-    editInputSalePrice?.addEventListener('input', () => {
+    
+    finalEditInputSalePrice?.addEventListener('input', () => {
         editLastChanged = null;
         editUpdateMarkup();
     });
 
     editProductType?.addEventListener('change', () => {
         const type = editProductType.value;
-
-        // Jalankan handler UI
         handleProductTypeChange(editProductType, 'edit');
 
-        // Service
         if (type === 'service') {
-            if (!editInputCost.value) {
-                editInputCost.value = '0';
+            if (!finalEditInputCost.value) {
+                finalEditInputCost.value = '0';
             }
         }
 
-        // PPOB
         if (type === 'ppob') {
-            editInputCost.value = 0;
-            editInputMarkup.value = 0;
-            editInputSalePrice.value = 0;
+            finalEditInputCost.value = 0;
+            finalEditInputMarkup.value = 0;
+            // Jangan reset salePrice, biarkan dari database
         }
     });
 }
 
+// submit edit
 formEdit.addEventListener('submit', async (e) => {
     e.preventDefault();
+
     resetInputErrors(formEdit);
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
     const formData = new FormData(formEdit);
 
-    // Set nilai boolean sesuai model
+    // Karena disabled tidak ikut terkirim
+    const editType = document.getElementById('editProductType').value;
+
+    formData.set('type', editType);
+
+    // Boolean normalization
     formData.set('requireQtyInput', formData.get('requireQtyInput') === 'on');
     formData.set('priceChangeAllowed', formData.get('priceChangeAllowed') === 'on');
     formData.set('enableAltDesc', formData.get('enableAltDesc') === 'on');
     formData.set('enableInputTax', formData.get('enableInputTax') === 'on');
-    formData.set('lowStockWarning', formData.get('enableLowStockWarning') === 'on');
+    formData.set('lowStockWarning', formData.get('lowStockWarning') === 'on');
 
-    const productType = formData.get('type');
-    if (productType === 'ppob') {
-        formData.set('priceChangeAllowed', 'true');
+    // PPOB backend consistency
+    if (editType === 'ppob') {
+        formData.set('priceChangeAllowed', true);
     }
 
-    if (productType === 'ppob' || productType === 'service') {
-        formData.set('stock', 0);
+    if (editType === 'service') {
+        formData.set('cost', 0);
+        formData.set('markup', 0);
         formData.set('reorderPoint', 0);
         formData.set('preferredQty', 0);
+        formData.set('lowStockWarning', false);
+        formData.set('lowStockThreshold', '');
+    }
+
+    if (editType === 'ppob') {
+        formData.set('reorderPoint', 0);
+        formData.set('preferredQty', 0);
+        formData.set('lowStockWarning', false);
+        formData.set('lowStockThreshold', '');
     }
 
     try {
@@ -724,19 +815,26 @@ formEdit.addEventListener('submit', async (e) => {
         });
 
         const result = await res.json();
+
         if (res.ok && result.success) {
+
             showToast({
                 type: 'success',
                 title: 'Berhasil',
                 message: 'Produk berhasil diupdate'
             });
+
             bootstrap.Modal.getInstance(modalEdit).hide();
 
             offset = 0;
             done = false;
+
             tbody.innerHTML = '';
+
             await loadMoreProducts();
+
         } else {
+
             if (result.errors) {
                 showInputErrors(result.errors, formEdit);
             } else {
@@ -747,8 +845,11 @@ formEdit.addEventListener('submit', async (e) => {
                 });
             }
         }
+
     } catch (err) {
+
         console.error(err);
+
         showToast({
             type: 'danger',
             title: 'Error',
@@ -791,17 +892,16 @@ document.getElementById('btnGenerateEditBarcode').addEventListener('click', () =
 
 // Enable/disable input dependent on switches in edit modal:
 document.getElementById('editEnableLowStockWarning').addEventListener('change', e => {
-    document.getElementById('editLowStockWarning').disabled = !e.target.checked;
+    document.getElementById('editLowStockThreshold').disabled = !e.target.checked;
 });
 
-document.getElementById('editEnableInputTax').addEventListener('change', e => {
+document.getElementById('editEnableInputTax')?.addEventListener('change', e => {
     document.getElementById('editTax').disabled = !e.target.checked;
 });
 
 const inputCost = document.getElementById('inputCost');
 const inputMarkup = document.getElementById('inputMarkup');
 const inputSalePrice = document.getElementById('inputSalePrice');
-const checkboxService = document.getElementById('isService');
 
 let lastChanged = null;
 
@@ -837,8 +937,8 @@ inputSalePrice?.addEventListener('input', () => {
     updateMarkup();
 });
 
-document.getElementById('enableLowStockWarning').addEventListener('change', function () {
-    document.getElementById('lowStockWarning').disabled = !this.checked;
+document.getElementById('lowStockWarning').addEventListener('change', function () {
+    document.getElementById('lowStockThreshold').disabled = !this.checked;
 });
 
 document.getElementById('enableInputTax').addEventListener('change', function () {
@@ -848,15 +948,6 @@ document.getElementById('enableInputTax').addEventListener('change', function ()
     } else {
         input.disabled = true;
         input.value = ''; // kosongkan agar tidak terkirim
-    }
-});
-
-checkboxService?.addEventListener('change', () => {
-    const isService = checkboxService.checked;
-
-    if (isService) {
-        if (!inputCost.value) inputCost.value = '0';
-        inputMarkup.value = '';
     }
 });
 

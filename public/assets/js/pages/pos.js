@@ -1560,170 +1560,308 @@ function calculateAndDisplayTotals() {
     return { subtotal, taxAmount, globalDiscount, total };
 }
 
-// ==================== CUSTOMER MANAGEMENT ====================
+// ========================================
+// CUSTOMER SELECTOR CARD - MODERN POS
+// ========================================
+
+// Customer data (contoh, nanti dari API)
+let sampleCustomers = [{
+        id: 1,
+        name: "Budi Santoso",
+        phone: "08123456789",
+        type: "member",
+        point: 1500
+    },
+    {
+        id: 2,
+        name: "Siti Aminah",
+        phone: "08234567890",
+        type: "member",
+        point: 3200
+    },
+    {
+        id: 3,
+        name: "Ahmad Fauzi",
+        phone: "08345678901",
+        type: "regular",
+        point: 0
+    },
+    {
+        id: 4,
+        name: "Dewi Lestari",
+        phone: "08456789012",
+        type: "member",
+        point: 500
+    },
+    {
+        id: 5,
+        name: "Rizky Pratama",
+        phone: "08567890123",
+        type: "regular",
+        point: 0
+    }
+];
+
 function initializeCustomerSearch() {
     const searchInput = document.getElementById('customerSearchInput');
     if (!searchInput) return;
-    
+
     searchInput.value = 'Walk-in Customer';
-    
+
     searchInput.addEventListener('input', (e) => {
         const keyword = e.target.value.trim();
-        
+
         if (keyword === '' || keyword === 'Walk-in Customer') {
             hideCustomerDropdown();
             resetToDefaultCustomer();
             return;
         }
-        
+
         clearTimeout(POS.customerSearchTimeout);
         if (keyword.length < 2) {
             hideCustomerDropdown();
             return;
         }
-        
+
         POS.customerSearchTimeout = setTimeout(() => performCustomerSearch(keyword), 300);
     });
-    
+
     searchInput.addEventListener('keydown', handleCustomerKeydown);
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.position-relative')) hideCustomerDropdown();
     });
-    
+
     document.getElementById('clearCustomerBtn')?.addEventListener('click', resetToDefaultCustomer);
 }
 
-function resetToDefaultCustomer() {
-    POS.selectedCustomer = null;
-    document.getElementById('customerId').value = '';
-    document.getElementById('customerSearchInput').value = 'Walk-in Customer';
-    document.getElementById('clearCustomerBtn').style.display = 'none';
-    hideCustomerDropdown();
-}
+let currentSelectedCustomer = null; // null = walk-in
 
-async function performCustomerSearch(keyword) {
-    try {
-        const response = await fetch(`/pos/search-customers?q=${encodeURIComponent(keyword)}`);
-        const data = await response.json();
-        
-        if (data.customers?.length > 0) {
-            POS.currentCustomerResults = data.customers;
-            POS.selectedCustomerIndex = -1;
-            renderCustomerDropdown(POS.currentCustomerResults);
-            showCustomerDropdown();
-        } else {
-            hideCustomerDropdown();
-        }
-    } catch (error) {
-        console.error('Customer search error:', error);
-        hideCustomerDropdown();
-    }
-}
+function renderSelectedCustomer(customer = null) {
+    const nameEl = document.getElementById('selectedCustomerName');
+    const phoneEl = document.getElementById('selectedCustomerPhone');
+    const badgeEl = document.getElementById('customerBadge');
+    const clearBtn = document.getElementById('clearCustomerBtn');
+    const customerIdInput = document.getElementById('customerId');
 
-function renderCustomerDropdown(customers) {
-    const listContainer = document.getElementById('customerResultsList');
-    if (!listContainer) return;
-    
-    if (!customers?.length) {
-        listContainer.innerHTML = '<div class="text-center text-muted py-3"><small>Tidak ada customer ditemukan</small></div>';
+    if (!customer) {
+        // Walk-in Customer state
+        nameEl.textContent = 'Walk-in Customer';
+        phoneEl.innerHTML = '<i class="bx bx-phone"></i><span>Customer umum / non member</span>';
+        badgeEl.textContent = 'UMUM';
+        badgeEl.classList.remove('member-badge');
+        clearBtn.style.display = 'none';
+        if (customerIdInput) customerIdInput.value = '';
+        currentSelectedCustomer = null;
         return;
     }
-    
-    let html = '';
-    customers.forEach((customer, index) => {
-        const isMember = customer.type === 'member';
-        html += `
-            <div class="customer-dropdown-item" data-index="${index}" data-id="${customer.id}">
-                <div class="customer-dropdown-item-info">
-                    <div class="customer-dropdown-item-name">${escapeHtml(customer.name)}</div>
-                    <div class="customer-dropdown-item-phone">${customer.phone || '-'}</div>
-                </div>
-                <div class="customer-dropdown-item-type ${isMember ? 'member' : ''}">${isMember ? 'Member' : 'Umum'}</div>
+
+    // Member/Regular Customer state
+    nameEl.textContent = customer.name;
+    phoneEl.innerHTML = `<i class="bx bx-phone"></i><span>${customer.phone || '-'}</span>`;
+
+    if (customer.type === 'member') {
+        badgeEl.textContent = 'MEMBER';
+        badgeEl.classList.add('member-badge');
+    } else {
+        badgeEl.textContent = 'UMUM';
+        badgeEl.classList.remove('member-badge');
+    }
+
+    clearBtn.style.display = 'inline-flex';
+    if (customerIdInput) customerIdInput.value = customer.id;
+    currentSelectedCustomer = customer;
+
+    // Trigger event untuk fungsi lain yang butuh customer
+    if (typeof window.onCustomerSelected === 'function') {
+        window.onCustomerSelected(customer);
+    }
+}
+
+function openCustomerSearch() {
+    const dropdown = document.getElementById('customerDropdown');
+    const searchInput = document.getElementById('customerSearchInput');
+
+    if (!dropdown) return;
+
+    // Toggle dropdown
+    if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+        dropdown.style.display = 'block';
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+            searchCustomer('');
+        }
+    } else {
+        dropdown.style.display = 'none';
+    }
+}
+
+function searchCustomer(query) {
+    const resultsList = document.getElementById('customerResultsList');
+    if (!resultsList) return;
+
+    if (!query || query.trim() === '') {
+        // Tampilkan beberapa customer terbaru atau populer
+        const recentCustomers = sampleCustomers.slice(0, 5);
+        renderCustomerResults(recentCustomers);
+        return;
+    }
+
+    const filtered = sampleCustomers.filter(c =>
+        c.name.toLowerCase().includes(query.toLowerCase()) ||
+        c.phone.includes(query)
+    );
+
+    renderCustomerResults(filtered);
+}
+
+function renderCustomerResults(customers) {
+    const resultsList = document.getElementById('customerResultsList');
+    if (!resultsList) return;
+
+    if (!customers || customers.length === 0) {
+        resultsList.innerHTML = `
+            <div class="customer-dropdown-empty">
+                <i class="bx bx-user-x"></i>
+                <div>Customer tidak ditemukan</div>
+                <small>Tekan Esc untuk tutup</small>
             </div>
         `;
-    });
-    
-    listContainer.innerHTML = html;
-    
-    document.querySelectorAll('.customer-dropdown-item').forEach(item => {
+        return;
+    }
+
+    resultsList.innerHTML = customers.map(customer => `
+        <div class="customer-dropdown-item" data-customer-id="${customer.id}">
+            <div class="customer-dropdown-info">
+                <div class="customer-dropdown-name">
+                    ${escapeHtml(customer.name)}
+                    <span class="customer-dropdown-badge">${customer.type === 'member' ? 'MEMBER' : 'REGULAR'}</span>
+                </div>
+                <div class="customer-dropdown-phone">
+                    <i class="bx bx-phone"></i>
+                    ${customer.phone || '-'}
+                </div>
+            </div>
+            <i class="bx bx-chevron-right" style="color: #ccc;"></i>
+        </div>
+    `).join('');
+
+    // Add click handlers
+    resultsList.querySelectorAll('.customer-dropdown-item').forEach(item => {
         item.addEventListener('click', () => {
-            const id = parseInt(item.dataset.id);
-            const customer = POS.currentCustomerResults.find(c => c.id === id);
-            if (customer) selectCustomer(customer);
-        });
-        item.addEventListener('mouseenter', () => {
-            const index = parseInt(item.dataset.index);
-            setSelectedCustomerIndex(index);
+            const customerId = parseInt(item.dataset.customerId);
+            const selected = sampleCustomers.find(c => c.id === customerId);
+            if (selected) {
+                selectCustomer(selected);
+            }
         });
     });
 }
 
 function selectCustomer(customer) {
-    POS.selectedCustomer = customer;
-    document.getElementById('customerId').value = customer.id;
-    document.getElementById('customerSearchInput').value = `${customer.name}${customer.phone ? ` - ${customer.phone}` : ''}`;
-    document.getElementById('clearCustomerBtn').style.display = 'inline-flex';
-    hideCustomerDropdown();
+    renderSelectedCustomer(customer);
+    closeCustomerDropdown();
 }
 
-function handleCustomerKeydown(e) {
+function closeCustomerDropdown() {
     const dropdown = document.getElementById('customerDropdown');
-    if (!dropdown || dropdown.style.display === 'none') return;
-    
-    if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectNextCustomerResult();
-    } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectPreviousCustomerResult();
-    } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (POS.selectedCustomerIndex >= 0 && POS.currentCustomerResults[POS.selectedCustomerIndex]) {
-            selectCustomer(POS.currentCustomerResults[POS.selectedCustomerIndex]);
-        }
-    } else if (e.key === 'Escape') {
-        hideCustomerDropdown();
+    if (dropdown) {
+        dropdown.style.display = 'none';
     }
 }
 
-function selectNextCustomerResult() {
-    if (POS.currentCustomerResults.length === 0) return;
-    POS.selectedCustomerIndex = (POS.selectedCustomerIndex + 1) % POS.currentCustomerResults.length;
-    updateSelectedCustomerItem();
+function resetToWalkIn() {
+    renderSelectedCustomer(null);
 }
 
-function selectPreviousCustomerResult() {
-    if (POS.currentCustomerResults.length === 0) return;
-    POS.selectedCustomerIndex = (POS.selectedCustomerIndex - 1 + POS.currentCustomerResults.length) % POS.currentCustomerResults.length;
-    updateSelectedCustomerItem();
+// Escape HTML untuk keamanan
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
-function setSelectedCustomerIndex(index) {
-    POS.selectedCustomerIndex = index;
-    updateSelectedCustomerItem();
-}
+// ========================================
+// INIT CUSTOMER SELECTOR
+// ========================================
 
-function updateSelectedCustomerItem() {
-    document.querySelectorAll('.customer-dropdown-item').forEach((item, i) => {
-        if (i === POS.selectedCustomerIndex) {
-            item.classList.add('selected');
-            item.scrollIntoView({ block: 'nearest' });
-        } else {
-            item.classList.remove('selected');
+function initCustomerSelector() {
+    const selectorCard = document.getElementById('customerSelectorCard');
+    const searchInput = document.getElementById('customerSearchInput');
+    const clearBtn = document.getElementById('clearCustomerBtn');
+
+    // Click card to open search
+    if (selectorCard) {
+        selectorCard.addEventListener('click', (e) => {
+            // Jangan buka dropdown jika klik tombol clear
+            if (e.target.closest('#clearCustomerBtn')) {
+                e.stopPropagation();
+                return;
+            }
+            openCustomerSearch();
+        });
+    }
+
+    // Search input handler
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchCustomer(e.target.value);
+            }, 300);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeCustomerDropdown();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const firstItem = document.querySelector('.customer-dropdown-item');
+                if (firstItem) {
+                    firstItem.click();
+                }
+            }
+        });
+    }
+
+    // Clear button
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetToWalkIn();
+        });
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('customerDropdown');
+        const selectorCard = document.getElementById('customerSelectorCard');
+        if (dropdown && selectorCard && !selectorCard.contains(e.target)) {
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            }
         }
     });
+
+    // Keyboard shortcut F2
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F2') {
+            e.preventDefault();
+            openCustomerSearch();
+        }
+    });
+
+    // Initial render
+    renderSelectedCustomer(null);
 }
 
-function showCustomerDropdown() {
-    const dropdown = document.getElementById('customerDropdown');
-    if (dropdown) dropdown.style.display = 'block';
-}
-
-function hideCustomerDropdown() {
-    const dropdown = document.getElementById('customerDropdown');
-    if (dropdown) dropdown.style.display = 'none';
-    POS.currentCustomerResults = [];
-    POS.selectedCustomerIndex = -1;
+// Run when DOM ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCustomerSelector);
+} else {
+    initCustomerSelector();
 }
 
 // ==================== TRANSACTIONS ====================

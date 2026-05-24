@@ -2107,3 +2107,170 @@ function showError(title, message) {
 
 // Load favorite products on start
 // loadFavoriteProducts();
+
+
+// ==================== CUSTOMER MANAGEMENT ====================
+function initializeCustomerSearch() {
+    const searchInput = document.getElementById('customerSearchInput');
+    if (!searchInput) return;
+
+    searchInput.value = 'Walk-in Customer';
+
+    searchInput.addEventListener('input', (e) => {
+        const keyword = e.target.value.trim();
+
+        if (keyword === '' || keyword === 'Walk-in Customer') {
+            hideCustomerDropdown();
+            resetToDefaultCustomer();
+            return;
+        }
+
+        clearTimeout(POS.customerSearchTimeout);
+        if (keyword.length < 2) {
+            hideCustomerDropdown();
+            return;
+        }
+
+        POS.customerSearchTimeout = setTimeout(() => performCustomerSearch(keyword), 300);
+    });
+
+    searchInput.addEventListener('keydown', handleCustomerKeydown);
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.position-relative')) hideCustomerDropdown();
+    });
+
+    document.getElementById('clearCustomerBtn')?.addEventListener('click', resetToDefaultCustomer);
+}
+
+function resetToDefaultCustomer() {
+    POS.selectedCustomer = null;
+    document.getElementById('customerId').value = '';
+    document.getElementById('customerSearchInput').value = 'Walk-in Customer';
+    document.getElementById('clearCustomerBtn').style.display = 'none';
+    hideCustomerDropdown();
+}
+
+async function performCustomerSearch(keyword) {
+    try {
+        const response = await fetch(`/pos/search-customers?q=${encodeURIComponent(keyword)}`);
+        const data = await response.json();
+
+        if (data.customers?.length > 0) {
+            POS.currentCustomerResults = data.customers;
+            POS.selectedCustomerIndex = -1;
+            renderCustomerDropdown(POS.currentCustomerResults);
+            showCustomerDropdown();
+        } else {
+            hideCustomerDropdown();
+        }
+    } catch (error) {
+        console.error('Customer search error:', error);
+        hideCustomerDropdown();
+    }
+}
+
+function renderCustomerDropdown(customers) {
+    const listContainer = document.getElementById('customerResultsList');
+    if (!listContainer) return;
+
+    if (!customers?.length) {
+        listContainer.innerHTML = '<div class="text-center text-muted py-3"><small>Tidak ada customer ditemukan</small></div>';
+        return;
+    }
+
+    let html = '';
+    customers.forEach((customer, index) => {
+        const isMember = customer.type === 'member';
+        html += `
+            <div class="customer-dropdown-item" data-index="${index}" data-id="${customer.id}">
+                <div class="customer-dropdown-item-info">
+                    <div class="customer-dropdown-item-name">${escapeHtml(customer.name)}</div>
+                    <div class="customer-dropdown-item-phone">${customer.phone || '-'}</div>
+                </div>
+                <div class="customer-dropdown-item-type ${isMember ? 'member' : ''}">${isMember ? 'Member' : 'Umum'}</div>
+            </div>
+        `;
+    });
+
+    listContainer.innerHTML = html;
+
+    document.querySelectorAll('.customer-dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const id = parseInt(item.dataset.id);
+            const customer = POS.currentCustomerResults.find(c => c.id === id);
+            if (customer) selectCustomer(customer);
+        });
+        item.addEventListener('mouseenter', () => {
+            const index = parseInt(item.dataset.index);
+            setSelectedCustomerIndex(index);
+        });
+    });
+}
+
+function selectCustomer(customer) {
+    POS.selectedCustomer = customer;
+    document.getElementById('customerId').value = customer.id;
+    document.getElementById('customerSearchInput').value = `${customer.name}${customer.phone ? ` - ${customer.phone}` : ''}`;
+    document.getElementById('clearCustomerBtn').style.display = 'inline-flex';
+    hideCustomerDropdown();
+}
+
+function handleCustomerKeydown(e) {
+    const dropdown = document.getElementById('customerDropdown');
+    if (!dropdown || dropdown.style.display === 'none') return;
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectNextCustomerResult();
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectPreviousCustomerResult();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (POS.selectedCustomerIndex >= 0 && POS.currentCustomerResults[POS.selectedCustomerIndex]) {
+            selectCustomer(POS.currentCustomerResults[POS.selectedCustomerIndex]);
+        }
+    } else if (e.key === 'Escape') {
+        hideCustomerDropdown();
+    }
+}
+
+function selectNextCustomerResult() {
+    if (POS.currentCustomerResults.length === 0) return;
+    POS.selectedCustomerIndex = (POS.selectedCustomerIndex + 1) % POS.currentCustomerResults.length;
+    updateSelectedCustomerItem();
+}
+
+function selectPreviousCustomerResult() {
+    if (POS.currentCustomerResults.length === 0) return;
+    POS.selectedCustomerIndex = (POS.selectedCustomerIndex - 1 + POS.currentCustomerResults.length) % POS.currentCustomerResults.length;
+    updateSelectedCustomerItem();
+}
+
+function setSelectedCustomerIndex(index) {
+    POS.selectedCustomerIndex = index;
+    updateSelectedCustomerItem();
+}
+
+function updateSelectedCustomerItem() {
+    document.querySelectorAll('.customer-dropdown-item').forEach((item, i) => {
+        if (i === POS.selectedCustomerIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+function showCustomerDropdown() {
+    const dropdown = document.getElementById('customerDropdown');
+    if (dropdown) dropdown.style.display = 'block';
+}
+
+function hideCustomerDropdown() {
+    const dropdown = document.getElementById('customerDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+    POS.currentCustomerResults = [];
+    POS.selectedCustomerIndex = -1;
+}

@@ -441,6 +441,17 @@ function createPaymentModal() {
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const modalElement = document.getElementById('paymentModal');
+    if (modalElement) {
+        modalElement.addEventListener('shown.bs.modal', function () {
+            const paymentAmountInput = document.getElementById('paymentAmount');
+            if (paymentAmountInput) {
+                paymentAmountInput.focus();
+                paymentAmountInput.select();
+            }
+        });
+    }
 }
 
 export function showPaymentModal(total) {
@@ -594,6 +605,7 @@ async function processTransaction(modal, method, isDirect = false, directData = 
     } : directData;
 
     const transactionData = {
+        invoiceNumber: POS.currentInvoice,
         customerId: paymentData.customerId,
         items: POS.cart.map(item => ({
             productId: item.id,

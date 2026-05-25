@@ -15,7 +15,8 @@ import {
     initCustomerSearch
 } from '../customer/customerSearch.js';
 import {
-    initProductSearch
+    initProductSearch,
+    refocusProductSearch
 } from '../search/productSearch.js';
 import {
     initPaymentHandlers
@@ -41,6 +42,11 @@ export function initGlobalState() {
     initPaymentHandlers();
     initTimeUpdater();
 
+    // Initialize invoice from DOM
+    if (DOM.currentInvoice) {
+        POS.currentInvoice = DOM.currentInvoice.textContent.trim();
+    }
+
     // Initial Render for persisted cart
     renderCart();
     renderMobileCart();
@@ -57,10 +63,44 @@ export function initGlobalState() {
         });
     }
 
+    focusOnSearch();
+    refocusProductSearch();
+    
     console.log('POS System initialized');
 }
 
 function initTimeUpdater() {
     updateTimeDisplay();
     setInterval(updateTimeDisplay, 1000);
+}
+
+function focusOnSearch() {
+    // Method 1: Langsung fokus ke input search
+    if (DOM.searchProduct) {
+        // Fokus setelah DOM benar-benar siap
+        setTimeout(() => {
+            DOM.searchProduct.focus();
+            DOM.searchProduct.select(); // Select semua teks jika ada
+        }, 100);
+    }
+
+    // Method 2: Untuk mobile
+    if (DOM.mobileSearchProduct && window.innerWidth < 768) {
+        setTimeout(() => {
+            DOM.mobileSearchProduct.focus();
+        }, 100);
+    }
+
+    // Method 3: Fallback jika menggunakan element lain
+    const searchInput = document.querySelector('#searchProduct, #mobileSearchProduct, .search-input');
+    if (searchInput && searchInput !== DOM.searchProduct) {
+        setTimeout(() => {
+            searchInput.focus();
+        }, 150);
+    }
+}
+
+// Export untuk dipanggil dari file lain jika perlu
+export function refocusOnSearch() {
+    focusOnSearch();
 }

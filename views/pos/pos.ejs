@@ -38,10 +38,26 @@
         <div class="pos-cart">
             <div class="pos-cart-header">
                 <div class="pos-cart-title">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bx bx-cart"></i>
+                        <span>Shopping Cart</span>
+
+                        <span class="cart-invoice-badge"
+                            id="currentInvoice">
+                            <%= invoiceNumber %>
+                        </span>
+                    </div>
+
+                    <span class="cart-badge"
+                        id="cartItemCount">
+                        0
+                    </span>
+                </div>
+                <!-- <div class="pos-cart-title">
                     <i class="bx bx-cart"></i>
                     <span>Shopping Cart</span>
                     <span class="cart-badge" id="cartItemCount">0</span>
-                </div>
+                </div> -->
                 <!-- Search Product -->
                 <div class="pos-search-group">
                     <div class="input-group">

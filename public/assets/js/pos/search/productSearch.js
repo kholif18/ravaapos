@@ -55,6 +55,26 @@ export function initProductSearch() {
             DOM.searchProduct?.select();
         }
     });
+
+    // TAMBAHKAN: Auto-focus saat halaman dimuat
+    setTimeout(() => {
+        focusSearchInput();
+    }, 100);
+
+    // TAMBAHKAN: Re-focus saat modal ditutup
+    document.addEventListener('modalClosed', () => {
+        setTimeout(() => focusSearchInput(), 150);
+    });
+
+    // TAMBAHKAN: Re-focus saat cart di-clear
+    document.addEventListener('cartCleared', () => {
+        setTimeout(() => focusSearchInput(), 100);
+    });
+
+    // TAMBAHKAN: Re-focus saat transaksi selesai
+    document.addEventListener('transactionCompleted', () => {
+        setTimeout(() => focusSearchInput(), 200);
+    });
 }
 
 function renderProductSearchItem(item, index) {
@@ -224,10 +244,12 @@ async function handleBarcodeScan(barcode) {
             closeAllProductDropdowns();
         } else {
             showError('Not Found', `Produk dengan barcode ${barcode} tidak ditemukan`);
+            setTimeout(() => focusSearchInput(), 100);
         }
     } catch (error) {
         console.error('Barcode error:', error);
         showError('Error', 'Gagal memindai barcode');
+        setTimeout(() => focusSearchInput(), 100);
     }
 }
 
@@ -263,6 +285,7 @@ function initBarcodeScanner() {
                 handleBarcodeScan(barcodeBuffer);
                 barcodeBuffer = '';
                 if (resetTimeout) clearTimeout(resetTimeout);
+                setTimeout(() => focusSearchInput(), 100);
             }
             return;
         }
@@ -318,3 +341,22 @@ function focusSearchInput() {
         }
     }, 100);
 }
+
+// Export fungsi untuk dipanggil dari file lain (index.js atau init.js)
+export function refocusProductSearch() {
+    focusSearchInput();
+}
+
+// Auto-refocus saat halaman menjadi visible kembali
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        setTimeout(() => focusSearchInput(), 100);
+    }
+});
+
+// Auto-refocus saat halaman direstore dari bfcache (back/forward)
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        setTimeout(() => focusSearchInput(), 100);
+    }
+});

@@ -76,6 +76,19 @@
     color: var(--pos-dark);
 }
 
+.cart-invoice-badge {
+    background: rgba(105, 108, 255, 0.12);
+    color: #696cff;
+
+    padding: 4px 10px;
+    border-radius: 999px;
+
+    font-size: 0.75rem;
+    font-weight: 600;
+
+    letter-spacing: 0.3px;
+}
+
 .cart-badge {
     background: var(--pos-primary);
     color: white;

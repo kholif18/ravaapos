@@ -34,6 +34,7 @@ export const DOM = {
 
     // UI elements
     currentTime: document.getElementById('currentTime'),
+    currentInvoice: document.getElementById('currentInvoice'),
     slidePanel: document.getElementById('slidePanel'),
     slideOverlay: document.getElementById('slideOverlay'),
 

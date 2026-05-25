@@ -108,7 +108,8 @@ exports.index = async (req, res) => {
             categories,
             customers,
             taxRate: 11,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            invoiceNumber: generateInvoiceNumber()
         });
 
     } catch (err) {
@@ -280,6 +281,11 @@ exports.getCustomers = async (req, res) => {
         console.error('Error fetching customers:', err);
         res.status(500).json({ customers: [] });
     }
+};
+
+// API: Get next invoice number
+exports.getNextInvoiceNumber = (req, res) => {
+    res.json({ success: true, invoiceNumber: generateInvoiceNumber() });
 };
 
 // POST: Save transaction (FULL VERSION)

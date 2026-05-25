@@ -9,9 +9,18 @@ export const POS = {
     cart: savedState.cart || [],
     selectedCustomer: savedState.selectedCustomer || null,
     currentDiscount: savedState.currentDiscount || 0,
+    currentInvoice: null,
     transactionLocked: false,
     currentTransactionId: null,
     holdSales: [],
+
+    setInvoice(invoice) {
+        this.currentInvoice = invoice;
+        const invoiceEl = document.getElementById('currentInvoice');
+        if (invoiceEl) {
+            invoiceEl.textContent = invoice;
+        }
+    },
 
     // Persistence
     saveToStorage() {

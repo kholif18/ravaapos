@@ -21,8 +21,19 @@ import {
 export function renderCart() {
     if (!DOM.cartItems) return;
 
+    let html = `
+        <div class="cart-header">
+            <div class="cart-header-product">Produk</div>
+            <div class="cart-header-price">Harga</div>
+            <div class="cart-header-qty">Qty</div>
+            <div class="cart-header-disc">Disc</div>
+            <div class="cart-header-total">Total</div>
+            <div class="cart-header-action"></div>
+        </div>
+    `;
+
     if (POS.cart.length === 0) {
-        DOM.cartItems.innerHTML = `
+        html += `
             <div class="cart-empty">
                 <i class="bx bx-cart"></i>
                 <p>Keranjang kosong</p>
@@ -30,7 +41,12 @@ export function renderCart() {
             </div>
         `;
     } else {
-        DOM.cartItems.innerHTML = POS.cart.map((item, index) => createCartItemRow(item, index)).join('');
+        html += POS.cart.map((item, index) => createCartItemRow(item, index)).join('');
+    }
+
+    DOM.cartItems.innerHTML = html;
+
+    if (POS.cart.length > 0) {
         bindCartItemEvents();
     }
 
@@ -38,28 +54,69 @@ export function renderCart() {
 }
 
 function createCartItemRow(item, index) {
-    const itemTotal = (item.price * item.quantity) - (item.discount || 0);
+    const quantity = Number(item.quantity) || 0;
+    const price = Number(item.price) || 0;
+    const discount = Number(item.discount) || 0;
+    const itemTotal = Math.max(0, (price * quantity) - discount);
+    const isService = item.type === 'service';
+    const isPPOB = item.type === 'ppob';
+    const hasStockLimit = !isService && !isPPOB;
+    const isPriceEditable = (item.priceChangeAllowed === true || item.priceChangeAllowed === 1) && !isPPOB;
+    const needQtyInput = item.requireQtyInput || item.defaultQty || isService || isPPOB;
+    const stock = Number(item.stock) || 0;
+
+    let badgeHtml = '';
+    if (isService) badgeHtml += '<span class="badge bg-warning">SVC</span>';
+    if (isPPOB) badgeHtml += '<span class="badge bg-info">PPOB</span>';
+    if (item.requireQtyInput || item.defaultQty) badgeHtml += '<span class="badge bg-secondary ms-1">Qty</span>';
 
     return `
-        <div class="cart-item" data-id="${item.id}" data-index="${index}">
+        <div class="cart-item ${quantity === 0 ? 'need-qty' : ''}" data-id="${item.id}" data-index="${index}">
             <div class="cart-row">
                 <div class="cart-col product">
-                    <div class="cart-product-name">
-                        ${escapeHtml(item.name)}
+                    <div class="cart-product-name" title="${escapeHtml(item.name)}">
+                        ${escapeHtml(truncateText(item.name, 30))}
+                        ${badgeHtml}
                         ${item.discount ? '<span class="badge bg-warning">Disc</span>' : ''}
                     </div>
-                    <div class="cart-product-barcode">${escapeHtml(item.barcode || '')}</div>
+                    ${item.enableAltDesc ? `
+                        <input type="text"
+                            class="form-control form-control-sm cart-desc-input"
+                            data-id="${item.id}"
+                            data-field="altDesc"
+                            placeholder="Deskripsi item..."
+                            value="${escapeHtml(item.altDesc || '')}"
+                            autocomplete="off">
+                    ` : ''}
                 </div>
                 <div class="cart-col price">
-                    <input type="text" class="price-input" value="${formatRupiah(item.price)}" data-id="${item.id}" data-field="price">
+                    <input type="number" class="form-control form-control-sm price-input ${isPriceEditable ? 'price-editable' : ''}" 
+                        value="${price}" 
+                        data-id="${item.id}" 
+                        data-field="price"
+                        step="1000"
+                        min="0"
+                        ${!isPriceEditable ? 'readonly' : ''}>
                 </div>
                 <div class="cart-col qty">
-                    <div class="cart-item-qty">
-                        <input type="number" class="qty-input" value="${item.quantity}" data-id="${item.id}" data-field="qty" min="1">
-                    </div>
+                    <input type="number"
+                        class="form-control form-control-sm qty-input ${needQtyInput && quantity === 0 ? 'highlight-qty' : ''}"
+                        value="${quantity}"
+                        data-id="${item.id}"
+                        data-field="qty"
+                        min="${needQtyInput ? '0' : '1'}"
+                        step="1"
+                        ${hasStockLimit ? `max="${stock}"` : ''}
+                        placeholder="${needQtyInput ? 'Isi qty' : ''}">
                 </div>
                 <div class="cart-col disc">
-                    <input type="text" class="disc-input" value="${formatRupiah(item.discount || 0)}" data-id="${item.id}" data-field="disc" placeholder="Diskon">
+                    <input type="number"
+                        class="form-control form-control-sm disc-input"
+                        value="${discount}"
+                        data-id="${item.id}"
+                        data-field="disc"
+                        step="1000"
+                        min="0">
                 </div>
                 <div class="cart-col total">
                     ${formatRupiah(itemTotal)}
@@ -104,59 +161,86 @@ function bindCartItemEvents() {
         input.removeEventListener('change', handleDiscChange);
         input.addEventListener('change', handleDiscChange);
     });
+
+    // Alt Desc inputs
+    document.querySelectorAll('.cart-desc-input').forEach(input => {
+        input.removeEventListener('change', handleAltDescChange);
+        input.addEventListener('change', handleAltDescChange);
+    });
 }
 
 function handleQtyClick(e) {
-    const id = parseInt(e.currentTarget.dataset.id);
-    const delta = parseInt(e.currentTarget.dataset.delta);
+    e.preventDefault();
+
+    const id = parseInt(e.currentTarget.dataset.id, 10);
+    const delta = parseInt(e.currentTarget.dataset.delta, 10) || 0;
     const item = POS.cart.find(i => i.id === id);
+
     if (item) {
         updateQuantity(id, item.quantity + delta);
     }
 }
 
 function handleRemoveClick(e) {
-    const id = parseInt(e.currentTarget.dataset.id);
-    removeFromCart(id);
+    e.preventDefault();
+
+    const id = parseInt(e.currentTarget.dataset.id, 10);
+    if (id) {
+        removeFromCart(id);
+    }
 }
 
 function handlePriceChange(e) {
-    const id = parseInt(e.currentTarget.dataset.id);
-    const rawValue = e.currentTarget.value;
-    const price = parseInt(rawValue.replace(/[^0-9]/g, ''));
-    if (price > 0) {
+    const input = e.currentTarget;
+    const id = parseInt(input.dataset.id, 10);
+    const price = parseFloat(input.value) || 0;
+
+    if (id && price > 0) {
         updatePrice(id, price);
-    } else {
-        renderCart(); // Revert on invalid
     }
 }
 
 function handleQtyInputChange(e) {
-    const id = parseInt(e.currentTarget.dataset.id);
-    const qty = parseInt(e.currentTarget.value);
-    if (qty > 0) {
-        updateQuantity(id, qty);
-    } else {
-        renderCart();
+    const input = e.currentTarget;
+    const id = parseInt(input.dataset.id, 10);
+    const quantity = parseFloat(input.value) || 0;
+
+    if (id) {
+        updateQuantity(id, quantity);
     }
 }
 
 function handleDiscChange(e) {
+    const input = e.currentTarget;
+    const id = parseInt(input.dataset.id, 10);
+    const discount = parseFloat(input.value) || 0;
+
+    if (id) {
+        updateItemDiscount(id, discount);
+    }
+}
+
+function truncateText(text, maxLength) {
+    if (!text) return '';
+    return text.length > maxLength ? `${text.substring(0, maxLength - 3)}...` : text;
+}
+
+function handleAltDescChange(e) {
     const id = parseInt(e.currentTarget.dataset.id);
-    const rawValue = e.currentTarget.value;
-    const discount = parseInt(rawValue.replace(/[^0-9]/g, ''));
-    updateItemDiscount(id, discount);
+    const value = e.currentTarget.value;
+    const item = POS.cart.find(i => i.id === id);
+    if (item) {
+        item.altDesc = value;
+        POS.saveToStorage();
+    }
 }
 
 function calculateAndDisplayTotals() {
-    const subtotal = POS.getSubtotal();
-    const afterDiscount = POS.getAfterDiscount();
-    const tax = POS.getTax();
-    const total = POS.getTotal();
+    const totals = POS.calculateTotals();
 
-    if (DOM.subtotal) DOM.subtotal.textContent = formatRupiah(subtotal);
-    if (DOM.taxAmount) DOM.taxAmount.textContent = formatRupiah(tax);
-    if (DOM.total) DOM.total.textContent = formatRupiah(total);
+    if (DOM.subtotal) DOM.subtotal.textContent = formatRupiah(totals.subtotal);
+    if (DOM.taxAmount) DOM.taxAmount.textContent = formatRupiah(totals.taxAmount);
+    if (DOM.total) DOM.total.textContent = formatRupiah(totals.total);
 }
 
 export function renderMobileCart() {
@@ -173,9 +257,9 @@ export function renderMobileCart() {
                 </div>
                 <div class="mobile-cart-item-actions">
                     <div class="mobile-cart-item-qty">
-                        <button class="btn-qty-mobile" data-id="${item.id}" data-delta="-1">-</button>
+                        <button class="btn-qty-minus-mobile" data-id="${item.id}" data-delta="-1">-</button>
                         <span class="qty-value">${item.quantity}</span>
-                        <button class="btn-qty-mobile" data-id="${item.id}" data-delta="1">+</button>
+                        <button class="btn-qty-plus-mobile" data-id="${item.id}" data-delta="1">+</button>
                     </div>
                     <div class="mobile-cart-item-total">${formatRupiah(item.price * item.quantity)}</div>
                     <button class="btn-remove-mobile" data-id="${item.id}">

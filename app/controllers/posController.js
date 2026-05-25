@@ -125,20 +125,14 @@ exports.index = async (req, res) => {
 exports.searchProducts = async (req, res) => {
     try {
         const { q, categoryId } = req.query;
-        const whereClause = { ...availableProductWhere };
+        const whereClause = {};
 
         if (q && q.trim()) {
-            whereClause[Op.and] = [
-                { ...availableProductWhere },
-                {
-                    [Op.or]: [
-                        { name: { [Op.like]: `%${q}%` } },
-                        { code: { [Op.like]: `%${q}%` } },
-                        { barcode: { [Op.like]: `%${q}%` } }
-                    ]
-                }
+            whereClause[Op.or] = [
+                { name: { [Op.like]: `%${q}%` } },
+                { code: { [Op.like]: `%${q}%` } },
+                { barcode: { [Op.like]: `%${q}%` } }
             ];
-            delete whereClause[Op.or];
         }
 
         if (categoryId && categoryId !== 'all') {

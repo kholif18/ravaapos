@@ -9,6 +9,7 @@ const customerRoutes = require('./customers');
 const posRouter = require('./pos');
 const stockRoutes = require('./stock');
 const purchasingRoutes = require('./purchasing');
+const salesRoutes = require('./sales');
 
 // Halaman utama
 
@@ -20,6 +21,7 @@ router.use('/categories', categoryRoutes);
 router.use('/suppliers', supplierRoutes);
 router.use('/customers', customerRoutes);
 router.use('/purchasing', purchasingRoutes);
+router.use('/sales', salesRoutes);
 
 // REST API routes untuk /products
 router.use('/products', productRoutes);

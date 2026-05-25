@@ -13,6 +13,8 @@ export const DOM = {
     mobileSearchProduct: document.getElementById('mobileSearchProduct'),
     searchDropdown: document.getElementById('searchDropdown'),
     searchResultsList: document.getElementById('searchResultsList'),
+    mobileSearchDropdown: document.getElementById('mobileSearchDropdown'),
+    mobileSearchResultsList: document.getElementById('mobileSearchResultsList'),
 
     // Customer elements
     customerSelectorCard: document.getElementById('customerSelectorCard'),

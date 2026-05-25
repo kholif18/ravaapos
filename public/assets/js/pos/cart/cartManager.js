@@ -20,18 +20,24 @@ export function addToCart(product, quantity = 1) {
         return false;
     }
 
-    const existing = POS.cart.find(item => item.id === product.id);
+    const canMerge = !product.priceChangeAllowed &&
+        !product.requireQtyInput &&
+        !product.defaultQty &&
+        product.type !== 'service' &&
+        product.type !== 'ppob';
+    const existing = canMerge ? POS.cart.find(item => item.id === product.id) : null;
 
     if (existing) {
         existing.quantity += quantity;
     } else {
+        const initialQuantity = product.quantity ?? product.qty ?? quantity;
+
         POS.cart.push({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            quantity: quantity,
-            barcode: product.barcode,
-            discount: 0
+            ...product,
+            quantity: initialQuantity,
+            discount: product.discount || 0,
+            altDesc: product.altDesc || '',
+            cartId: product.cartId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`)
         });
     }
 
@@ -115,6 +121,7 @@ function renderAll() {
     renderCart();
     renderMobileCart();
     updateCartCount();
+    POS.saveToStorage();
 }
 
 function updateCartCount() {

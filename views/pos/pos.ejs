@@ -220,12 +220,12 @@
                     <button class="quick-action-btn" id="holdTransactionBtn">
                         <i class="bx bx-save"></i>
                         <span>Hold</span>
-                        <kbd>F5</kbd>
+                        <kbd>Ctrl+S</kbd>
                     </button>
                     <button class="quick-action-btn" id="resumeTransactionBtn">
                         <i class="bx bx-history"></i>
                         <span>Resume</span>
-                        <kbd>F6</kbd>
+                        <kbd>Ctrl+H</kbd>
                     </button>
                     <button class="quick-action-btn btn-outline-warning" id="discountQuickBtn">
                         <i class="bx bx-purchase-tag"></i>
@@ -274,12 +274,16 @@
         
         <!-- Mobile Cart Summary -->
         <div class="mobile-cart-summary">
-            <div class="mobile-summary-row">
+            <div class="mobile-summary-row mb-3">
                 <span>Total</span>
                 <span id="mobileTotal">Rp 0</span>
             </div>
+            <button class="btn-checkout-mobile" id="completeOrderBtnMobile">
+                <i class="bx bx-check-circle"></i>
+                <span>CHECKOUT / PAY</span>
+            </button>
         </div>
-        
+
         <!-- Mobile Bottom Navigation -->
         <div class="mobile-bottom-nav">
             <button class="nav-item" id="mobileCartBtn">

@@ -2,87 +2,34 @@
 import { DOM } from '../core/dom.js';
 import { POS } from '../core/state.js';
 import { clearCart } from '../cart/cartManager.js';
-import { formatRupiah } from '../utils/currency.js';
-import { showSuccess, showWarning } from '../ui/notifications.js';
+import { formatCurrency } from '../utils/formatter.js';
+import { showSuccess, showWarning, showError } from '../ui/notifications.js';
+import { showSuccessModal } from './successModal.js';
 
 export function initPaymentHandlers() {
-    // Checkout button
+    // Checkout button (F4)
     if (DOM.completeOrderBtn) {
         DOM.completeOrderBtn.addEventListener('click', () => {
             if (POS.cart.length === 0) {
                 showWarning('Keranjang kosong, tidak bisa checkout');
                 return;
             }
-            showPaymentModal();
+            showPaymentModal(POS.getTotal());
         });
     }
     
-    // Payment method buttons
+    // Cash payment button (Quick access - F9 - Direct Exact Cash)
     if (DOM.cashPaymentBtn) {
         DOM.cashPaymentBtn.addEventListener('click', () => {
             if (POS.cart.length === 0) {
                 showWarning('Keranjang kosong');
                 return;
             }
-            showCashPaymentModal();
+            processDirectCashPayment();
         });
     }
-    
-    if (DOM.cardPaymentBtn) {
-        DOM.cardPaymentBtn.addEventListener('click', () => {
-            if (POS.cart.length === 0) {
-                showWarning('Keranjang kosong');
-                return;
-            }
-            processPayment('card');
-        });
-    }
-    
-    if (DOM.qrisPaymentBtn) {
-        DOM.qrisPaymentBtn.addEventListener('click', () => {
-            if (POS.cart.length === 0) {
-                showWarning('Keranjang kosong');
-                return;
-            }
-            processPayment('qris');
-        });
-    }
-    
-    if (DOM.transferPaymentBtn) {
-        DOM.transferPaymentBtn.addEventListener('click', () => {
-            if (POS.cart.length === 0) {
-                showWarning('Keranjang kosong');
-                return;
-            }
-            processPayment('transfer');
-        });
-    }
-    
-    // Discount quick button
-    if (DOM.discountQuickBtn) {
-        DOM.discountQuickBtn.addEventListener('click', () => {
-            if (DOM.discountInput) DOM.discountInput.focus();
-        });
-    }
-    
-    // Void transaction button
-    if (DOM.voidTransactionBtn) {
-        DOM.voidTransactionBtn.addEventListener('click', () => {
-            if (POS.cart.length === 0) {
-                showWarning('Keranjang kosong');
-                return;
-            }
-            confirmDialog('Yakin ingin membatalkan seluruh transaksi?', 'Konfirmasi Void')
-                .then((result) => {
-                    if (result.isConfirmed) {
-                        clearCart();
-                        showSuccess('Transaksi dibatalkan');
-                    }
-                });
-        });
-    }
-    
-    // Hold transaction button
+
+    // Quick Action Buttons from pos.ejs
     if (DOM.holdTransactionBtn) {
         DOM.holdTransactionBtn.addEventListener('click', () => {
             if (POS.cart.length === 0) {
@@ -92,409 +39,599 @@ export function initPaymentHandlers() {
             holdTransaction();
         });
     }
-    
-    // Resume transaction button
+
     if (DOM.resumeTransactionBtn) {
         DOM.resumeTransactionBtn.addEventListener('click', () => {
             resumeTransaction();
         });
     }
-}
 
-function showPaymentModal() {
-    const total = POS.getTotal();
-    
-    if (typeof Swal === 'undefined') {
-        processPayment('cash');
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Pembayaran',
-        html: `
-            <div style="text-align: center;">
-                <div style="font-size: 2rem; font-weight: bold; color: #696cff; margin-bottom: 20px;">
-                    ${formatRupiah(total)}
-                </div>
-                <div class="payment-methods" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;">
-                    <button class="btn btn-primary" id="modalCashBtn" style="margin: 5px;">💰 Cash</button>
-                    <button class="btn btn-primary" id="modalCardBtn" style="margin: 5px;">💳 Card</button>
-                    <button class="btn btn-primary" id="modalQrisBtn" style="margin: 5px;">📱 QRIS</button>
-                    <button class="btn btn-primary" id="modalTransferBtn" style="margin: 5px;">🏦 Transfer</button>
-                </div>
-            </div>
-        `,
-        showConfirmButton: false,
-        showCancelButton: true,
-        cancelButtonText: 'Batal',
-        didOpen: (modal) => {
-            modal.querySelector('#modalCashBtn')?.addEventListener('click', () => {
-                Swal.close();
-                showCashPaymentModal();
-            });
-            modal.querySelector('#modalCardBtn')?.addEventListener('click', () => {
-                Swal.close();
-                processPayment('card');
-            });
-            modal.querySelector('#modalQrisBtn')?.addEventListener('click', () => {
-                Swal.close();
-                processPayment('qris');
-            });
-            modal.querySelector('#modalTransferBtn')?.addEventListener('click', () => {
-                Swal.close();
-                processPayment('transfer');
-            });
-        }
-    });
-}
-
-function showCashPaymentModal() {
-    const total = POS.getTotal();
-    
-    if (typeof Swal === 'undefined') {
-        const amount = prompt(`Total pembayaran: ${formatRupiah(total)}\nMasukkan jumlah uang:`);
-        if (amount) {
-            const paid = parseInt(amount.replace(/[^0-9]/g, '')) || 0;
-            if (paid >= total) {
-                const change = paid - total;
-                alert(`Kembalian: ${formatRupiah(change)}`);
-                processPayment('cash');
-            } else {
-                alert('Uang kurang!');
+    if (DOM.voidTransactionBtn) {
+        DOM.voidTransactionBtn.addEventListener('click', () => {
+            if (POS.cart.length === 0) {
+                showWarning('Keranjang kosong');
+                return;
             }
-        }
+            if (confirm('Yakin ingin membatalkan seluruh transaksi ini?')) {
+                clearCart();
+                showSuccess('Transaksi dibatalkan');
+            }
+        });
+    }
+
+    if (DOM.discountQuickBtn) {
+        DOM.discountQuickBtn.addEventListener('click', () => {
+            if (DOM.discountInput) {
+                DOM.discountInput.focus();
+                DOM.discountInput.select();
+            }
+        });
+    }
+}
+
+async function processDirectCashPayment() {
+    const total = POS.getTotal();
+
+    if (typeof Swal === 'undefined') {
+        await processTransaction(null, 'cash', true);
         return;
     }
-    
-    Swal.fire({
+
+    const result = await Swal.fire({
         title: 'Pembayaran Tunai',
         html: `
-            <div style="text-align: center;">
-                <div style="font-size: 1.5rem; margin-bottom: 15px;">
-                    Total: <strong>${formatRupiah(total)}</strong>
-                </div>
-                <div class="input-group" style="margin-bottom: 15px;">
-                    <span class="input-group-text">Rp</span>
-                    <input type="text" class="form-control" id="cashAmountInput" placeholder="Masukkan jumlah uang" style="font-size: 1.2rem; text-align: right;">
-                </div>
-                <div id="changeDisplay" style="font-size: 1rem; color: #666;"></div>
+            <div class="pos-cash-confirm">
+                <div class="pos-cash-icon"><i class="bx bx-money"></i></div>
+                <div class="pos-cash-label">Tunai pas</div>
+                <div class="pos-cash-total">${formatCurrency(total)}</div>
+                <div class="pos-cash-note">Transaksi akan diproses tanpa kembalian.</div>
             </div>
         `,
-        showConfirmButton: true,
+        icon: null,
         showCancelButton: true,
-        confirmButtonText: 'Bayar',
+        confirmButtonText: 'Proses Tunai',
         cancelButtonText: 'Batal',
-        didOpen: (modal) => {
-            const input = modal.querySelector('#cashAmountInput');
-            if (input) {
-                input.focus();
-                input.addEventListener('input', (e) => {
-                    let value = e.target.value.replace(/[^0-9]/g, '');
-                    e.target.value = formatNumberInput(value);
-                    const paid = parseInt(value) || 0;
-                    const change = paid - total;
-                    const changeDisplay = modal.querySelector('#changeDisplay');
-                    if (changeDisplay) {
-                        if (paid >= total) {
-                            changeDisplay.innerHTML = `<span style="color: green;">Kembalian: ${formatRupiah(change)}</span>`;
-                        } else if (paid > 0) {
-                            changeDisplay.innerHTML = `<span style="color: red;">Kurang: ${formatRupiah(Math.abs(change))}</span>`;
-                        } else {
-                            changeDisplay.innerHTML = '';
-                        }
-                    }
-                });
-            }
+        customClass: {
+            popup: 'pos-swal-popup',
+            confirmButton: 'btn btn-primary',
+            cancelButton: 'btn btn-outline-secondary'
         },
-        preConfirm: () => {
-            const input = document.getElementById('cashAmountInput');
-            const paid = parseInt(input?.value.replace(/[^0-9]/g, '')) || 0;
-            if (paid < total) {
-                Swal.showValidationMessage(`Uang kurang! ${formatRupiah(total - paid)} lagi`);
-                return false;
-            }
-            return { paid };
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const paid = result.value?.paid || total;
-            const change = paid - total;
-            if (change > 0) {
-                showSuccess(`Kembalian: ${formatRupiah(change)}`);
-            }
-            processPayment('cash');
-        }
+        buttonsStyling: false,
+        focusConfirm: true
     });
-}
 
-function formatNumberInput(value) {
-    if (!value) return '';
-    return new Intl.NumberFormat('id-ID').format(parseInt(value));
-}
-
-function processPayment(method) {
-    const total = POS.getTotal();
-    const customerName = POS.selectedCustomer?.name || 'Walk-in Customer';
-    const receiptNumber = generateReceiptNumber();
-    
-    // Save transaction to localStorage (simulasi)
-    const transaction = {
-        id: receiptNumber,
-        date: new Date().toISOString(),
-        customer: customerName,
-        items: [...POS.cart],
-        subtotal: POS.getSubtotal(),
-        discount: POS.currentDiscount,
-        tax: POS.getTax(),
-        total: total,
-        paymentMethod: method
-    };
-    
-    saveTransaction(transaction);
-    
-    // Show success modal
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'success',
-            title: 'Pembayaran Berhasil!',
-            html: `
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 10px;">✅</div>
-                    <div><strong>${formatRupiah(total)}</strong></div>
-                    <div style="margin-top: 10px;">Metode: ${method.toUpperCase()}</div>
-                    <div>Customer: ${customerName}</div>
-                    <div style="margin-top: 15px; font-size: 0.8rem; color: #666;">
-                        No. Transaksi: ${receiptNumber}
-                    </div>
-                </div>
-            `,
-            confirmButtonText: 'Cetak Struk',
-            showCancelButton: true,
-            cancelButtonText: 'Selesai'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                printReceipt(transaction);
-            }
-            resetTransaction();
-        });
-    } else {
-        alert(`Pembayaran ${method.toUpperCase()} berhasil!\nTotal: ${formatRupiah(total)}\nNo. Transaksi: ${receiptNumber}`);
-        resetTransaction();
+    if (result.isConfirmed) {
+        await processTransaction(null, 'cash', true);
     }
 }
 
-function generateReceiptNumber() {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `INV/${year}${month}${day}/${random}`;
-}
-
-function saveTransaction(transaction) {
-    const transactions = JSON.parse(localStorage.getItem('pos_transactions') || '[]');
-    transactions.unshift(transaction);
-    // Keep only last 100 transactions
-    if (transactions.length > 100) transactions.pop();
-    localStorage.setItem('pos_transactions', JSON.stringify(transactions));
-}
-
-function printReceipt(transaction) {
-    const receiptHtml = generateReceiptHTML(transaction);
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-        printWindow.document.write(receiptHtml);
-        printWindow.document.close();
-        printWindow.print();
-        printWindow.close();
-    }
-}
-
-function generateReceiptHTML(transaction) {
-    const items = transaction.items.map(item => `
-        <tr>
-            <td>${item.name}</td>
-            <td style="text-align: center;">${item.quantity}x</td>
-            <td style="text-align: right;">${formatRupiah(item.price)}</td>
-            <td style="text-align: right;">${formatRupiah(item.price * item.quantity)}</td>
-        </tr>
-    `).join('');
-    
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Struk Pembayaran</title>
-            <style>
-                body { font-family: 'Courier New', monospace; width: 300px; margin: 0 auto; padding: 20px; }
-                table { width: 100%; margin: 10px 0; border-collapse: collapse; }
-                th, td { padding: 4px; border-bottom: 1px dotted #ccc; }
-                .header { text-align: center; margin-bottom: 20px; }
-                .header h3 { margin: 0; }
-                .total { margin-top: 10px; padding-top: 10px; border-top: 1px solid #000; }
-                .footer { text-align: center; margin-top: 30px; font-size: 12px; }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h3>TOKO KAMI</h3>
-                <p>${new Date(transaction.date).toLocaleString('id-ID')}</p>
-                <small>${transaction.id}</small>
-            </div>
-            <table>
-                <thead>
-                    <tr><th>Item</th><th>Qty</th><th>Harga</th><th>Total</th></tr>
-                </thead>
-                <tbody>
-                    ${items}
-                </tbody>
-            </table>
-            <div class="total">
-                <div>Subtotal: ${formatRupiah(transaction.subtotal)}</div>
-                <div>Diskon: ${formatRupiah(transaction.discount)}</div>
-                <div>Tax: ${formatRupiah(transaction.tax)}</div>
-                <div><strong>TOTAL: ${formatRupiah(transaction.total)}</strong></div>
-                <div>Pembayaran: ${transaction.paymentMethod.toUpperCase()}</div>
-            </div>
-            <div class="footer">
-                <p>Terima kasih atas kunjungan Anda</p>
-                <p>💳 ⭐ 🛍️</p>
-            </div>
-        </body>
-        </html>
-    `;
-}
-
-function resetTransaction() {
-    clearCart();
-    if (DOM.discountInput) DOM.discountInput.value = 0;
-    POS.currentDiscount = 0;
-}
-
-// Hold sale functions
-let heldSales = JSON.parse(localStorage.getItem('pos_held_sales') || '[]');
-
-function holdTransaction() {
-    if (POS.cart.length === 0) {
-        showWarning('Keranjang kosong');
-        return;
-    }
+export function holdTransaction() {
+    if (POS.cart.length === 0) return;
     
     const holdData = {
         id: Date.now(),
         date: new Date().toISOString(),
         cart: [...POS.cart],
-        discount: POS.currentDiscount,
         customer: POS.selectedCustomer,
+        discount: POS.currentDiscount,
         total: POS.getTotal()
     };
     
+    const heldSales = JSON.parse(localStorage.getItem('pos_held_sales') || '[]');
     heldSales.push(holdData);
     localStorage.setItem('pos_held_sales', JSON.stringify(heldSales));
     
     clearCart();
     if (DOM.discountInput) DOM.discountInput.value = 0;
-    POS.currentDiscount = 0;
-    
-    showSuccess('Transaksi disimpan', 'Hold Sale');
+    showSuccess('Transaksi berhasil ditahan');
 }
 
-function resumeTransaction() {
+export function resumeTransaction() {
+    const heldSales = JSON.parse(localStorage.getItem('pos_held_sales') || '[]');
     if (heldSales.length === 0) {
         showWarning('Tidak ada transaksi yang ditahan');
         return;
     }
-    
-    if (typeof Swal !== 'undefined') {
-        const saleOptions = heldSales.map((sale, index) => ({
-            id: index,
-            text: `${new Date(sale.date).toLocaleString()} - ${formatRupiah(sale.total)} (${sale.cart.length} item)`
-        }));
-        
-        Swal.fire({
-            title: 'Pilih Transaksi',
-            input: 'select',
-            inputOptions: saleOptions.reduce((acc, opt) => {
-                acc[opt.id] = opt.text;
-                return acc;
-            }, {}),
-            inputPlaceholder: 'Pilih transaksi',
-            showCancelButton: true,
-            confirmButtonText: 'Resume',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed && result.value !== undefined) {
-                const selected = heldSales[parseInt(result.value)];
-                if (selected) {
-                    loadHeldTransaction(selected);
-                }
-            }
+
+    showResumeTransactionModal(heldSales);
+}
+
+function createResumeTransactionModal() {
+    if (document.getElementById('resumeTransactionModal')) return;
+
+    const modalHtml = `
+        <div class="modal fade" id="resumeTransactionModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg resume-transaction-dialog">
+                <div class="modal-content border-0 shadow-lg resume-transaction-content">
+                    <div class="modal-header resume-transaction-header">
+                        <div>
+                            <h5 class="modal-title">
+                                <i class="bx bx-history"></i>
+                                Transaksi Ditahan
+                            </h5>
+                            <small>Pilih transaksi hold yang ingin dikembalikan ke cart</small>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body resume-transaction-body">
+                        <div class="resume-search-wrap">
+                            <i class="bx bx-search"></i>
+                            <input type="search"
+                                class="form-control"
+                                id="heldTransactionSearch"
+                                placeholder="Cari transaksi, customer, item, atau total..."
+                                autocomplete="off">
+                        </div>
+                        <div class="resume-layout">
+                            <div>
+                                <div class="resume-section-title">Daftar transaksi</div>
+                                <div id="heldTransactionList" class="held-transaction-list"></div>
+                            </div>
+                            <div>
+                                <div class="resume-section-title">Preview</div>
+                                <div id="heldTransactionDetail" class="held-transaction-detail"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer resume-transaction-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary" id="resumeHeldBtn" disabled>
+                            <i class="bx bx-reset"></i>
+                            Kembalikan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function showResumeTransactionModal(heldSales) {
+    createResumeTransactionModal();
+
+    const modalElement = document.getElementById('resumeTransactionModal');
+    const searchInput = document.getElementById('heldTransactionSearch');
+    const resumeBtn = document.getElementById('resumeHeldBtn');
+    let selectedIndex = 0;
+
+    const render = () => {
+        const query = document.getElementById('heldTransactionSearch')?.value?.trim().toLowerCase() || '';
+        const filtered = getFilteredHeldSales(heldSales, query);
+
+        if (!filtered.some(entry => entry.index === selectedIndex)) {
+            selectedIndex = filtered[0]?.index ?? null;
+        }
+
+        renderHeldTransactionList(filtered, selectedIndex);
+        renderHeldTransactionDetail(heldSales[selectedIndex]);
+        const activeResumeBtn = document.getElementById('resumeHeldBtn');
+        if (activeResumeBtn) activeResumeBtn.disabled = selectedIndex === null || !heldSales[selectedIndex];
+    };
+
+    searchInput?.replaceWith(searchInput.cloneNode(true));
+    const freshSearchInput = document.getElementById('heldTransactionSearch');
+    freshSearchInput?.addEventListener('input', render);
+    freshSearchInput.value = '';
+
+    if (resumeBtn) {
+        const freshResumeBtn = resumeBtn.cloneNode(true);
+        resumeBtn.parentNode.replaceChild(freshResumeBtn, resumeBtn);
+        freshResumeBtn.addEventListener('click', () => {
+            if (selectedIndex === null || !heldSales[selectedIndex]) return;
+
+            const selectedSale = heldSales.splice(selectedIndex, 1)[0];
+            localStorage.setItem('pos_held_sales', JSON.stringify(heldSales));
+
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) modal.hide();
+
+            loadHeldTransaction(selectedSale);
         });
-    } else {
-        const list = heldSales.map((s, i) => `${i + 1}. ${new Date(s.date).toLocaleString()} - ${formatRupiah(s.total)}`).join('\n');
-        const choice = prompt(`Pilih transaksi:\n${list}\n\nMasukkan nomor:`);
-        if (choice) {
-            const idx = parseInt(choice) - 1;
-            if (heldSales[idx]) {
-                loadHeldTransaction(heldSales[idx]);
-            }
-        }
     }
+
+    const listElement = document.getElementById('heldTransactionList');
+    if (listElement) {
+        listElement.onclick = (e) => {
+            const item = e.target.closest('.held-sale-item');
+            if (!item) return;
+
+            selectedIndex = parseInt(item.dataset.index, 10);
+            render();
+        };
+    }
+
+    render();
+
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    setTimeout(() => freshSearchInput?.focus(), 250);
 }
 
-function loadHeldTransaction(holdData) {
-    clearCart();
-    holdData.cart.forEach(item => {
-        POS.cart.push({ ...item });
-    });
-    POS.currentDiscount = holdData.discount;
-    if (DOM.discountInput) DOM.discountInput.value = holdData.discount;
-    POS.selectedCustomer = holdData.customer;
-    if (holdData.customer) {
-        renderSelectedCustomer(holdData.customer);
-    }
-    
-    // Remove from held sales
-    heldSales = heldSales.filter(s => s.id !== holdData.id);
-    localStorage.setItem('pos_held_sales', JSON.stringify(heldSales));
-    
-    // Trigger re-render
-    const event = new CustomEvent('cartUpdated');
-    document.dispatchEvent(event);
-    
-    showSuccess('Transaksi dimuat kembali');
+function getFilteredHeldSales(heldSales, query) {
+    return heldSales
+        .map((sale, index) => ({ sale, index }))
+        .filter(({ sale }) => {
+            if (!query) return true;
+            const searchable = [
+                sale.customer?.name,
+                formatCurrency(sale.total),
+                new Date(sale.date).toLocaleString('id-ID'),
+                ...sale.cart.map(item => item.name)
+            ].join(' ').toLowerCase();
+
+            return searchable.includes(query);
+        });
 }
 
-// Re-export untuk digunakan di file lain
-export function renderSelectedCustomer(customer) {
-    const nameEl = DOM.selectedCustomerName;
-    const phoneEl = DOM.selectedCustomerPhone;
-    const badgeEl = DOM.customerBadge;
-    const clearBtn = DOM.clearCustomerBtn;
-    
-    if (!nameEl) return;
-    
-    if (!customer) {
-        nameEl.textContent = 'Walk-in Customer';
-        if (phoneEl) phoneEl.innerHTML = '<i class="bx bx-phone"></i><span>Customer umum / non member</span>';
-        if (badgeEl) {
-            badgeEl.textContent = 'UMUM';
-            badgeEl.classList.remove('member-badge');
-        }
-        if (clearBtn) clearBtn.style.display = 'none';
+function renderHeldTransactionList(entries, selectedIndex) {
+    const list = document.getElementById('heldTransactionList');
+    if (!list) return;
+
+    if (entries.length === 0) {
+        list.innerHTML = `
+            <div class="held-sale-empty">
+                <i class="bx bx-search-alt"></i>
+                <span>Tidak ada transaksi yang cocok</span>
+            </div>
+        `;
         return;
     }
+
+    list.innerHTML = entries.map(({ sale, index }) => createHeldTransactionCard(sale, index, selectedIndex)).join('');
+}
+
+function createHeldTransactionCard(sale, index, selectedIndex) {
+    const date = new Date(sale.date);
+    const customerName = sale.customer?.name || 'Walk-in Customer';
+    const itemCount = sale.cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+    const firstItems = sale.cart.slice(0, 2).map(item => item.name).join(', ');
+
+    return `
+        <button type="button" class="held-sale-item ${index === selectedIndex ? 'active' : ''}" data-index="${index}">
+            <div class="held-sale-main">
+                <div>
+                    <div class="held-sale-title">HOLD-${sale.id}</div>
+                    <div class="held-sale-time">${date.toLocaleString('id-ID')}</div>
+                </div>
+                <div class="held-sale-total">
+                    <strong>${formatCurrency(sale.total)}</strong>
+                    <span>${itemCount} item</span>
+                </div>
+            </div>
+            <div class="held-sale-meta">
+                <span><i class="bx bx-user"></i>${escapeHtml(customerName)}</span>
+                <span>${escapeHtml(firstItems || '-')}</span>
+            </div>
+        </button>
+    `;
+}
+
+function renderHeldTransactionDetail(sale) {
+    const detail = document.getElementById('heldTransactionDetail');
+    if (!detail) return;
+
+    detail.innerHTML = sale ? createResumeTransactionDetail(sale) : `
+        <div class="held-detail-empty">
+            <i class="bx bx-receipt"></i>
+            <span>Pilih transaksi untuk melihat preview</span>
+        </div>
+    `;
+}
+
+function createResumeTransactionDetail(sale) {
+    const date = new Date(sale.date);
+    const customerName = sale.customer?.name || 'Walk-in Customer';
+    const items = sale.cart.map(item => {
+        const qty = Number(item.quantity) || 1;
+        const total = (Number(item.price) || 0) * qty;
+
+        return `
+        <div class="held-detail-item">
+            <div>
+                <strong>${escapeHtml(item.name)}</strong>
+                <span>${qty} x ${formatCurrency(item.price || 0)}</span>
+            </div>
+            <b>${formatCurrency(total)}</b>
+        </div>
+    `;
+    }).join('');
+
+    return `
+        <div class="held-detail-card">
+            <div class="held-detail-meta">
+                <div>
+                    <small>Waktu</small>
+                    <strong>${date.toLocaleString('id-ID')}</strong>
+                </div>
+                <div>
+                    <small>Customer</small>
+                    <strong>${escapeHtml(customerName)}</strong>
+                </div>
+            </div>
+            <div class="held-detail-items">${items}</div>
+            <div class="held-detail-summary">
+                <div>
+                    <span>Diskon</span>
+                    <strong>${formatCurrency(sale.discount || 0)}</strong>
+                </div>
+                <div class="total">
+                    <span>Total</span>
+                    <strong>${formatCurrency(sale.total)}</strong>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function loadHeldTransaction(sale) {
+    POS.cart = sale.cart;
+    POS.selectedCustomer = sale.customer;
+    POS.currentDiscount = sale.discount;
     
-    nameEl.textContent = customer.name;
-    if (phoneEl) phoneEl.innerHTML = `<i class="bx bx-phone"></i><span>${customer.phone || '-'}</span>`;
-    if (badgeEl) {
-        badgeEl.textContent = customer.type === 'member' ? 'MEMBER' : 'UMUM';
-        if (customer.type === 'member') {
-            badgeEl.classList.add('member-badge');
-        } else {
-            badgeEl.classList.remove('member-badge');
+    if (DOM.discountInput) DOM.discountInput.value = sale.discount;
+    
+    // Refresh UI
+    POS.saveToStorage();
+    
+    // Trigger UI updates
+    document.dispatchEvent(new CustomEvent('resetCustomer'));
+    
+    import('../cart/cartRenderer.js').then(m => {
+        m.renderCart();
+        m.renderMobileCart();
+    });
+
+    showSuccess('Transaksi berhasil dikembalikan');
+}
+
+function createPaymentModal() {
+    if (document.getElementById('paymentModal')) return;
+    
+    const modalHtml = `
+        <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body p-4">
+                        <div class="total-amount-card text-center mb-3 p-3 bg-primary text-white rounded">
+                            <small>TOTAL BAYAR</small>
+                            <h2 class="total-amount-value" id="paymentTotalAmount">Rp 0</h2>
+                        </div>
+                        <div class="payment-methods d-flex gap-2 mb-3">
+                            <button type="button" class="btn btn-outline-primary flex-fill" data-method="cash"><i class="bx bx-money"></i> Cash</button>
+                            <button type="button" class="btn btn-outline-primary flex-fill" data-method="card"><i class="bx bx-credit-card"></i> Card</button>
+                            <button type="button" class="btn btn-outline-primary flex-fill" data-method="qris"><i class="bx bx-qr"></i> QRIS</button>
+                            <button type="button" class="btn btn-outline-primary flex-fill" data-method="transfer"><i class="bx bx-transfer"></i> Transfer</button>
+                        </div>
+                        <div class="cash-amount-group">
+                            <label class="form-label">Jumlah Dibayar</label>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Rp</span>
+                                <input type="number" class="form-control" id="paymentAmount" min="0" step="1000">
+                            </div>
+                            <div class="quick-amounts d-flex gap-2 mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" data-quick="round">Bulatkan</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" data-quick="exact">Pas</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" data-quick="50000">+50k</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" data-quick="100000">+100k</button>
+                            </div>
+                            <div class="change-info p-2 bg-light rounded">
+                                <small>Kembalian</small>
+                                <h4 id="paymentChange" class="mb-0">Rp 0</h4>
+                            </div>
+                        </div>
+                        <textarea class="form-control mt-3" id="paymentNotes" rows="2" placeholder="Catatan (opsional)..."></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary" id="confirmPaymentBtn" disabled>Bayar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+export function showPaymentModal(total) {
+    createPaymentModal();
+    
+    const modalElement = document.getElementById('paymentModal');
+    const totalSpan = document.getElementById('paymentTotalAmount');
+    const changeSpan = document.getElementById('paymentChange');
+    const cashGroup = document.querySelector('.cash-amount-group');
+    
+    if (!modalElement) return;
+    
+    let selectedMethod = 'cash';
+    
+    // Set total
+    if (totalSpan) totalSpan.textContent = formatCurrency(total);
+    const initialAmountInput = document.getElementById('paymentAmount');
+    if (initialAmountInput) initialAmountInput.value = total;
+    
+    const calculateChange = () => {
+        const activeAmountInput = document.getElementById('paymentAmount');
+        const activeConfirmBtn = document.getElementById('confirmPaymentBtn');
+        const received = parseFloat(activeAmountInput?.value) || 0;
+        const change = received - total;
+
+        if (changeSpan) {
+            changeSpan.textContent = change < 0
+                ? `Kurang ${formatCurrency(Math.abs(change))}`
+                : formatCurrency(change);
+            changeSpan.style.color = change >= 0 ? '#2ecc71' : '#e74c3c';
+        }
+
+        if (activeConfirmBtn) activeConfirmBtn.disabled = selectedMethod === 'cash' && change < 0;
+    };
+
+    // Payment method selection
+    modalElement.querySelectorAll('[data-method]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
+            modalElement.querySelectorAll('[data-method]').forEach(b => {
+                b.classList.remove('active', 'btn-primary');
+                b.classList.add('btn-outline-primary');
+            });
+            newBtn.classList.add('active', 'btn-primary');
+            newBtn.classList.remove('btn-outline-primary');
+            selectedMethod = newBtn.dataset.method;
+            
+            const isCash = selectedMethod === 'cash';
+            if (cashGroup) cashGroup.style.display = isCash ? 'block' : 'none';
+            const activeConfirmBtn = document.getElementById('confirmPaymentBtn');
+            if (activeConfirmBtn) activeConfirmBtn.disabled = false;
+            
+            const amountInput = document.getElementById('paymentAmount');
+            if (isCash && amountInput) {
+                amountInput.value = total;
+                calculateChange();
+                setTimeout(() => amountInput.focus(), 100);
+            }
+        });
+    });
+    
+    // Quick amount buttons
+    modalElement.querySelectorAll('[data-quick]').forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', () => {
+            const amountInput = document.getElementById('paymentAmount');
+            if (!amountInput) return;
+
+            const quick = newBtn.dataset.quick;
+            if (quick === 'round') {
+                amountInput.value = Math.ceil(total / 1000) * 1000;
+            } else if (quick === 'exact') {
+                amountInput.value = total;
+            } else {
+                amountInput.value = total + parseInt(quick);
+            }
+            calculateChange();
+        });
+    });
+    
+    const amountInput = document.getElementById('paymentAmount');
+    const newAmountInput = amountInput.cloneNode(true);
+    amountInput.parentNode.replaceChild(newAmountInput, amountInput);
+    
+    newAmountInput.addEventListener('input', calculateChange);
+    newAmountInput.addEventListener('keydown', (e) => {
+        const activeConfirmBtn = document.getElementById('confirmPaymentBtn');
+        if (e.key === 'Enter' && !activeConfirmBtn?.disabled) {
+            confirmPayment(modalElement, total, selectedMethod);
+        }
+    });
+    
+    const confirmBtn = document.getElementById('confirmPaymentBtn');
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    newConfirmBtn.addEventListener('click', () => confirmPayment(modalElement, total, selectedMethod));
+    
+    // Set default active method
+    const defaultBtn = modalElement.querySelector('[data-method="cash"]');
+    if (defaultBtn) {
+        defaultBtn.classList.add('active', 'btn-primary');
+        defaultBtn.classList.remove('btn-outline-primary');
+    }
+    if (cashGroup) cashGroup.style.display = 'block';
+    calculateChange();
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    setTimeout(() => {
+        newAmountInput.focus();
+        newAmountInput.select();
+    }, 300);
+}
+
+async function confirmPayment(modalElement, total, selectedMethod) {
+    const notes = document.getElementById('paymentNotes')?.value || '';
+    const customerId = POS.selectedCustomer?.id || null;
+    
+    let received = total;
+    let change = 0;
+    
+    if (selectedMethod === 'cash') {
+        received = parseFloat(document.getElementById('paymentAmount')?.value) || 0;
+        change = received - total;
+        if (received < total) {
+            showError('Pembayaran Kurang', 'Jumlah yang diterima kurang dari total');
+            return;
         }
     }
-    if (clearBtn) clearBtn.style.display = 'inline-flex';
+    
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if (modal) modal.hide();
+    
+    await processTransaction(null, selectedMethod, false, { total, amountReceived: received, change, notes, customerId });
+}
+
+async function processTransaction(modal, method, isDirect = false, directData = null) {
+    const totals = POS.calculateTotals();
+    
+    const paymentData = isDirect ? {
+        total: totals.total,
+        amountReceived: totals.total,
+        change: 0,
+        notes: '',
+        customerId: POS.selectedCustomer?.id || null
+    } : directData;
+
+    const transactionData = {
+        customerId: paymentData.customerId,
+        items: POS.cart.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.price * item.quantity,
+            tax: item.tax || 0,
+            altDesc: item.altDesc || null
+        })),
+        subtotal: totals.subtotal,
+        tax: totals.taxAmount,
+        discount: totals.globalDiscount,
+        total: paymentData.total,
+        paymentMethod: method,
+        amountReceived: paymentData.amountReceived,
+        change: paymentData.change,
+        notes: paymentData.notes
+    };
+    
+    try {
+        const response = await fetch('/pos/save-transaction', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+            },
+            body: JSON.stringify(transactionData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccessModal(result.invoiceNumber, transactionData);
+        } else {
+            showError('Error', result.message || 'Transaksi gagal');
+        }
+    } catch (error) {
+        console.error('Transaction error:', error);
+        showError('Error', 'Gagal menyimpan transaksi');
+    }
 }

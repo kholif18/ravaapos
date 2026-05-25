@@ -1,15 +1,31 @@
 // Core/State
-import {
-    CONFIG
-} from './config.js';
+
+const STORAGE_KEY = 'rava_pos_cart_state';
+
+// Load initial state from localStorage
+const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
 
 export const POS = {
-    cart: [],
-    selectedCustomer: null,
-    currentDiscount: 0,
+    cart: savedState.cart || [],
+    selectedCustomer: savedState.selectedCustomer || null,
+    currentDiscount: savedState.currentDiscount || 0,
     transactionLocked: false,
     currentTransactionId: null,
     holdSales: [],
+
+    // Persistence
+    saveToStorage() {
+        const stateToSave = {
+            cart: this.cart,
+            selectedCustomer: this.selectedCustomer,
+            currentDiscount: this.currentDiscount
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    },
+
+    clearStorage() {
+        localStorage.removeItem(STORAGE_KEY);
+    },
 
     // Methods
     reset() {
@@ -18,10 +34,14 @@ export const POS = {
         this.currentDiscount = 0;
         this.transactionLocked = false;
         this.currentTransactionId = null;
+        this.clearStorage();
     },
 
     getSubtotal() {
-        return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        return this.cart.reduce((sum, item) => {
+            const itemTotal = Math.max(0, (item.price * item.quantity) - (item.discount || 0));
+            return sum + itemTotal;
+        }, 0);
     },
 
     getAfterDiscount() {
@@ -29,10 +49,43 @@ export const POS = {
     },
 
     getTax() {
-        return Math.round(this.getAfterDiscount() * (CONFIG.taxRate / 100));
+        return this.calculateTotals().taxAmount;
     },
 
     getTotal() {
-        return this.getAfterDiscount() + this.getTax();
+        return this.calculateTotals().total;
+    },
+
+    calculateTotals() {
+        let subtotal = 0;
+        let taxAmount = 0;
+        const globalDiscount = Number(this.currentDiscount) || 0;
+
+        this.cart.forEach(item => {
+            const quantity = Number(item.quantity) || 0;
+            const price = Number(item.price) || 0;
+            const itemDiscount = Number(item.discount) || 0;
+            const itemSubtotalBeforeDiscount = price * quantity;
+            const itemSubtotal = Math.max(0, itemSubtotalBeforeDiscount - itemDiscount);
+            const itemTaxRate = Number(item.tax) || 0;
+
+            subtotal += itemSubtotal;
+
+            if (itemTaxRate > 0) {
+                taxAmount += itemSubtotalBeforeDiscount * (itemTaxRate / 100);
+            }
+        });
+
+        taxAmount = Math.round(taxAmount);
+        const afterDiscount = Math.max(0, subtotal - globalDiscount);
+        const total = Math.max(0, subtotal + taxAmount - globalDiscount);
+        
+        return {
+            subtotal,
+            afterDiscount,
+            taxAmount,
+            globalDiscount,
+            total
+        };
     }
 };

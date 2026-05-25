@@ -23,6 +23,16 @@ export function initSlidePanel() {
     if (overlay) {
         overlay.addEventListener('click', closeSlidePanel);
     }
+
+    // Add Esc key support
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const panel = DOM.slidePanel;
+            if (panel && panel.classList.contains('open')) {
+                closeSlidePanel();
+            }
+        }
+    });
 }
 
 function closeSlidePanel() {

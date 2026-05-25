@@ -1,5 +1,4 @@
 // UI/Shortcuts
-import { POS } from '../core/state.js';
 import { DOM } from '../core/dom.js';
 
 export function initKeyboardShortcuts() {
@@ -8,20 +7,19 @@ export function initKeyboardShortcuts() {
         if (e.key === 'F1') {
             e.preventDefault();
             DOM.searchProduct?.focus();
+            DOM.searchProduct?.select();
         }
         
         // F2: Open customer search
         if (e.key === 'F2') {
             e.preventDefault();
-            const event = new CustomEvent('openCustomerSearch');
-            document.dispatchEvent(event);
+            DOM.customerSelectorCard?.click();
         }
         
         // F3: Clear cart
         if (e.key === 'F3') {
             e.preventDefault();
-            const event = new CustomEvent('clearCart');
-            document.dispatchEvent(event);
+            DOM.clearCartBtn?.click();
         }
         
         // F4: Checkout
@@ -30,29 +28,41 @@ export function initKeyboardShortcuts() {
             DOM.completeOrderBtn?.click();
         }
         
+        // Ctrl + S: Hold Transaction
+        if (e.ctrlKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            DOM.holdTransactionBtn?.click();
+        }
+
+        // Ctrl + H: Resume Transaction
+        if (e.ctrlKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            DOM.resumeTransactionBtn?.click();
+        }
+
         // F8: Open menu
         if (e.key === 'F8') {
             e.preventDefault();
             DOM.openSlidePanelBtn?.click();
         }
         
-        // F9: Cash payment
+        // F9: Direct Cash payment (Uang Pas)
         if (e.key === 'F9') {
             e.preventDefault();
             DOM.cashPaymentBtn?.click();
         }
         
-        // F10: Void item
+        // F10: Void transaction
         if (e.key === 'F10') {
             e.preventDefault();
-            const event = new CustomEvent('voidLastItem');
-            document.dispatchEvent(event);
+            DOM.voidTransactionBtn?.click();
         }
         
         // Ctrl+D: Discount
-        if (e.ctrlKey && e.key === 'd') {
+        if (e.ctrlKey && e.key.toLowerCase() === 'd') {
             e.preventDefault();
             DOM.discountInput?.focus();
+            DOM.discountInput?.select();
         }
     });
 }

@@ -50,7 +50,7 @@
                 <!-- Menu -->
 
                 <!-- Sidebar -->
-                <%- include('partials/sidebar') %>
+                <%- include('partials/sidebar', { activePage: typeof activePage !== 'undefined' ? activePage : '' }) %>
                 <!-- / Menu -->
 
                 <!-- Layout container -->

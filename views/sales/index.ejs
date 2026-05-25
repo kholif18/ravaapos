@@ -1,0 +1,269 @@
+<div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Riwayat Transaksi</h5>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm" id="refreshBtn">
+                            <i class="bx bx-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <form action="/sales" method="GET" class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label">Cari Invoice</label>
+                            <input type="text" name="search" class="form-control" placeholder="INV/..." value="<%= search %>">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Dari Tanggal</label>
+                            <input type="date" name="dateFrom" class="form-control" value="<%= dateFrom %>">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sampai Tanggal</label>
+                            <input type="date" name="dateTo" class="form-control" value="<%= dateTo %>">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end gap-2">
+                            <button type="submit" class="btn btn-primary flex-fill">Filter</button>
+                            <a href="/sales" class="btn btn-outline-secondary">Reset</a>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive text-nowrap">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>No. Invoice</th>
+                                    <th>Customer</th>
+                                    <th>Total</th>
+                                    <th>Metode</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (sales && sales.length > 0) { %>
+                                    <% sales.forEach(sale => { %>
+                                        <tr>
+                                            <td>
+                                                <strong><%= new Date(sale.createdAt).toLocaleDateString('id-ID') %></strong><br>
+                                                <small class="text-muted"><%= new Date(sale.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) %></small>
+                                            </td>
+                                            <td><span class="fw-bold"><%= sale.invoiceNumber %></span></td>
+                                            <td><%= sale.customer ? sale.customer.name : 'Walk-in Customer' %></td>
+                                            <td><span class="text-primary fw-bold"><%= formatRupiah(sale.total) %></span></td>
+                                            <td>
+                                                <span class="badge bg-label-info">
+                                                    <%= sale.paymentMethod.toUpperCase() %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <% if (sale.status === 'void') { %>
+                                                    <span class="badge bg-danger">VOID</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-success">PAID</span>
+                                                <% } %>
+                                            </td>
+                                            <td class="text-center position-static">
+                                                <div class="dropdown position-static">
+                                                    <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                                                        <i class="bx bx-dots-vertical-rounded"></i>
+                                                    </button>
+                                                    <div class="dropdown-menu">
+                                                        <button class="dropdown-item btn-detail" data-id="<%= sale.id %>">
+                                                            <i class="bx bx-show-alt me-1"></i> Detail
+                                                        </button>
+                                                        <button class="dropdown-item btn-print" data-id="<%= sale.id %>">
+                                                            <i class="bx bx-printer me-1"></i> Cetak Ulang
+                                                        </button>
+                                                        <% if (sale.status !== 'void') { %>
+                                                            <button class="dropdown-item text-danger btn-void" data-id="<%= sale.id %>">
+                                                                <i class="bx bx-trash me-1"></i> Batalkan
+                                                            </button>
+                                                        <% } %>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                <% } else { %>
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <i class="bx bx-search-alt fs-1 text-muted mb-2"></i>
+                                            <p class="mb-0">Tidak ada data transaksi ditemukan</p>
+                                        </td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="mt-4">
+                        <%- include('../partials/pagination.ejs', { pagination: paginatedData, baseUrl: '/sales', query: `search=${search}&dateFrom=${dateFrom}&dateTo=${dateTo}` }) %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detail Transaksi -->
+<div class="modal fade" id="saleDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title">Detail Transaksi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="saleDetailContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-primary" id="printInModalBtn">
+                    <i class="bx bx-printer me-1"></i> Cetak Struk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const detailModal = new bootstrap.Modal(document.getElementById('saleDetailModal'));
+    const detailContent = document.getElementById('saleDetailContent');
+    
+    // Refresh page
+    document.getElementById('refreshBtn')?.addEventListener('click', () => window.location.reload());
+
+    // Click Detail
+    document.querySelectorAll('.btn-detail').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            detailModal.show();
+            detailContent.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+            
+            try {
+                const response = await fetch(`/sales/${id}`);
+                const data = await response.json();
+                if (data.success) {
+                    renderDetail(data.sale);
+                }
+            } catch (err) {
+                detailContent.innerHTML = '<div class="alert alert-danger">Gagal memuat detail</div>';
+            }
+        });
+    });
+
+    // Click Void
+    document.querySelectorAll('.btn-void').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            const { value: reason } = await Swal.fire({
+                title: 'Batalkan Transaksi?',
+                text: 'Berikan alasan pembatalan ini:',
+                input: 'text',
+                inputPlaceholder: 'Cth: Salah input produk',
+                showCancelButton: true,
+                confirmButtonColor: '#ff3e1d',
+                confirmButtonText: 'Ya, Batalkan!'
+            });
+
+            if (reason) {
+                try {
+                    const response = await fetch(`/sales/void/${id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        Swal.fire('Berhasil', result.message, 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Gagal', result.message, 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Error', 'Gagal memproses pembatalan', 'error');
+                }
+            }
+        });
+    });
+
+    function renderDetail(sale) {
+        const date = new Date(sale.createdAt).toLocaleString('id-ID');
+        let itemsHtml = '';
+        
+        sale.items.forEach(item => {
+            itemsHtml += `
+                <tr>
+                    <td>${item.product ? item.product.name : 'Produk Dihapus'}</td>
+                    <td class="text-center">${item.qty}</td>
+                    <td class="text-end">${formatIdr(item.price)}</td>
+                    <td class="text-end">${formatIdr(item.subtotal)}</td>
+                </tr>
+            `;
+        });
+
+        detailContent.innerHTML = `
+            <div class="row mb-4">
+                <div class="col-sm-6">
+                    <small class="text-muted text-uppercase">Informasi Transaksi</small>
+                    <h5 class="mb-1">${sale.invoiceNumber}</h5>
+                    <p class="mb-0 text-muted">${date}</p>
+                    <p class="mb-0">Metode: <span class="badge bg-label-info">${sale.paymentMethod.toUpperCase()}</span></p>
+                </div>
+                <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
+                    <small class="text-muted text-uppercase">Customer</small>
+                    <h6 class="mb-0">${sale.customer ? sale.customer.name : 'Walk-in Customer'}</h6>
+                    ${sale.customer && sale.customer.phone ? `<p class="mb-0">${sale.customer.phone}</p>` : ''}
+                </div>
+            </div>
+
+            <div class="table-responsive border rounded">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Harga</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemsHtml}</tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Subtotal</td>
+                            <td class="text-end">${formatIdr(sale.subtotal)}</td>
+                        </tr>
+                        ${sale.discount > 0 ? `
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold text-danger">Diskon</td>
+                            <td class="text-end text-danger">-${formatIdr(sale.discount)}</td>
+                        </tr>` : ''}
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold text-primary">TOTAL</td>
+                            <td class="text-end fw-bold text-primary">${formatIdr(sale.total)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            ${sale.status === 'void' ? `
+            <div class="alert alert-danger mt-3 mb-0">
+                <strong>TRANSAKSI DIBATALKAN</strong><br>
+                <small>Alasan: ${sale.voidReason || '-'}</small>
+            </div>` : ''}
+        `;
+    }
+
+    function formatIdr(amount) {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+    }
+});
+</script>

@@ -20,6 +20,10 @@ import {
 import {
     initPaymentHandlers
 } from '../payment/paymentModal.js';
+import {
+    renderCart,
+    renderMobileCart
+} from '../cart/cartRenderer.js';
 
 // Hanya 1 deklarasi updateTime
 function updateTimeDisplay() {
@@ -37,13 +41,19 @@ export function initGlobalState() {
     initPaymentHandlers();
     initTimeUpdater();
 
+    // Initial Render for persisted cart
+    renderCart();
+    renderMobileCart();
+
     // Set initial discount input listener
     if (DOM.discountInput) {
+        DOM.discountInput.value = POS.currentDiscount || 0;
         DOM.discountInput.addEventListener('input', (e) => {
             POS.currentDiscount = parseInt(e.target.value) || 0;
+            POS.saveToStorage();
             // Trigger re-render
-            const event = new CustomEvent('cartUpdated');
-            document.dispatchEvent(event);
+            renderCart();
+            renderMobileCart();
         });
     }
 

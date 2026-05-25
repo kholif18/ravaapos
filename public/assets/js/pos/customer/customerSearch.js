@@ -8,17 +8,6 @@ import { showSuccess, showWarning, showError } from '../ui/notifications.js';
 let customers = [];
 let currentSelectedCustomer = null;
 
-// Sample customer data (nanti diganti dengan API call)
-const SAMPLE_CUSTOMERS = [
-    { id: 1, name: 'Budi Santoso', phone: '08123456789', email: 'budi@email.com', type: 'member', points: 1500, address: 'Jl. Merdeka No. 1' },
-    { id: 2, name: 'Siti Aminah', phone: '08234567890', email: 'siti@email.com', type: 'member', points: 3200, address: 'Jl. Sudirman No. 5' },
-    { id: 3, name: 'Ahmad Fauzi', phone: '08345678901', email: 'ahmad@email.com', type: 'regular', points: 0, address: 'Jl. Thamrin No. 10' },
-    { id: 4, name: 'Dewi Lestari', phone: '08456789012', email: 'dewi@email.com', type: 'member', points: 500, address: 'Jl. Gatot Subroto No. 8' },
-    { id: 5, name: 'Rizky Pratama', phone: '08567890123', email: 'rizky@email.com', type: 'regular', points: 0, address: 'Jl. Diponegoro No. 3' },
-    { id: 6, name: 'Maya Sari', phone: '08678901234', email: 'maya@email.com', type: 'member', points: 2100, address: 'Jl. Pahlawan No. 15' },
-    { id: 7, name: 'Indra Wijaya', phone: '08789012345', email: 'indra@email.com', type: 'regular', points: 0, address: 'Jl. Veteran No. 7' }
-];
-
 // Debounce helper function
 function debounce(func, wait) {
     let timeout;
@@ -32,36 +21,20 @@ function debounce(func, wait) {
     };
 }
 
-// Load customers (from API or localStorage)
+// Load customers (from API)
 export async function loadCustomers() {
     try {
-        // Try to load from localStorage first
-        const savedCustomers = localStorage.getItem('pos_customers');
-        if (savedCustomers) {
-            customers = JSON.parse(savedCustomers);
-        } else {
-            // Use sample data
-            customers = [...SAMPLE_CUSTOMERS];
-            saveCustomersToStorage();
+        const response = await fetch('/pos/customers');
+        if (response.ok) {
+            const data = await response.json();
+            customers = data.customers || [];
+            return customers;
         }
-        
-        // Optional: Fetch from API
-        // const response = await fetch('/api/customers');
-        // if (response.ok) {
-        //     customers = await response.json();
-        //     saveCustomersToStorage();
-        // }
-        
-        return customers;
+        return [];
     } catch (error) {
         console.error('Failed to load customers:', error);
-        customers = [...SAMPLE_CUSTOMERS];
-        return customers;
+        return [];
     }
-}
-
-function saveCustomersToStorage() {
-    localStorage.setItem('pos_customers', JSON.stringify(customers));
 }
 
 // Render selected customer in the UI
@@ -125,14 +98,14 @@ export function clearSelectedCustomer() {
 export function openCustomerDropdown() {
     if (!DOM.customerDropdown) return;
     
-    // Close any other open dropdowns
-    closeCustomerDropdown();
-    
     DOM.customerDropdown.style.display = 'block';
     if (DOM.customerSearchInput) {
         DOM.customerSearchInput.value = '';
         DOM.customerSearchInput.focus();
-        searchCustomers('');
+        // Load initial customers when opening
+        loadCustomers().then(results => {
+            renderCustomerResults(results.slice(0, 10));
+        });
     }
 }
 
@@ -144,20 +117,26 @@ export function closeCustomerDropdown() {
 }
 
 // Search customers based on query
-export function searchCustomers(query) {
+export async function searchCustomers(query) {
     if (!DOM.customerResultsList) return;
     
-    let filtered = customers;
-    if (query && query.trim() !== '') {
-        const searchTerm = query.toLowerCase().trim();
-        filtered = customers.filter(c => 
-            c.name.toLowerCase().includes(searchTerm) ||
-            (c.phone && c.phone.includes(searchTerm)) ||
-            (c.email && c.email.toLowerCase().includes(searchTerm))
-        );
+    if (!query || query.trim() === '') {
+        const initial = await loadCustomers();
+        renderCustomerResults(initial.slice(0, 10));
+        return;
     }
-    
-    renderCustomerResults(filtered);
+
+    try {
+        const response = await fetch(`/pos/search-customers?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        
+        if (data.customers) {
+            customers = data.customers;
+            renderCustomerResults(customers);
+        }
+    } catch (error) {
+        console.error('Customer search error:', error);
+    }
 }
 
 // Render customer search results
@@ -169,7 +148,6 @@ function renderCustomerResults(results) {
             <div class="customer-dropdown-empty">
                 <i class="bx bx-user-x"></i>
                 <div>Customer tidak ditemukan</div>
-                <small>Tekan Enter untuk tambah customer baru</small>
             </div>
         `;
         return;
@@ -187,7 +165,6 @@ function renderCustomerResults(results) {
                 <div class="customer-dropdown-phone">
                     <i class="bx bx-phone"></i> ${customer.phone || '-'}
                 </div>
-                ${customer.points ? `<div class="customer-dropdown-points"><i class="bx bx-star"></i> ${customer.points} poin</div>` : ''}
             </div>
             <i class="bx bx-chevron-right"></i>
         </div>
@@ -198,7 +175,7 @@ function renderCustomerResults(results) {
         item.addEventListener('click', (e) => {
             e.stopPropagation();
             const id = parseInt(item.dataset.customerId);
-            const selected = customers.find(c => c.id === id);
+            const selected = results.find(c => c.id === id);
             if (selected) {
                 selectCustomer(selected);
             }
@@ -215,106 +192,13 @@ export function selectCustomer(customer) {
     
     if (customer.type === 'member') {
         showSuccess(`Selamat datang kembali, ${customer.name}!`, 'Member');
-        if (customer.points && customer.points > 0) {
-            // Optional: show points info
-            setTimeout(() => {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Poin Member',
-                        text: `Anda memiliki ${customer.points} poin. ${customer.points >= 100 ? 'Bisa ditukar diskon!' : 'Kumpulkan 100 poin untuk diskon.'}`,
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 3000
-                    });
-                }
-            }, 500);
-        }
     }
-}
-
-// Add new customer
-export function addNewCustomer(customerData) {
-    const newId = Math.max(...customers.map(c => c.id), 0) + 1;
-    const newCustomer = {
-        id: newId,
-        ...customerData,
-        type: customerData.type || 'regular',
-        points: customerData.points || 0,
-        created_at: new Date().toISOString()
-    };
-    
-    customers.push(newCustomer);
-    saveCustomersToStorage();
-    
-    // Auto-select the new customer
-    selectCustomer(newCustomer);
-    showSuccess(`Customer ${newCustomer.name} berhasil ditambahkan`);
-    
-    return newCustomer;
-}
-
-// Show add customer modal
-function showAddCustomerModal() {
-    if (typeof Swal === 'undefined') {
-        const name = prompt('Nama customer:');
-        if (name) {
-            const phone = prompt('Nomor telepon:');
-            addNewCustomer({ name, phone, type: 'regular' });
-        }
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Tambah Customer Baru',
-        html: `
-            <div class="form-group mb-3">
-                <input type="text" id="customerName" class="form-control" placeholder="Nama lengkap*" required>
-            </div>
-            <div class="form-group mb-3">
-                <input type="tel" id="customerPhone" class="form-control" placeholder="Nomor telepon">
-            </div>
-            <div class="form-group mb-3">
-                <input type="email" id="customerEmail" class="form-control" placeholder="Email">
-            </div>
-            <div class="form-group">
-                <select id="customerType" class="form-control">
-                    <option value="regular">Regular Customer</option>
-                    <option value="member">Member</option>
-                </select>
-            </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Simpan',
-        cancelButtonText: 'Batal',
-        preConfirm: () => {
-            const name = document.getElementById('customerName')?.value;
-            if (!name) {
-                Swal.showValidationMessage('Nama customer wajib diisi');
-                return false;
-            }
-            return {
-                name: name,
-                phone: document.getElementById('customerPhone')?.value || '',
-                email: document.getElementById('customerEmail')?.value || '',
-                type: document.getElementById('customerType')?.value || 'regular'
-            };
-        }
-    }).then((result) => {
-        if (result.isConfirmed && result.value) {
-            addNewCustomer(result.value);
-        }
-    });
 }
 
 // Initialize customer search module
 export function initCustomerSearch() {
-    // Load customers
-    loadCustomers().then(() => {
-        // Initial render
-        renderSelectedCustomer(null);
-    });
+    // Initial render
+    renderSelectedCustomer(null);
     
     // Customer card click to open dropdown
     if (DOM.customerSelectorCard) {
@@ -344,30 +228,6 @@ export function initCustomerSearch() {
                 const firstItem = document.querySelector('.customer-dropdown-item');
                 if (firstItem) {
                     firstItem.click();
-                } else {
-                    // No results, offer to add new customer
-                    const query = DOM.customerSearchInput.value;
-                    if (query && query.trim()) {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({
-                                title: 'Customer tidak ditemukan',
-                                text: `Apakah ingin menambah "${query}" sebagai customer baru?`,
-                                icon: 'question',
-                                showCancelButton: true,
-                                confirmButtonText: 'Ya, tambah',
-                                cancelButtonText: 'Batal'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    addNewCustomer({ name: query, phone: '', type: 'regular' });
-                                }
-                            });
-                        } else {
-                            const add = confirm(`Customer "${query}" tidak ditemukan. Tambahkan?`);
-                            if (add) {
-                                addNewCustomer({ name: query, phone: '', type: 'regular' });
-                            }
-                        }
-                    }
                 }
             }
         });
@@ -411,17 +271,4 @@ export function getCurrentCustomer() {
 
 export function getAllCustomers() {
     return [...customers];
-}
-
-export function updateCustomerPoints(customerId, pointsToAdd) {
-    const customer = customers.find(c => c.id === customerId);
-    if (customer && customer.type === 'member') {
-        customer.points = (customer.points || 0) + pointsToAdd;
-        saveCustomersToStorage();
-        if (currentSelectedCustomer && currentSelectedCustomer.id === customerId) {
-            renderSelectedCustomer(customer);
-        }
-        return true;
-    }
-    return false;
 }

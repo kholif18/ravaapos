@@ -10,4 +10,10 @@ if (document.readyState === 'loading') {
     initGlobalState();
 }
 
-window.POSDebug = window.POSDebug || {};
+window.POSDebug = {
+    version: '2.0.0',
+    modules: [
+        'core', 'cart', 'search', 'customer',
+        'payment', 'transaction', 'ui', 'utils', 'reports'
+    ]
+};

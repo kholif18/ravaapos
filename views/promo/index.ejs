@@ -1,0 +1,221 @@
+<div class="card">
+  <div class="card-header">
+    <div class="d-flex flex-wrap justify-content-between mb-3">
+      <div class="gap-2">
+        <button class="btn btn-outline-secondary" id="btnExportCSV"><i class="bx bx-file" title="Export CSV"></i> Export CSV</button>
+        <button class="btn btn-outline-success" id="btnImportCSV" data-bs-toggle="modal" data-bs-target="#modalImportCSV"><i class="bx bx-upload"></i> Import CSV</button>
+        <a href="#" class="btn btn-outline-info" id="btnDownloadTemplate"><i class="bx bx-download"></i> Template CSV</a>
+      </div>
+      <div class="gap-2">
+        <small class="text-muted">Press <kbd>Alt</kbd> + <kbd>N</kbd> to add</small>
+        <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#promoModal" onclick="resetPromoForm()" title="Add Promo (Alt+N)">
+          + Tambah Promo
+        </button>
+      </div>
+    </div>
+    <form method="GET" class="row g-2 mb-3">
+      <div class="col-md-10">
+        <input type="text" class="form-control" name="search" value="<%= pagination?.search || '' %>" placeholder="Cari nama atau kode promo...">
+      </div>
+      <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-secondary" type="submit"><i class="bx bx-search"></i> Cari</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabel Promo -->
+  <div class="card-body">
+    <%- include('_partial', { promos, pagination }) %>
+  </div>
+</div>
+
+<!-- Modal Create/Edit (SATU MODAL) -->
+<div class="modal fade" id="promoModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form id="promoForm" class="modal-content" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="_method" id="formMethod" value="POST">
+      <input type="hidden" name="id" id="promoId">
+      
+      <div class="modal-header">
+        <h5 class="modal-title" id="promoModalTitle">Tambah Promo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="row g-3">
+          <!-- Nama Promo -->
+          <div class="col-md-6">
+            <label class="form-label">Nama Promo <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="promoName" class="form-control" placeholder="Contoh: Diskon Akhir Tahun" required>
+            <div class="invalid-feedback">Nama promo wajib diisi</div>
+          </div>
+
+          <!-- Kode Promo -->
+          <div class="col-md-6">
+            <label class="form-label">Kode Promo <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="promoCode" class="form-control text-uppercase" placeholder="WELCOME10" style="font-family: monospace;" required>
+            <div class="invalid-feedback" id="codeError">Kode sudah digunakan, silakan ganti.</div>
+            <div class="form-text text-muted" id="codeReadonlyHint" style="display: none;">Kode tidak dapat diubah saat edit</div>
+          </div>
+
+          <!-- Pembatasan Promo -->
+          <div class="col-12">
+              <label class="form-label">Pembatasan Promo</label>
+              <select name="applyType" id="applyType" class="form-select">
+                  <option value="all">Semua Produk (Global)</option>
+                  <option value="category">Kategori Tertentu</option>
+                  <option value="product">Produk Tertentu</option>
+              </select>
+              <div class="form-text text-muted">Promo hanya berlaku untuk produk yang dipilih</div>
+          </div>
+
+          <!-- Pilih Kategori (muncul jika applyType = category) -->
+          <div class="col-12" id="categorySelectWrapper" style="display: none;">
+              <label class="form-label">Pilih Kategori</label>
+              <div class="pos-search-group">
+                  <div class="input-group">
+                      <span class="input-group-text bg-primary text-white border-0">
+                          <i class="bx bx-category"></i>
+                      </span>
+                      <input type="text" 
+                            id="categorySearchInput" 
+                            class="form-control" 
+                            placeholder="Cari kategori..." 
+                            autocomplete="off">
+                      <input type="hidden" name="categoryId" id="categoryId" value="">
+                  </div>
+                  <div id="categoryDropdown" class="search-dropdown" style="display: none;">
+                      <div class="search-dropdown-header">
+                          <small>↑ ↓ pilih &nbsp;&nbsp; Enter pilih &nbsp;&nbsp; Esc tutup</small>
+                      </div>
+                      <div id="categoryResultsList" class="search-dropdown-list"></div>
+                  </div>
+              </div>
+              <div class="form-text text-muted">Promo hanya berlaku untuk produk dalam kategori ini</div>
+          </div>
+
+          <!-- Pilih Produk (muncul jika applyType = product) -->
+          <div class="col-12" id="productSelectWrapper" style="display: none;">
+              <label class="form-label">Pilih Produk</label>
+              <div class="pos-search-group">
+                  <div class="input-group">
+                      <span class="input-group-text bg-primary text-white border-0">
+                          <i class="bx bx-package"></i>
+                      </span>
+                      <input type="text" 
+                            id="productSearchInput" 
+                            class="form-control" 
+                            placeholder="Cari produk (nama, kode, atau barcode)..." 
+                            autocomplete="off">
+                      <input type="hidden" name="productId" id="productId" value="">
+                  </div>
+                  <div id="productDropdown" class="search-dropdown" style="display: none;">
+                      <div class="search-dropdown-header">
+                          <small>↑ ↓ pilih &nbsp;&nbsp; Enter pilih &nbsp;&nbsp; Esc tutup</small>
+                      </div>
+                      <div id="productResultsList" class="search-dropdown-list"></div>
+                  </div>
+              </div>
+              <div class="form-text text-muted">Promo hanya berlaku untuk produk ini</div>
+          </div>
+
+          <!-- Tipe Diskon -->
+          <div class="col-md-4">
+            <label class="form-label">Tipe Diskon <span class="text-danger">*</span></label>
+            <select name="type" id="promoType" class="form-select" required>
+              <option value="percent">Persen (%)</option>
+              <option value="fixed">Nominal (Rp)</option>
+            </select>
+          </div>
+
+          <!-- Nilai Diskon -->
+          <div class="col-md-4">
+            <label class="form-label">Nilai Diskon <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text" id="valuePrefix">%</span>
+              <input type="number" name="value" id="promoValue" class="form-control" placeholder="10" step="1" required>
+            </div>
+            <div class="invalid-feedback">Nilai diskon wajib diisi</div>
+          </div>
+
+          <!-- Maksimal Diskon (khusus persen) -->
+          <div class="col-md-4" id="maxDiscountGroup">
+            <label class="form-label">Maksimal Diskon</label>
+            <div class="input-group">
+              <span class="input-group-text">Rp</span>
+              <input type="number" name="maxDiscount" id="promoMaxDiscount" class="form-control" placeholder="Tidak terbatas" step="1000">
+            </div>
+            <div class="form-text text-muted">Khusus tipe persen</div>
+          </div>
+
+          <!-- Minimal Transaksi -->
+          <div class="col-md-6">
+            <label class="form-label">Minimal Transaksi</label>
+            <div class="input-group">
+              <span class="input-group-text">Rp</span>
+              <input type="number" name="minTransaction" id="promoMinTransaction" class="form-control" placeholder="0" step="1000" value="0">
+            </div>
+          </div>
+
+          <!-- Limit Penggunaan -->
+          <div class="col-md-6">
+            <label class="form-label">Limit Penggunaan</label>
+            <input type="number" name="usageLimit" id="promoUsageLimit" class="form-control" placeholder="Tidak terbatas" step="1">
+            <div class="form-text text-muted">Maksimal berapa kali promo dapat digunakan</div>
+          </div>
+
+          <!-- Tanggal Mulai -->
+          <div class="col-md-6">
+            <label class="form-label">Tanggal Mulai</label>
+            <input type="datetime-local" name="startDate" id="promoStartDate" class="form-control">
+          </div>
+
+          <!-- Tanggal Berakhir -->
+          <div class="col-md-6">
+            <label class="form-label">Tanggal Berakhir</label>
+            <input type="datetime-local" name="expiredAt" id="promoExpiredAt" class="form-control">
+          </div>
+
+          <!-- Deskripsi -->
+          <div class="col-12">
+            <label class="form-label">Deskripsi</label>
+            <textarea name="description" id="promoDescription" class="form-control" rows="2" placeholder="Contoh: Diskon khusus member baru..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary" id="promoSubmitBtn">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Detail -->
+<%- include('_detailModal') %>
+
+<!-- Modal Import CSV -->
+<div class="modal fade" id="modalImportCSV" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="formImportCSV" class="modal-content" enctype="multipart/form-data" action="/promo/import" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="modal-header">
+        <h5 class="modal-title">Import Promo dari CSV</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="file" name="csv" accept=".csv" required class="form-control">
+        <div class="form-text">Format kolom: name, code, type, value, minTransaction, maxDiscount, usageLimit, startDate, expiredAt, description</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary">Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/assets/js/pages/promo.js"></script>
+<script type="module" src="/assets/js/utils/shortcut.js"></script>

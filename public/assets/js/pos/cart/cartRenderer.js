@@ -292,3 +292,30 @@ function bindMobileCartEvents() {
         };
     });
 }
+
+export function updateCartBadges() {
+    const totalItems = POS.cart.length;
+    const totalQuantity = POS.cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+    console.log('updateCartBadges - totalItems:', totalItems, 'totalQuantity:', totalQuantity);
+
+    // Update badge jumlah jenis produk
+    const cartItemCountEl = document.getElementById('cartItemCount');
+    if (cartItemCountEl) {
+        cartItemCountEl.textContent = totalItems;
+        cartItemCountEl.title = `${totalItems} jenis produk`;
+    }
+
+    // Update badge total unit
+    const cartTotalQtyEl = document.getElementById('cartTotalQty');
+    if (cartTotalQtyEl) {
+        cartTotalQtyEl.textContent = totalQuantity;
+        cartTotalQtyEl.title = `Total ${totalQuantity} unit`;
+    }
+
+    // Mobile badge
+    if (DOM.mobileCartCount) {
+        DOM.mobileCartCount.textContent = totalQuantity;
+        DOM.mobileCartCount.style.display = totalQuantity > 0 ? 'inline-flex' : 'none';
+    }
+}

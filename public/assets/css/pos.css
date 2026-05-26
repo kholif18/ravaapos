@@ -70,6 +70,7 @@
     font-size: 1.25rem;
     font-weight: 700;
     display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 10px;
     margin-bottom: 16px;
@@ -89,14 +90,49 @@
     letter-spacing: 0.3px;
 }
 
-.cart-badge {
+.cart-badge-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0f2f5;
+    padding: 4px 12px;
+    border-radius: 40px;
+}
+
+.cart-badge-item,
+.cart-badge-qty {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+}
+
+.cart-badge-item i,
+.cart-badge-qty i {
+    font-size: 0.85rem;
+    color: #696cff;
+}
+
+.cart-badge-item span,
+.cart-badge-qty span {
+    background: #696cff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 30px;
+    min-width: 28px;
+    text-align: center;
+}
+
+/* .cart-badge {
     background: var(--pos-primary);
     color: white;
     font-size: 0.75rem;
     padding: 2px 8px;
     border-radius: 20px;
     margin-left: auto;
-}
+} */
 
 /* Search */
 .pos-search-group {
@@ -408,13 +444,12 @@
 .pos-summary-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
     font-size: 0.85rem;
 }
 
 .pos-summary-total {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 2rem;
+    font-weight: 900;
     color: var(--pos-primary);
     margin-top: 8px;
     padding-top: 8px;
@@ -468,7 +503,7 @@
 .pos-customer-section {
     background: var(--pos-white);
     border-radius: 20px;
-    padding: 16px 20px;
+    padding: 16px;
     box-shadow: var(--pos-shadow);
     flex-shrink: 0;
 }
@@ -480,6 +515,41 @@
     color: #6c757d;
 }
 
+/* Promo Section */
+.pos-promo-section {
+    background: var(--pos-white);
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: var(--pos-shadow);
+    flex-shrink: 0;
+}
+
+.input-promo-box {
+    display: flex;
+    gap: 8px;
+}
+
+.promo {
+    border-radius: 12px;
+}
+.btn-promo {
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--bs-primary);
+    color: white;
+    border: 1px solid var(--pos-border);
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-promo:hover {
+    background: var(--pos-primary-dark);
+    color: white;
+    border-color: var(--pos-primary-dark);
+}
 /* Payment Section */
 .pos-payment-section {
     background: var(--pos-white);
@@ -1339,8 +1409,8 @@
 }
 
 /* ========================================
-   SEARCH DROPDOWN - COMPACT WITH STOCK
-   ======================================== */
+SEARCH DROPDOWN - COMPACT WITH STOCK
+======================================== */
 .search-dropdown {
     position: absolute;
     top: 100%;
@@ -1452,8 +1522,8 @@
 }
 
 /* ========================================
-   MOBILE SEARCH DROPDOWN
-   ======================================== */
+MOBILE SEARCH DROPDOWN
+======================================== */
 
 .mobile-search {
     position: relative;
@@ -2206,7 +2276,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 15px 12px;
+    padding: 10px 12px;
     background: #f8f9fa;
     border: 1px solid var(--pos-border);
     border-radius: 12px;

@@ -217,17 +217,18 @@ function addProductToCart(product) {
     focusSearchInput();
     
     // Tampilkan notifikasi sukses
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'success',
-            title: 'Ditambahkan',
-            text: `${product.name} ditambahkan ke keranjang`,
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 1000
-        });
-    }
+    // if (typeof Swal !== 'undefined') {
+    //     Swal.fire({
+    //         icon: 'success',
+    //         title: 'Ditambahkan',
+    //         text: `${product.name} ditambahkan ke keranjang`,
+    //         toast: true,
+    //         position: 'top-end',
+    //         showConfirmButton: false,
+    //         timer: 1000
+    //     });
+    // }
+    console.log(`Added to cart: ${product.name}`);
 }
 
 /**

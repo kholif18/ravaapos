@@ -52,6 +52,20 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: 'paid',
             allowNull: false
         },
+        promoId: {
+            type: DataTypes.INTEGER,
+            allowNull: true
+        },
+
+        promoCode: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+
+        promoDiscount: {
+            type: DataTypes.FLOAT,
+            defaultValue: 0
+        },
         voidReason: {
             type: DataTypes.TEXT,
             allowNull: true
@@ -74,6 +88,10 @@ module.exports = (sequelize, DataTypes) => {
         Sale.hasMany(models.SaleItem, {
             foreignKey: 'saleId',
             as: 'items'
+        });
+        Sale.belongsTo(models.Promo, {
+            foreignKey: 'promoId',
+            as: 'promo'
         });
     };
 

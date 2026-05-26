@@ -1,0 +1,205 @@
+<div class="table-responsive">
+  <table class="table table-sm table-bordered table-hover">
+    <thead class="table-light">
+      <tr>
+        <th width="50">No</th>
+        <th>Kode</th>
+        <th>Nama Promo</th>
+        <th>Tipe</th>
+        <th>Pembatasan</th>
+        <th>Nilai</th>
+        <th>Min. Transaksi</th>
+        <th>Penggunaan</th>
+        <th>Periode</th>
+        <th>Status</th>
+        <th width="100">Aksi</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (promos && promos.length > 0) { %>
+        <% promos.forEach((promo, index) => { %>
+          <tr id="promo-row-<%= promo.id %>">
+            <td><%= (pagination.offset || 0) + index + 1 %></td>
+            <td>
+              <span class="fw-bold font-monospace"><%= promo.code %></span>
+            </td>
+            <td><%= promo.name %></td>
+            <td>
+              <% if (promo.type === 'percent') { %>
+                <span class="badge bg-label-info">(%)</span>
+              <% } else { %>
+                <span class="badge bg-label-warning">Rp</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (promo.applyType === 'all') { %>
+                  <span class="badge bg-secondary">Semua Produk</span>
+              <% } else if (promo.applyType === 'category' && promo.category) { %>
+                  <span class="badge bg-info">
+                      <i class="bx bx-category"></i> <%= promo.category.name %>
+                  </span>
+              <% } else if (promo.applyType === 'product' && promo.product) { %>
+                  <span class="badge bg-primary">
+                      <i class="bx bx-package"></i> <%= promo.product.name %>
+                  </span>
+              <% } else { %>
+                  <span class="badge bg-secondary">-</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (promo.type === 'percent') { %>
+                <%= promo.value %>%
+              <% } else { %>
+                Rp <%= new Intl.NumberFormat('id-ID').format(promo.value) %>
+              <% } %>
+              <% if (promo.maxDiscount && promo.type === 'percent') { %>
+                <br><small class="text-muted">max: Rp <%= new Intl.NumberFormat('id-ID').format(promo.maxDiscount) %></small>
+              <% } %>
+            </td>
+            <td>
+              <% if (promo.minTransaction > 0) { %>
+                Rp <%= new Intl.NumberFormat('id-ID').format(promo.minTransaction) %>
+              <% } else { %>
+                <span class="text-muted">-</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (promo.usageLimit) { %>
+                <%= promo.usedCount %> / <%= promo.usageLimit %>
+              <% } else { %>
+                <span class="text-muted">Tak terbatas</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (promo.startDate || promo.expiredAt) { %>
+                <small>
+                  <% if (promo.startDate) { %>
+                    <%= new Date(promo.startDate).toLocaleDateString('id-ID') %>
+                  <% } else { %>
+                    -
+                  <% } %>
+                  →
+                  <% if (promo.expiredAt) { %>
+                    <%= new Date(promo.expiredAt).toLocaleDateString('id-ID') %>
+                  <% } else { %>
+                    -
+                  <% } %>
+                </small>
+              <% } else { %>
+                <span class="text-muted">-</span>
+              <% } %>
+            </td>
+            <td>
+              <div class="form-check form-switch">
+                <input type="checkbox" 
+                       class="form-check-input toggle-status" 
+                       data-id="<%= promo.id %>" 
+                       <%= promo.isActive ? 'checked' : '' %>
+                       style="cursor: pointer;">
+              </div>
+            </td>
+            <td class="text-center position-static">
+              <div class="dropdown position-static">
+                <button type="button" class="btn btn-sm btn-icon dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                  <i class="bx bx-dots-vertical-rounded"></i>
+                </button>
+                <div class="dropdown-menu">
+                  <button class="dropdown-item btn-detail" 
+                          data-id="<%= promo.id %>" 
+                          data-name="<%= promo.name %>" 
+                          data-code="<%= promo.code %>" 
+                          data-type="<%= promo.type %>" 
+                          data-apply-type="<%= promo.applyType || 'all' %>"
+                          data-category-id="<%= promo.categoryId || '' %>"
+                          data-product-id="<%= promo.productId || '' %>"
+                          data-value="<%= promo.value %>" 
+                          data-max-discount="<%= promo.maxDiscount %>" 
+                          data-min-transaction="<%= promo.minTransaction %>" 
+                          data-usage-limit="<%= promo.usageLimit %>" 
+                          data-used-count="<%= promo.usedCount %>"
+                          data-start-date="<%= promo.startDate %>" 
+                          data-expired-at="<%= promo.expiredAt %>" 
+                          data-description="<%= promo.description ? promo.description.replace(/"/g, '&quot;') : '' %>"
+                          data-is-active="<%= promo.isActive %>">
+                    <i class="bx bx-info-circle"></i> Detail
+                  </button>
+                  <button class="dropdown-item btn-edit" 
+                          data-id="<%= promo.id %>" 
+                          data-name="<%= promo.name %>" 
+                          data-code="<%= promo.code %>" 
+                          data-type="<%= promo.type %>" 
+                          data-apply-type="<%= promo.applyType || 'all' %>"
+                          data-category-id="<%= promo.categoryId || '' %>"
+                          data-product-id="<%= promo.productId || '' %>"
+                          data-value="<%= promo.value %>" 
+                          data-max-discount="<%= promo.maxDiscount %>" 
+                          data-min-transaction="<%= promo.minTransaction %>" 
+                          data-usage-limit="<%= promo.usageLimit %>" 
+                          data-start-date="<%= promo.startDate %>" 
+                          data-expired-at="<%= promo.expiredAt %>" 
+                          data-description="<%= promo.description ? promo.description.replace(/"/g, '&quot;') : '' %>">
+                    <i class="bx bx-edit-alt"></i> Edit
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button class="dropdown-item text-danger btn-delete" data-id="<%= promo.id %>" data-name="<%= promo.name %>">
+                    <i class="bx bx-trash"></i> Hapus
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      <% } else { %>
+        <tr>
+          <td colspan="11" class="text-center py-4">
+            <i class="bx bx-gift bx-lg text-muted"></i>
+            <p class="mt-2 mb-0">Belum ada promo</p>
+            <small class="text-muted">Klik "Tambah Promo" untuk menambahkan</small>
+          </td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+
+<% if (pagination && pagination.totalPages > 1) { %>
+  <nav aria-label="Page navigation" class="mt-3">
+    <ul class="pagination justify-content-end">
+      <% if (pagination.hasPrev) { %>
+        <li class="page-item">
+          <a class="page-link" href="?page=<%= pagination.prevPage %><%= pagination.search ? '&search=' + pagination.search : '' %>">
+            <i class="bx bx-chevron-left"></i> Prev
+          </a>
+        </li>
+      <% } else { %>
+        <li class="page-item disabled">
+          <span class="page-link"><i class="bx bx-chevron-left"></i> Prev</span>
+        </li>
+      <% } %>
+      
+      <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+        <% if (i === pagination.currentPage) { %>
+          <li class="page-item active"><span class="page-link"><%= i %></span></li>
+        <% } else if (Math.abs(i - pagination.currentPage) <= 2 || i === 1 || i === pagination.totalPages) { %>
+          <li class="page-item">
+            <a class="page-link" href="?page=<%= i %><%= pagination.search ? '&search=' + pagination.search : '' %>"><%= i %></a>
+          </li>
+        <% } else if (Math.abs(i - pagination.currentPage) === 3) { %>
+          <li class="page-item disabled"><span class="page-link">...</span></li>
+        <% } %>
+      <% } %>
+      
+      <% if (pagination.hasNext) { %>
+        <li class="page-item">
+          <a class="page-link" href="?page=<%= pagination.nextPage %><%= pagination.search ? '&search=' + pagination.search : '' %>">
+            Next <i class="bx bx-chevron-right"></i>
+          </a>
+        </li>
+      <% } else { %>
+        <li class="page-item disabled">
+          <span class="page-link">Next <i class="bx bx-chevron-right"></i></span>
+        </li>
+      <% } %>
+    </ul>
+  </nav>
+<% } %>

@@ -352,3 +352,133 @@ body.swal2-shown .layout-menu {
     flex-wrap: wrap;
     gap: 4px;
 }
+
+/* ========================================
+SEARCH DROPDOWN - COMPACT WITH STOCK
+======================================== */
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    z-index: 1060;
+    max-height: 380px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.search-dropdown-header {
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.3px;
+}
+
+.search-dropdown-list {
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.search-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f5f5f5;
+    transition: background 0.15s;
+}
+
+.search-dropdown-item:hover,
+.search-dropdown-item.selected {
+    background: #f0f0ff;
+}
+
+/* Compact info area */
+.search-dropdown-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-dropdown-name {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.search-dropdown-name .item-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #2c3e50;
+}
+
+.search-dropdown-name .item-code {
+    font-size: 0.65rem;
+    color: #999;
+    font-family: monospace;
+}
+
+.search-dropdown-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.search-dropdown-meta .item-price {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--pos-primary);
+}
+
+.search-dropdown-meta .item-stock {
+    font-size: 0.7rem;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.search-dropdown-meta .item-stock i {
+    font-size: 0.7rem;
+}
+
+.search-dropdown-meta .stock-value {
+    font-weight: 600;
+}
+
+.search-dropdown-meta .stock-value.low-stock {
+    color: #e74c3c;
+}
+
+.search-dropdown-meta .stock-value.medium-stock {
+    color: #f39c12;
+}
+
+.search-dropdown-meta .stock-value.high-stock {
+    color: #2ecc71;
+}
+
+.modal .pos-search-group {
+    position: relative;
+}
+
+.modal .search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    max-height: 300px;
+    overflow: auto;
+}

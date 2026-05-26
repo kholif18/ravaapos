@@ -1,6 +1,6 @@
 // controllers/posController.js
 const db = require('../models');
-const { Product, Category, Customer, Sale, SaleItem, StockMovement } = db;
+const { Product, Category, Customer, Sale, SaleItem, StockMovement, Promo } = db;
 const { Op } = require('sequelize');
 
 // Constanta untuk available product where clause
@@ -45,6 +45,86 @@ function generateInvoiceNumber() {
     const day = String(now.getDate()).padStart(2, '0');
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     return `INV-${year}${month}${day}-${random}`;
+}
+
+function normalizePromoCode(code) {
+    return String(code || '').trim().toUpperCase();
+}
+
+function getPromoValidationError(promo, subtotal, now = new Date()) {
+    if (!promo) return 'Kode promo tidak ditemukan';
+    if (!promo.isActive) return 'Promo tidak aktif';
+    if (promo.startDate && new Date(promo.startDate) > now) return 'Promo belum dimulai';
+    if (promo.expiredAt && new Date(promo.expiredAt) < now) return 'Promo sudah berakhir';
+    if (promo.usageLimit && promo.usedCount >= promo.usageLimit) return 'Limit penggunaan promo sudah habis';
+    if (Number(promo.minTransaction || 0) > subtotal) {
+        return `Minimal transaksi promo Rp ${Number(promo.minTransaction).toLocaleString('id-ID')}`;
+    }
+    return null;
+}
+
+async function calculatePromoDiscount({ code, items, subtotal, transaction = null }) {
+    const promoCode = normalizePromoCode(code);
+    if (!promoCode) {
+        return { promo: null, discount: 0, eligibleSubtotal: 0 };
+    }
+
+    const promo = await Promo.findOne({
+        where: { code: promoCode },
+        transaction
+    });
+
+    const validationError = getPromoValidationError(promo, Number(subtotal) || 0);
+    if (validationError) {
+        throw new Error(validationError);
+    }
+
+    const productIds = (items || [])
+        .map(item => parseInt(item.productId, 10))
+        .filter(Boolean);
+
+    const products = await Product.findAll({
+        where: { id: productIds },
+        attributes: ['id', 'categoryId'],
+        transaction
+    });
+
+    const productMap = new Map(products.map(product => [product.id, product]));
+    let eligibleSubtotal = 0;
+
+    for (const item of items || []) {
+        const productId = parseInt(item.productId, 10);
+        const product = productMap.get(productId);
+        if (!product) continue;
+
+        let eligible = promo.applyType === 'all';
+        if (promo.applyType === 'category') {
+            eligible = Number(product.categoryId) === Number(promo.categoryId);
+        } else if (promo.applyType === 'product') {
+            eligible = productId === Number(promo.productId);
+        }
+
+        if (eligible) {
+            const itemSubtotal = Math.max(0, Number(item.subtotal) || ((Number(item.price) || 0) * (Number(item.quantity) || 0)));
+            eligibleSubtotal += itemSubtotal;
+        }
+    }
+
+    if (eligibleSubtotal <= 0) {
+        throw new Error('Promo tidak berlaku untuk produk di keranjang');
+    }
+
+    let discount = promo.type === 'percent'
+        ? eligibleSubtotal * (Number(promo.value) / 100)
+        : Number(promo.value);
+
+    if (promo.maxDiscount && promo.type === 'percent') {
+        discount = Math.min(discount, Number(promo.maxDiscount));
+    }
+
+    discount = Math.min(Math.round(discount), eligibleSubtotal);
+
+    return { promo, discount, eligibleSubtotal };
 }
 
 // GET POS page
@@ -113,7 +193,7 @@ exports.index = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ Error loading POS:', err);
+        console.error('Error loading POS:', err);
         res.status(500).send(`
             <h1>Error Loading POS</h1>
             <p>${err.message}</p>
@@ -288,6 +368,47 @@ exports.getNextInvoiceNumber = (req, res) => {
     res.json({ success: true, invoiceNumber: generateInvoiceNumber() });
 };
 
+exports.applyPromo = async (req, res) => {
+    try {
+        const { code, items = [], subtotal = 0 } = req.body;
+
+        if (!items.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Keranjang belanja kosong'
+            });
+        }
+
+        const { promo, discount, eligibleSubtotal } = await calculatePromoDiscount({
+            code,
+            items,
+            subtotal
+        });
+
+        res.json({
+            success: true,
+            message: 'Promo berhasil diterapkan',
+            promo: {
+                id: promo.id,
+                code: promo.code,
+                name: promo.name,
+                type: promo.type,
+                value: promo.value,
+                applyType: promo.applyType,
+                categoryId: promo.categoryId,
+                productId: promo.productId
+            },
+            discount,
+            eligibleSubtotal
+        });
+    } catch (err) {
+        res.status(400).json({
+            success: false,
+            message: err.message
+        });
+    }
+};
+
 // POST: Save transaction (FULL VERSION)
 exports.saveTransaction = async (req, res) => {
     const t = await db.sequelize.transaction();
@@ -303,7 +424,9 @@ exports.saveTransaction = async (req, res) => {
             paymentMethod,
             amountReceived,
             change,
-            notes
+            notes,
+            promoCode,
+            invoiceNumber: requestedInvoiceNumber
         } = req.body;
 
         if (!items || items.length === 0) {
@@ -314,17 +437,43 @@ exports.saveTransaction = async (req, res) => {
             throw new Error('Metode pembayaran harus dipilih');
         }
 
+        let promo = null;
+        let promoDiscount = 0;
+        let finalDiscount = parseFloat(discount) || 0;
+        let finalTotal = parseFloat(total);
+
+        if (promoCode) {
+            const promoResult = await calculatePromoDiscount({
+                code: promoCode,
+                items,
+                subtotal,
+                transaction: t
+            });
+            promo = promoResult.promo;
+            promoDiscount = promoResult.discount;
+            finalDiscount = promoDiscount;
+            finalTotal = Math.max(0, (parseFloat(subtotal) || 0) + (parseFloat(tax) || 0) - promoDiscount);
+        }
+
         // VALIDASI PEMBAYARAN
         if (paymentMethod === 'cash') {
             const received = parseFloat(amountReceived) || 0;
-            const totalAmount = parseFloat(total);
+            const totalAmount = finalTotal;
             
             if (received < totalAmount) {
                 throw new Error(`Uang pembayaran kurang: Rp ${totalAmount - received} yang harus dibayar`);
             }
         }
 
-        const invoiceNumber = generateInvoiceNumber();
+        const invoiceNumber = String(requestedInvoiceNumber || '').trim() || generateInvoiceNumber();
+        const existingSale = await Sale.findOne({
+            where: { invoiceNumber },
+            transaction: t
+        });
+
+        if (existingSale) {
+            throw new Error(`Nomor invoice ${invoiceNumber} sudah pernah digunakan`);
+        }
 
         // Create sale
         const sale = await Sale.create({
@@ -332,15 +481,22 @@ exports.saveTransaction = async (req, res) => {
             customerId: customerId || null,
             subtotal: parseFloat(subtotal),
             tax: parseFloat(tax),
-            discount: parseFloat(discount),
-            total: parseFloat(total),
+            discount: finalDiscount,
+            total: finalTotal,
             paymentMethod,
             amountReceived: parseFloat(amountReceived) || 0,
             change: parseFloat(change) || 0,
             notes: notes || null,
             cashierId: req.user?.id || null,
-            status: 'paid'
+            status: 'paid',
+            promoId: promo ? promo.id : null,
+            promoCode: promo ? promo.code : null,
+            promoDiscount
         }, { transaction: t });
+
+        if (promo) {
+            await promo.increment('usedCount', { by: 1, transaction: t });
+        }
 
         // Process items
         for (const item of items) {

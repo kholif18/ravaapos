@@ -3,10 +3,13 @@ export const DOM = {
     // Cart elements
     cartItems: document.getElementById('cartItems'),
     cartItemCount: document.getElementById('cartItemCount'),
+    cartTotalQty: document.getElementById('cartTotalQty'),
     subtotal: document.getElementById('subtotal'),
     taxAmount: document.getElementById('taxAmount'),
     total: document.getElementById('total'),
     discountInput: document.getElementById('discountInput'),
+    promoInput: document.querySelector('.input-promo-box .promo'),
+    promoApplyBtn: document.querySelector('.input-promo-box .btn-promo'),
 
     // Search elements
     searchProduct: document.getElementById('searchProduct'),

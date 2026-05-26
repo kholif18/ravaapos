@@ -48,17 +48,17 @@
                         </span>
                     </div>
 
-                    <span class="cart-badge"
-                        id="cartItemCount">
-                        0
-                    </span>
+                    <div class="cart-badge-wrapper">
+                        <span class="cart-badge-item" title="Jumlah produk">
+                            <i class="bx bx-package"></i>
+                            <span id="cartItemCount">0</span>
+                        </span>
+                        <span class="cart-badge-qty" title="Total unit">
+                            <i class="bx bx-box"></i>
+                            <span id="cartTotalQty">0</span>
+                        </span>
+                    </div>
                 </div>
-                <!-- <div class="pos-cart-title">
-                    <i class="bx bx-cart"></i>
-                    <span>Shopping Cart</span>
-                    <span class="cart-badge" id="cartItemCount">0</span>
-                </div> -->
-                <!-- Search Product -->
                 <div class="pos-search-group">
                     <div class="input-group">
                         <span class="input-group-text bg-primary text-white border-0">
@@ -181,9 +181,7 @@
                     <!-- Hidden Search Dropdown -->
                     <div id="customerDropdown" class="customer-dropdown" style="display: none;">
                         <div class="customer-search-box">
-                            <input type="text"
-                                class="form-control"
-                                id="customerSearchInput"
+                            <input type="text" class="form-control" id="customerSearchInput"
                                 placeholder="Cari nama atau telepon customer..."
                                 autocomplete="off">
                         </div>
@@ -197,6 +195,13 @@
                 </div>
             </div>
             
+            <!-- input Promo Code -->
+            <div class="pos-promo-section">
+                <div class="input-promo-box">
+                    <input type="text" class="form-control promo" placeholder="Promo Code">
+                    <button type="button" class="btn btn-promo">Apply</button>
+                </div>
+            </div>
             <!-- Payment Section - Utama -->
             <div class="pos-payment-section">
                 <button class="btn-checkout-large" id="completeOrderBtn">
@@ -243,15 +248,20 @@
                         <span>Resume</span>
                         <kbd>Ctrl+H</kbd>
                     </button>
-                    <button class="quick-action-btn btn-outline-warning" id="discountQuickBtn">
-                        <i class="bx bx-purchase-tag"></i>
-                        <span>Discount</span>
-                        <kbd>Ctrl+D</kbd>
-                    </button>
                     <button class="quick-action-btn btn-outline-danger" id="voidTransactionBtn">
                         <i class="bx bx-trash"></i>
                         <span>Void</span>
                         <kbd>F10</kbd>
+                    </button>
+                    <button class="quick-action-btn" id="">
+                        <i class="bx bx-save"></i>
+                        <span>Refund</span>
+                        <kbd>Ctrl+</kbd>
+                    </button>
+                    <button class="quick-action-btn" id="">
+                        <i class="bx bx-history"></i>
+                        <span>Open Drawer</span>
+                        <kbd>Ctrl+</kbd>
                     </button>
                 </div>
             </div>
@@ -373,13 +383,13 @@
                         </div>
                         <i class="bx bx-chevron-right arrow-icon"></i>
                     </button>
-                    <button class="action-btn with-arrow" id="transactionHistoryBtn">
+                    <a href="/sales" class="action-btn with-arrow" id="transactionHistoryBtn">
                         <div class="action-btn-content">
                             <i class="bx bx-history"></i>
                             <span>Sales History</span>
                         </div>
                         <i class="bx bx-chevron-right arrow-icon"></i>
-                    </button>
+                    </a>
                     <button class="action-btn with-arrow" id="reprintReceiptBtn">
                         <div class="action-btn-content">
                             <i class="bx bx-printer"></i>

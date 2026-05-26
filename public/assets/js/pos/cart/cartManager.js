@@ -14,6 +14,15 @@ import {
     DOM
 } from '../core/dom.js';
 
+function clearAppliedPromo() {
+    if (!POS.appliedPromo) return;
+
+    POS.appliedPromo = null;
+    POS.currentDiscount = 0;
+    if (DOM.discountInput) DOM.discountInput.value = 0;
+    if (DOM.promoInput) DOM.promoInput.value = '';
+}
+
 export function addToCart(product, quantity = 1) {
     if (POS.transactionLocked) {
         showWarning('Transaksi sedang dikunci, tidak bisa menambah item');
@@ -41,7 +50,9 @@ export function addToCart(product, quantity = 1) {
         });
     }
 
+    clearAppliedPromo();
     renderAll();
+    POS.saveToStorage();
     return true;
 }
 
@@ -52,7 +63,9 @@ export function removeFromCart(productId) {
     }
 
     POS.cart = POS.cart.filter(item => item.id !== productId);
+    clearAppliedPromo();
     renderAll();
+    POS.saveToStorage();
     return true;
 }
 
@@ -65,8 +78,10 @@ export function updateQuantity(productId, newQuantity) {
             removeFromCart(productId);
         } else {
             item.quantity = newQuantity;
+            clearAppliedPromo();
         }
         renderAll();
+        POS.saveToStorage();
         return true;
     }
     return false;
@@ -78,7 +93,9 @@ export function updatePrice(productId, newPrice) {
     const item = POS.cart.find(item => item.id === productId);
     if (item && newPrice > 0) {
         item.price = newPrice;
+        clearAppliedPromo();
         renderAll();
+        POS.saveToStorage();
         return true;
     }
     return false;
@@ -90,7 +107,9 @@ export function updateItemDiscount(productId, discountAmount) {
     const item = POS.cart.find(item => item.id === productId);
     if (item) {
         item.discount = Math.min(discountAmount, item.price * item.quantity);
+        clearAppliedPromo();
         renderAll();
+        POS.saveToStorage();
         return true;
     }
     return false;
@@ -104,8 +123,11 @@ export function clearCart() {
 
     POS.cart = [];
     POS.currentDiscount = 0;
+    POS.appliedPromo = null;
     if (DOM.discountInput) DOM.discountInput.value = 0;
+    if (DOM.promoInput) DOM.promoInput.value = '';
     renderAll();
+    POS.saveToStorage();
     return true;
 }
 
@@ -121,11 +143,35 @@ function renderAll() {
     renderCart();
     renderMobileCart();
     updateCartCount();
-    POS.saveToStorage();
+    // POS.saveToStorage();
 }
 
 function updateCartCount() {
-    const totalItems = POS.cart.reduce((sum, item) => sum + item.quantity, 0);
-    if (DOM.cartItemCount) DOM.cartItemCount.textContent = totalItems;
-    if (DOM.mobileCartCount) DOM.mobileCartCount.textContent = totalItems;
+    if (document.readyState !== 'complete') {
+        setTimeout(updateCartCount, 100);
+        return;
+    }
+    
+    const totalItems = POS.cart.length;
+    const totalQuantity = POS.cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+    // Update badge utama (jumlah item)
+    const cartItemCountEl = document.getElementById('cartItemCount');
+    if (cartItemCountEl) {
+        cartItemCountEl.textContent = totalItems;
+        cartItemCountEl.title = `${totalItems} jenis produk`;
+    }
+
+    // Update badge total qty
+    const totalQtyEl = document.getElementById('cartTotalQty');
+    if (totalQtyEl) {
+        totalQtyEl.textContent = totalQuantity;
+        totalQtyEl.title = `Total ${totalQuantity} unit`;
+    }
+
+    // Mobile badge (cukup total qty)
+    if (DOM.mobileCartCount) {
+        DOM.mobileCartCount.textContent = totalQuantity;
+        DOM.mobileCartCount.style.display = totalQuantity > 0 ? 'inline-flex' : 'none';
+    }
 }

@@ -2,19 +2,20 @@
 // Menggunakan Swal dari global window (sudah di-load di HTML)
 
 export function showSuccess(message, title = 'Sukses') {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: 'success',
-            title: title,
-            text: message,
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 2000
-        });
-    } else {
-        alert(`✅ ${title}: ${message}`);
-    }
+    // if (typeof Swal !== 'undefined') {
+    //     Swal.fire({
+    //         icon: 'success',
+    //         title: title,
+    //         text: message,
+    //         toast: true,
+    //         position: 'top-end',
+    //         showConfirmButton: false,
+    //         timer: 2000
+    //     });
+    // } else {
+    //     alert(`✅ ${title}: ${message}`);
+    // }
+    console.log(`✅ ${title}: ${message}`);
 }
 
 export function showError(message, title = 'Error') {
@@ -70,7 +71,7 @@ export function confirmDialog(message, title = 'Konfirmasi') {
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Ya',
-            cancelButtonText: 'Batal'
+            cancelButtonText: 'Batal',
         });
     } else {
         return Promise.resolve({

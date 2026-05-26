@@ -9,6 +9,7 @@ export const POS = {
     cart: savedState.cart || [],
     selectedCustomer: savedState.selectedCustomer || null,
     currentDiscount: savedState.currentDiscount || 0,
+    appliedPromo: savedState.appliedPromo || null,
     currentInvoice: null,
     transactionLocked: false,
     currentTransactionId: null,
@@ -27,7 +28,8 @@ export const POS = {
         const stateToSave = {
             cart: this.cart,
             selectedCustomer: this.selectedCustomer,
-            currentDiscount: this.currentDiscount
+            currentDiscount: this.currentDiscount,
+            appliedPromo: this.appliedPromo
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     },
@@ -41,6 +43,7 @@ export const POS = {
         this.cart = [];
         this.selectedCustomer = null;
         this.currentDiscount = 0;
+        this.appliedPromo = null;
         this.transactionLocked = false;
         this.currentTransactionId = null;
         this.clearStorage();

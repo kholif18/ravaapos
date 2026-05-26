@@ -19,7 +19,8 @@ import {
     refocusProductSearch
 } from '../search/productSearch.js';
 import {
-    initPaymentHandlers
+    initPaymentHandlers,
+    initPromoHandlers
 } from '../payment/paymentModal.js';
 import {
     renderCart,
@@ -34,12 +35,17 @@ function updateTimeDisplay() {
 }
 
 export function initGlobalState() {
+    if (DOM.currentInvoice) {
+        POS.currentInvoice = DOM.currentInvoice.textContent.trim();
+    }
+
     // Initialize all modules
     initKeyboardShortcuts();
     initSlidePanel();
     initCustomerSearch();
     initProductSearch();
     initPaymentHandlers();
+    initPromoHandlers();
     initTimeUpdater();
 
     // Initialize invoice from DOM
@@ -48,13 +54,20 @@ export function initGlobalState() {
     }
 
     // Initial Render for persisted cart
-    renderCart();
-    renderMobileCart();
+    setTimeout(() => {
+        renderCart();
+        renderMobileCart();
+    }, 50);
+
 
     // Set initial discount input listener
     if (DOM.discountInput) {
         DOM.discountInput.value = POS.currentDiscount || 0;
         DOM.discountInput.addEventListener('input', (e) => {
+            if (POS.appliedPromo) {
+                POS.appliedPromo = null;
+                if (DOM.promoInput) DOM.promoInput.value = '';
+            }
             POS.currentDiscount = parseInt(e.target.value) || 0;
             POS.saveToStorage();
             // Trigger re-render
@@ -64,7 +77,9 @@ export function initGlobalState() {
     }
 
     focusOnSearch();
-    refocusProductSearch();
+    setTimeout(() => {
+        refocusProductSearch();
+    }, 150);
     
     console.log('POS System initialized');
 }

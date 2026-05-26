@@ -3,8 +3,87 @@ import { DOM } from '../core/dom.js';
 import { POS } from '../core/state.js';
 import { clearCart } from '../cart/cartManager.js';
 import { formatCurrency } from '../utils/formatter.js';
-import { showSuccess, showWarning, showError } from '../ui/notifications.js';
+import { showSuccess, showWarning, showError, confirmDialog } from '../ui/notifications.js';
 import { showSuccessModal } from './successModal.js';
+
+let isProcessingPayment = false;
+
+export function initPromoHandlers() {
+    if (!DOM.promoApplyBtn || !DOM.promoInput) return;
+
+    DOM.promoApplyBtn.addEventListener('click', applyPromoCode);
+    DOM.promoInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            applyPromoCode();
+        }
+    });
+}
+
+async function applyPromoCode() {
+    const code = DOM.promoInput?.value?.trim();
+    if (!code) {
+        showError('Masukkan kode promo', 'Promo Kosong');
+        return;
+    }
+
+    if (POS.cart.length === 0) {
+        showError('Tambahkan produk sebelum memakai promo', 'Keranjang Kosong');
+        return;
+    }
+
+    const totals = POS.calculateTotals();
+
+    try {
+        DOM.promoApplyBtn.disabled = true;
+        const response = await fetch('/pos/apply-promo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+            },
+            body: JSON.stringify({
+                code,
+                subtotal: totals.subtotal,
+                items: POS.cart.map(item => ({
+                    productId: item.id,
+                    quantity: item.quantity,
+                    price: item.price,
+                    subtotal: Math.max(0, (item.price * item.quantity) - (item.discount || 0))
+                }))
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Promo tidak valid');
+        }
+
+        POS.appliedPromo = result.promo;
+        POS.currentDiscount = Number(result.discount) || 0;
+        if (DOM.discountInput) DOM.discountInput.value = POS.currentDiscount;
+        POS.saveToStorage();
+        updateTotalsDisplay();
+        showSuccess(result.message, result.promo.code);
+    } catch (error) {
+        POS.appliedPromo = null;
+        POS.currentDiscount = 0;
+        if (DOM.discountInput) DOM.discountInput.value = 0;
+        POS.saveToStorage();
+        updateTotalsDisplay();
+        showError(error.message, 'Promo Gagal');
+    } finally {
+        DOM.promoApplyBtn.disabled = false;
+    }
+}
+
+function updateTotalsDisplay() {
+    const totals = POS.calculateTotals();
+    if (DOM.subtotal) DOM.subtotal.textContent = formatCurrency(totals.subtotal);
+    if (DOM.taxAmount) DOM.taxAmount.textContent = formatCurrency(totals.taxAmount);
+    if (DOM.total) DOM.total.textContent = formatCurrency(totals.total);
+    if (DOM.mobileTotal) DOM.mobileTotal.textContent = formatCurrency(totals.total);
+}
 
 export function initPaymentHandlers() {
     // Checkout button (F4)
@@ -47,12 +126,18 @@ export function initPaymentHandlers() {
     }
 
     if (DOM.voidTransactionBtn) {
-        DOM.voidTransactionBtn.addEventListener('click', () => {
+        DOM.voidTransactionBtn.addEventListener('click', async () => {
             if (POS.cart.length === 0) {
                 showWarning('Keranjang kosong');
                 return;
             }
-            if (confirm('Yakin ingin membatalkan seluruh transaksi ini?')) {
+
+            const confirmed = await confirmDialog(
+                'Yakin ingin membatalkan seluruh transaksi ini?',
+                'Konfirmasi Void'
+            );
+
+            if (confirmed.isConfirmed) {
                 clearCart();
                 showSuccess('Transaksi dibatalkan');
             }
@@ -111,6 +196,7 @@ export function holdTransaction() {
     const holdData = {
         id: Date.now(),
         date: new Date().toISOString(),
+        invoiceNumber: POS.currentInvoice,
         cart: [...POS.cart],
         customer: POS.selectedCustomer,
         discount: POS.currentDiscount,
@@ -123,6 +209,7 @@ export function holdTransaction() {
     
     clearCart();
     if (DOM.discountInput) DOM.discountInput.value = 0;
+    refreshInvoiceNumber();
     showSuccess('Transaksi berhasil ditahan');
 }
 
@@ -255,6 +342,7 @@ function getFilteredHeldSales(heldSales, query) {
         .filter(({ sale }) => {
             if (!query) return true;
             const searchable = [
+                sale.invoiceNumber,
                 sale.customer?.name,
                 formatCurrency(sale.total),
                 new Date(sale.date).toLocaleString('id-ID'),
@@ -292,7 +380,7 @@ function createHeldTransactionCard(sale, index, selectedIndex) {
         <button type="button" class="held-sale-item ${index === selectedIndex ? 'active' : ''}" data-index="${index}">
             <div class="held-sale-main">
                 <div>
-                    <div class="held-sale-title">HOLD-${sale.id}</div>
+                    <div class="held-sale-title">${escapeHtml(sale.invoiceNumber || `HOLD-${sale.id}`)}</div>
                     <div class="held-sale-time">${date.toLocaleString('id-ID')}</div>
                 </div>
                 <div class="held-sale-total">
@@ -342,6 +430,12 @@ function createResumeTransactionDetail(sale) {
         <div class="held-detail-card">
             <div class="held-detail-meta">
                 <div>
+                    <small>Invoice</small>
+                    <strong>${escapeHtml(sale.invoiceNumber || `HOLD-${sale.id}`)}</strong>
+                </div>
+            </div>
+            <div class="held-detail-meta">
+                <div>
                     <small>Waktu</small>
                     <strong>${date.toLocaleString('id-ID')}</strong>
                 </div>
@@ -378,6 +472,10 @@ function loadHeldTransaction(sale) {
     POS.cart = sale.cart;
     POS.selectedCustomer = sale.customer;
     POS.currentDiscount = sale.discount;
+
+    if (sale.invoiceNumber) {
+        POS.setInvoice(sale.invoiceNumber);
+    }
     
     if (DOM.discountInput) DOM.discountInput.value = sale.discount;
     
@@ -594,6 +692,9 @@ async function confirmPayment(modalElement, total, selectedMethod) {
 }
 
 async function processTransaction(modal, method, isDirect = false, directData = null) {
+    if (isProcessingPayment) return;
+    isProcessingPayment = true;
+
     const totals = POS.calculateTotals();
     
     const paymentData = isDirect ? {
@@ -611,8 +712,9 @@ async function processTransaction(modal, method, isDirect = false, directData = 
             productId: item.id,
             quantity: item.quantity,
             price: item.price,
-            subtotal: item.price * item.quantity,
+            subtotal: Math.max(0, (item.price * item.quantity) - (item.discount || 0)),
             tax: item.tax || 0,
+            discount: item.discount || 0,
             altDesc: item.altDesc || null
         })),
         subtotal: totals.subtotal,
@@ -622,7 +724,8 @@ async function processTransaction(modal, method, isDirect = false, directData = 
         paymentMethod: method,
         amountReceived: paymentData.amountReceived,
         change: paymentData.change,
-        notes: paymentData.notes
+        notes: paymentData.notes,
+        promoCode: POS.appliedPromo?.code || null
     };
     
     try {
@@ -638,6 +741,11 @@ async function processTransaction(modal, method, isDirect = false, directData = 
         const result = await response.json();
 
         if (result.success) {
+            clearCart();
+            if (DOM.discountInput) DOM.discountInput.value = '0';
+            if (DOM.promoInput) DOM.promoInput.value = '';
+            document.dispatchEvent(new CustomEvent('resetCustomer'));
+            refreshInvoiceNumber();
             showSuccessModal(result.invoiceNumber, transactionData);
         } else {
             showError('Error', result.message || 'Transaksi gagal');
@@ -645,5 +753,20 @@ async function processTransaction(modal, method, isDirect = false, directData = 
     } catch (error) {
         console.error('Transaction error:', error);
         showError('Error', 'Gagal menyimpan transaksi');
+    } finally {
+        isProcessingPayment = false;
+    }
+}
+
+async function refreshInvoiceNumber() {
+    try {
+        const response = await fetch('/pos/next-invoice');
+        const result = await response.json();
+
+        if (result.success && result.invoiceNumber) {
+            POS.setInvoice(result.invoiceNumber);
+        }
+    } catch (error) {
+        console.error('Failed to refresh invoice number:', error);
     }
 }

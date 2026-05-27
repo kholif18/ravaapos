@@ -1,0 +1,274 @@
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Daftar Piutang (Outstanding)</h5>
+    <div class="d-flex gap-2">
+        <a href="/piutang?overdue=true" class="btn btn-outline-danger btn-sm">
+            <i class="bx bx-error"></i> Lewat Jatuh Tempo
+        </a>
+        <a href="/piutang" class="btn btn-outline-secondary btn-sm">
+            <i class="bx bx-list-ul"></i> Semua Piutang
+        </a>
+    </div>
+  </div>
+  <div class="table-responsive text-nowrap">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Invoice</th>
+          <th>Customer</th>
+          <th>Total</th>
+          <th>Dibayar</th>
+          <th>Sisa</th>
+          <th>Jatuh Tempo</th>
+          <th>Aging</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="table-border-bottom-0">
+        <% if (sales.length === 0) { %>
+            <tr>
+                <td colspan="9" class="text-center py-4 text-muted">Tidak ada data piutang ditemukan</td>
+            </tr>
+        <% } %>
+        <% sales.forEach(sale => { %>
+        <tr>
+          <td>
+            <strong><%= sale.invoiceNumber %></strong><br>
+            <small class="text-muted"><%= new Date(sale.createdAt).toLocaleDateString('id-ID') %></small>
+          </td>
+          <td><%= sale.customer ? sale.customer.name : 'Unknown' %></td>
+          <td>Rp <%= Number(sale.total).toLocaleString('id-ID') %></td>
+          <td>Rp <%= Number(sale.paidAmount).toLocaleString('id-ID') %></td>
+          <td class="text-danger fw-bold">Rp <%= Number(sale.remainingAmount).toLocaleString('id-ID') %></td>
+          <td>
+            <span class="<%= sale.isOverdue ? 'text-danger fw-bold' : '' %>">
+                <%= sale.dueDate ? new Date(sale.dueDate).toLocaleDateString('id-ID') : '-' %>
+            </span>
+          </td>
+          <td><span class="badge bg-label-info"><%= sale.agingCategory %></span></td>
+          <td>
+            <span class="badge bg-label-<%= sale.paymentStatus === 'unpaid' ? 'danger' : 'warning' %>">
+                <%= sale.paymentStatus.toUpperCase() %>
+            </span>
+          </td>
+          <td>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-primary btn-pay" 
+                        data-id="<%= sale.id %>" 
+                        data-invoice="<%= sale.invoiceNumber %>"
+                        data-remaining="<%= sale.remainingAmount %>">
+                    Bayar
+                </button>
+                <button class="btn btn-sm btn-info btn-history" data-id="<%= sale.id %>">
+                    History
+                </button>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer">
+    <%- include('../partials/pagination', { pagination }) %>
+  </div>
+</div>
+
+<!-- Modal Pelunasan -->
+<div class="modal fade" id="modalSettle" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="formSettle" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalSettleTitle">Pelunasan Piutang</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="saleId" id="settleSaleId">
+        <div class="mb-3">
+            <label class="form-label">Nomor Invoice</label>
+            <input type="text" id="settleInvoice" class="form-control" readonly>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Sisa Hutang</label>
+            <input type="text" id="settleRemaining" class="form-control" readonly>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Jumlah Pembayaran</label>
+            <input type="number" name="amount" id="settleAmount" class="form-control" step="0.01" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Metode Pembayaran</label>
+            <select name="paymentMethod" class="form-select" required>
+                <option value="cash">Cash</option>
+                <option value="transfer">Transfer</option>
+                <option value="qris">QRIS</option>
+                <option value="card">Card</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Tanggal Pembayaran</label>
+            <input type="date" name="paidAt" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+        </div>
+        <div class="mb-0">
+            <label class="form-label">Catatan</label>
+            <textarea name="note" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary">Simpan Pembayaran</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal History -->
+<div class="modal fade" id="modalHistory" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Histori Pembayaran</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Metode</th>
+                        <th>Jumlah</th>
+                        <th>Petugas</th>
+                        <th>Catatan</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTbody">
+                    <!-- Data will be loaded via AJAX -->
+                </tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modalSettle = new bootstrap.Modal(document.getElementById('modalSettle'));
+    const modalHistory = new bootstrap.Modal(document.getElementById('modalHistory'));
+    const formSettle = document.getElementById('formSettle');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    // Handle Bayar button
+    document.querySelectorAll('.btn-pay').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('settleSaleId').value = btn.dataset.id;
+            document.getElementById('settleInvoice').value = btn.dataset.invoice;
+            document.getElementById('settleRemaining').value = 'Rp ' + Number(btn.dataset.remaining).toLocaleString('id-ID');
+            document.getElementById('settleAmount').value = btn.dataset.remaining;
+            document.getElementById('settleAmount').max = btn.dataset.remaining;
+            modalSettle.show();
+        });
+    });
+
+    // Handle History button
+    document.querySelectorAll('.btn-history').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const saleId = btn.dataset.id;
+            const res = await fetch(`/piutang/history/${saleId}`);
+            const result = await res.json();
+            
+            if (result.success) {
+                const tbody = document.getElementById('historyTbody');
+                tbody.innerHTML = '';
+                
+                if (result.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3">Belum ada histori pembayaran</td></tr>';
+                } else {
+                    result.data.forEach(p => {
+                        const date = new Date(p.paidAt).toLocaleDateString('id-ID', {
+                            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                        });
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${date}</td>
+                                <td><span class="badge bg-label-info">${p.paymentMethod.toUpperCase()}</span></td>
+                                <td class="fw-bold">Rp ${Number(p.amount).toLocaleString('id-ID')}</td>
+                                <td>${p.creator ? p.creator.name : '-'}</td>
+                                <td><small>${p.note || '-'}</small></td>
+                            </tr>
+                        `;
+                    });
+                }
+                modalHistory.show();
+            }
+        });
+    });
+
+    // Handle Settle Form
+    formSettle.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Disable submit button
+        const submitBtn = formSettle.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Memproses...';
+        
+        const formData = new FormData(formSettle);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const res = await fetch('/piutang/settle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'CSRF-Token': csrfToken
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await res.json();
+            
+            // Reset button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            
+            if (result.success) {
+                // Close modal first
+                modalSettle.hide();
+                
+                // Show success message after modal is closed
+                setTimeout(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: result.message,
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload();
+                    });
+                }, 300);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal!',
+                    text: result.message,
+                    confirmButtonText: 'OK'
+                });
+            }
+        } catch (error) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: 'Terjadi kesalahan sistem',
+                confirmButtonText: 'OK'
+            });
+        }
+    });
+});
+</script>

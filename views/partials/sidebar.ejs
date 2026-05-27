@@ -69,14 +69,14 @@
     <ul class="menu-inner py-1">
         <!-- Dashboard -->
         <li class="menu-item <%= activePage === 'dashboard' ? 'active' : '' %>">
-            <a href="/" class="menu-link">
+            <a href="/dashboard" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-home-circle"></i>
                 <div data-i18n="Analytics">Dashboard</div>
             </a>
         </li>
 
         <li class="menu-item <%= activePage === 'pos' ? 'active' : '' %>">
-            <a href="/pos" class="menu-link">
+            <a href="/" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-cart"></i>
                 <div data-i18n="POS">POS</div>
             </a>
@@ -90,7 +90,7 @@
         </li>
 
         <li class="menu-header small text-uppercase">
-            <span class="menu-header-text">Pages</span>
+            <span class="menu-header-text">Inventory</span>
         </li>
         <li class="menu-item <%= activePage === 'products' ? 'active' : '' %>">
             <a href="/products" class="menu-link">
@@ -122,22 +122,45 @@
                 <div data-i18n="Purchasing">Purchasing</div>
             </a>
         </li>
+
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Retail</span>
+        </li>
         <li class="menu-item <%= activePage === 'customers' ? 'active' : '' %>">
             <a href="/customers" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-user"></i>
                 <div data-i18n="Customers">Customers</div>
             </a>
         </li>
-        <li class="menu-header small text-uppercase">
-            <span class="menu-header-text">POS</span>
+        <li class="menu-item <%= activePage === 'piutang' ? 'active' : '' %>">
+            <a href="/piutang" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-wallet"></i>
+                <div data-i18n="Piutang">Piutang</div>
+            </a>
         </li>
         <li class="menu-item <%= activePage === 'promo' ? 'active' : '' %>">
             <a href="/promo" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-history"></i>
+                <i class="menu-icon tf-icons bx bx-purchase-tag"></i>
                 <div data-i18n="Promo Product">Promo Product</div>
             </a>
         </li>
+
         <!-- Components -->
+        <% if (locals.user && locals.user.role === 'admin') { %>
         <li class="menu-header small text-uppercase"><span class="menu-header-text">Settings</span></li>
+        <li class="menu-item <%= activePage === 'users' ? 'active' : '' %>">
+            <a href="/users" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-user-circle"></i>
+                <div data-i18n="User Management">User Management</div>
+            </a>
+        </li>
+        <% } %>
+
+        <li class="menu-item mt-4">
+            <a href="/logout" class="menu-link text-danger">
+                <i class="menu-icon tf-icons bx bx-power-off text-danger"></i>
+                <div data-i18n="Logout">Logout</div>
+            </a>
+        </li>
     </ul>
 </aside>

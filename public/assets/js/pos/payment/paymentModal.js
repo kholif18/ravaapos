@@ -8,6 +8,10 @@ import { showSuccessModal } from './successModal.js';
 
 let isProcessingPayment = false;
 
+let debtToggle = null;
+let debtDueDateInput = null;
+let debtCustomerWarning = null;
+
 export function initPromoHandlers() {
     if (!DOM.promoApplyBtn || !DOM.promoInput) return;
 
@@ -495,7 +499,7 @@ function loadHeldTransaction(sale) {
 
 function createPaymentModal() {
     if (document.getElementById('paymentModal')) return;
-    
+
     const modalHtml = `
         <div class="modal fade" id="paymentModal" tabindex="-1" data-bs-backdrop="static">
             <div class="modal-dialog modal-dialog-centered">
@@ -505,12 +509,57 @@ function createPaymentModal() {
                             <small>TOTAL BAYAR</small>
                             <h2 class="total-amount-value" id="paymentTotalAmount">Rp 0</h2>
                         </div>
+                        
+                        <!-- TAMBAHKAN: Opsi Pembayaran Hutang/DP -->
+                        <div class="debt-options mb-3 p-3 bg-light rounded">
+                            <div class="form-check form-switch mb-2">
+                                <input type="checkbox" class="form-check-input" id="debtModeToggle">
+                                <label class="form-check-label fw-semibold" for="debtModeToggle">
+                                    <i class="bx bx-transfer-alt"></i> Bayar Nanti / Hutang
+                                </label>
+                            </div>
+                            <div id="debtOptionsPanel" style="display: none;">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Jumlah Dibayar (DP)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">Rp</span>
+                                            <input type="number" class="form-control" id="debtPaymentAmount" min="0" step="1000" value="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Jatuh Tempo</label>
+                                        <input type="date" class="form-control" id="debtDueDate">
+                                    </div>
+                                </div>
+                                <div class="debt-summary mt-2 p-2 bg-white rounded small">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total:</span>
+                                        <span id="debtTotalDisplay">Rp 0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between text-primary">
+                                        <span>Dibayar:</span>
+                                        <span id="debtPaidDisplay">Rp 0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between fw-bold">
+                                        <span>Sisa Hutang:</span>
+                                        <span id="debtRemainingDisplay">Rp 0</span>
+                                    </div>
+                                </div>
+                                <div id="debtCustomerWarning" class="alert alert-warning small mt-2 mb-0" style="display: none;">
+                                    <i class="bx bx-info-circle"></i> Customer wajib dipilih untuk transaksi hutang/DP
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="payment-methods d-flex gap-2 mb-3">
                             <button type="button" class="btn btn-outline-primary flex-fill" data-method="cash"><i class="bx bx-money"></i> Cash</button>
                             <button type="button" class="btn btn-outline-primary flex-fill" data-method="card"><i class="bx bx-credit-card"></i> Card</button>
                             <button type="button" class="btn btn-outline-primary flex-fill" data-method="qris"><i class="bx bx-qr"></i> QRIS</button>
                             <button type="button" class="btn btn-outline-primary flex-fill" data-method="transfer"><i class="bx bx-transfer"></i> Transfer</button>
                         </div>
+                        
+                        <!-- Cash amount group (hanya tampil jika bukan mode hutang) -->
                         <div class="cash-amount-group">
                             <label class="form-label">Jumlah Dibayar</label>
                             <div class="input-group mb-2">
@@ -540,11 +589,23 @@ function createPaymentModal() {
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+    // Inisialisasi debt mode elements
+    debtToggle = document.getElementById('debtModeToggle');
+    debtDueDateInput = document.getElementById('debtDueDate');
+    debtCustomerWarning = document.getElementById('debtCustomerWarning');
+
+    // Set default due date +7 days
+    if (debtDueDateInput) {
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 7);
+        debtDueDateInput.value = defaultDate.toISOString().split('T')[0];
+    }
+
     const modalElement = document.getElementById('paymentModal');
     if (modalElement) {
         modalElement.addEventListener('shown.bs.modal', function () {
             const paymentAmountInput = document.getElementById('paymentAmount');
-            if (paymentAmountInput) {
+            if (paymentAmountInput && document.querySelector('.cash-amount-group').style.display !== 'none') {
                 paymentAmountInput.focus();
                 paymentAmountInput.select();
             }
@@ -559,16 +620,103 @@ export function showPaymentModal(total) {
     const totalSpan = document.getElementById('paymentTotalAmount');
     const changeSpan = document.getElementById('paymentChange');
     const cashGroup = document.querySelector('.cash-amount-group');
+    const debtOptionsPanel = document.getElementById('debtOptionsPanel');
+    const debtPaymentAmount = document.getElementById('debtPaymentAmount');
+    const debtTotalDisplay = document.getElementById('debtTotalDisplay');
+    const debtPaidDisplay = document.getElementById('debtPaidDisplay');
+    const debtRemainingDisplay = document.getElementById('debtRemainingDisplay');
     
     if (!modalElement) return;
     
     let selectedMethod = 'cash';
+    let isDebtMode = false;
     
     // Set total
     if (totalSpan) totalSpan.textContent = formatCurrency(total);
+    
+    // Set initial amount inputs
     const initialAmountInput = document.getElementById('paymentAmount');
     if (initialAmountInput) initialAmountInput.value = total;
+    if (debtPaymentAmount) debtPaymentAmount.value = 0;
+    if (debtTotalDisplay) debtTotalDisplay.textContent = formatCurrency(total);
+    if (debtPaidDisplay) debtPaidDisplay.textContent = formatCurrency(0);
+    if (debtRemainingDisplay) debtRemainingDisplay.textContent = formatCurrency(total);
     
+    // ✅ Debt mode toggle handler
+    if (debtToggle) {
+        debtToggle.addEventListener('change', function() {
+            isDebtMode = this.checked;
+            
+            if (isDebtMode) {
+                debtOptionsPanel.style.display = 'block';
+                cashGroup.style.display = 'none';
+                
+                // Reset payment method to cash for debt
+                selectedMethod = 'cash';
+                modalElement.querySelectorAll('[data-method]').forEach(btn => {
+                    btn.classList.remove('active', 'btn-primary');
+                    btn.classList.add('btn-outline-primary');
+                });
+                const cashBtn = modalElement.querySelector('[data-method="cash"]');
+                if (cashBtn) {
+                    cashBtn.classList.add('active', 'btn-primary');
+                    cashBtn.classList.remove('btn-outline-primary');
+                }
+                
+                updateDebtSummary(total);
+            } else {
+                debtOptionsPanel.style.display = 'none';
+                cashGroup.style.display = 'block';
+                updateDebtSummary(total);
+            }
+            
+            // Update confirm button state
+            const confirmBtn = document.getElementById('confirmPaymentBtn');
+            if (confirmBtn) {
+                if (isDebtMode) {
+                    // For debt mode, check if customer exists
+                    const hasCustomer = POS.selectedCustomer?.id;
+                    confirmBtn.disabled = !hasCustomer;
+                } else {
+                    confirmBtn.disabled = selectedMethod === 'cash' && parseFloat(document.getElementById('paymentAmount')?.value || 0) < total;
+                }
+            }
+            
+            // Show/hide customer warning
+            if (debtCustomerWarning) {
+                debtCustomerWarning.style.display = (isDebtMode && !POS.selectedCustomer?.id) ? 'block' : 'none';
+            }
+        });
+    }
+    
+    // Update debt summary when DP amount changes
+    if (debtPaymentAmount) {
+        debtPaymentAmount.addEventListener('input', () => updateDebtSummary(total));
+    }
+    
+    function updateDebtSummary(grandTotal) {
+        const dpAmount = parseFloat(debtPaymentAmount?.value || 0);
+        const paidAmount = isDebtMode ? dpAmount : (parseFloat(document.getElementById('paymentAmount')?.value || 0));
+        const remaining = grandTotal - paidAmount;
+        const paymentStatus = paidAmount >= grandTotal ? 'paid' : (paidAmount > 0 ? 'partial' : 'unpaid');
+        
+        if (debtPaidDisplay) debtPaidDisplay.textContent = formatCurrency(paidAmount);
+        if (debtRemainingDisplay) {
+            debtRemainingDisplay.textContent = formatCurrency(remaining);
+            debtRemainingDisplay.style.color = remaining > 0 ? '#e74c3c' : '#2ecc71';
+        }
+        
+        // Store debt info for later use
+        window._debtInfo = {
+            isDebtMode,
+            paidAmount,
+            remaining,
+            paymentStatus,
+            dueDate: debtDueDateInput?.value || null
+        };
+    }
+    
+    // Calculate change for cash mode
     const calculateChange = () => {
         const activeAmountInput = document.getElementById('paymentAmount');
         const activeConfirmBtn = document.getElementById('confirmPaymentBtn');
@@ -582,7 +730,13 @@ export function showPaymentModal(total) {
             changeSpan.style.color = change >= 0 ? '#2ecc71' : '#e74c3c';
         }
 
-        if (activeConfirmBtn) activeConfirmBtn.disabled = selectedMethod === 'cash' && change < 0;
+        if (activeConfirmBtn && !isDebtMode) {
+            activeConfirmBtn.disabled = selectedMethod === 'cash' && change < 0;
+        }
+        
+        if (!isDebtMode) {
+            updateDebtSummary(total);
+        }
     };
 
     // Payment method selection
@@ -591,6 +745,8 @@ export function showPaymentModal(total) {
         btn.parentNode.replaceChild(newBtn, btn);
         
         newBtn.addEventListener('click', () => {
+            if (isDebtMode) return; // Lock payment method in debt mode
+            
             modalElement.querySelectorAll('[data-method]').forEach(b => {
                 b.classList.remove('active', 'btn-primary');
                 b.classList.add('btn-outline-primary');
@@ -600,12 +756,12 @@ export function showPaymentModal(total) {
             selectedMethod = newBtn.dataset.method;
             
             const isCash = selectedMethod === 'cash';
-            if (cashGroup) cashGroup.style.display = isCash ? 'block' : 'none';
+            if (cashGroup && !isDebtMode) cashGroup.style.display = isCash ? 'block' : 'none';
             const activeConfirmBtn = document.getElementById('confirmPaymentBtn');
-            if (activeConfirmBtn) activeConfirmBtn.disabled = false;
+            if (activeConfirmBtn && !isDebtMode) activeConfirmBtn.disabled = false;
             
             const amountInput = document.getElementById('paymentAmount');
-            if (isCash && amountInput) {
+            if (isCash && amountInput && !isDebtMode) {
                 amountInput.value = total;
                 calculateChange();
                 setTimeout(() => amountInput.focus(), 100);
@@ -613,12 +769,13 @@ export function showPaymentModal(total) {
         });
     });
     
-    // Quick amount buttons
+    // Quick amount buttons (cash mode)
     modalElement.querySelectorAll('[data-quick]').forEach(btn => {
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         
         newBtn.addEventListener('click', () => {
+            if (isDebtMode) return;
             const amountInput = document.getElementById('paymentAmount');
             if (!amountInput) return;
 
@@ -634,17 +791,19 @@ export function showPaymentModal(total) {
         });
     });
     
+    let newAmountInput = null;
     const amountInput = document.getElementById('paymentAmount');
-    const newAmountInput = amountInput.cloneNode(true);
-    amountInput.parentNode.replaceChild(newAmountInput, amountInput);
-    
-    newAmountInput.addEventListener('input', calculateChange);
-    newAmountInput.addEventListener('keydown', (e) => {
-        const activeConfirmBtn = document.getElementById('confirmPaymentBtn');
-        if (e.key === 'Enter' && !activeConfirmBtn?.disabled) {
-            confirmPayment(modalElement, total, selectedMethod);
-        }
-    });
+    if (amountInput) {
+        newAmountInput = amountInput.cloneNode(true);
+        amountInput.parentNode.replaceChild(newAmountInput, amountInput);
+        newAmountInput.addEventListener('input', calculateChange);
+        newAmountInput.addEventListener('keydown', (e) => {
+            const activeConfirmBtn = document.getElementById('confirmPaymentBtn');
+            if (e.key === 'Enter' && !activeConfirmBtn?.disabled) {
+                confirmPayment(modalElement, total, selectedMethod);
+            }
+        });
+    }
     
     const confirmBtn = document.getElementById('confirmPaymentBtn');
     const newConfirmBtn = confirmBtn.cloneNode(true);
@@ -661,11 +820,27 @@ export function showPaymentModal(total) {
     if (cashGroup) cashGroup.style.display = 'block';
     calculateChange();
     
+    // Set default due date
+    if (debtDueDateInput && !debtDueDateInput.value) {
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 7);
+        debtDueDateInput.value = defaultDate.toISOString().split('T')[0];
+    }
+    
+    // Check customer for debt mode warning on load
+    if (debtCustomerWarning && debtToggle?.checked) {
+        debtCustomerWarning.style.display = POS.selectedCustomer?.id ? 'none' : 'block';
+    }
+    
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
     setTimeout(() => {
-        newAmountInput.focus();
-        newAmountInput.select();
+        if (!debtToggle?.checked) {
+            newAmountInput?.focus();
+            newAmountInput?.select();
+        } else {
+            debtPaymentAmount?.focus();
+        }
     }, 300);
 }
 
@@ -673,22 +848,60 @@ async function confirmPayment(modalElement, total, selectedMethod) {
     const notes = document.getElementById('paymentNotes')?.value || '';
     const customerId = POS.selectedCustomer?.id || null;
     
+    // ✅ Get debt info
+    const debtInfo = window._debtInfo || {};
+    const isDebtMode = debtToggle?.checked || false;
+    
     let received = total;
     let change = 0;
+    let paidAmount = total;
     
-    if (selectedMethod === 'cash') {
+    if (isDebtMode) {
+        // Debt/DP mode
+        paidAmount = parseFloat(document.getElementById('debtPaymentAmount')?.value) || 0;
+        received = paidAmount;
+        change = 0;
+        
+        // Validate customer for debt
+        if (!customerId) {
+            showError('Customer wajib dipilih untuk transaksi hutang/DP', 'Validasi Gagal');
+            return;
+        }
+        
+        if (paidAmount < 0) {
+            showError('Jumlah pembayaran tidak valid', 'Validasi Gagal');
+            return;
+        }
+    } else if (selectedMethod === 'cash') {
         received = parseFloat(document.getElementById('paymentAmount')?.value) || 0;
         change = received - total;
+        paidAmount = received;
         if (received < total) {
             showError('Pembayaran Kurang', 'Jumlah yang diterima kurang dari total');
             return;
         }
+    } else {
+        // Non-cash payment (card, qris, transfer)
+        paidAmount = total;
+        received = total;
+        change = 0;
     }
     
     const modal = bootstrap.Modal.getInstance(modalElement);
     if (modal) modal.hide();
     
-    await processTransaction(null, selectedMethod, false, { total, amountReceived: received, change, notes, customerId });
+    await processTransaction(null, selectedMethod, false, {
+        total,
+        amountReceived: received,
+        change,
+        notes,
+        customerId,
+        // ✅ Add debt data
+        isDebtMode,
+        paidAmount,
+        dueDate: isDebtMode ? (debtDueDateInput?.value || null) : null,
+        paymentStatus: isDebtMode ? (paidAmount >= total ? 'paid' : (paidAmount > 0 ? 'partial' : 'unpaid')) : 'paid'
+    });
 }
 
 async function processTransaction(modal, method, isDirect = false, directData = null) {
@@ -702,7 +915,11 @@ async function processTransaction(modal, method, isDirect = false, directData = 
         amountReceived: totals.total,
         change: 0,
         notes: '',
-        customerId: POS.selectedCustomer?.id || null
+        customerId: POS.selectedCustomer?.id || null,
+        isDebtMode: false,
+        paidAmount: totals.total,
+        dueDate: null,
+        paymentStatus: 'paid'
     } : directData;
 
     const transactionData = {
@@ -725,7 +942,13 @@ async function processTransaction(modal, method, isDirect = false, directData = 
         amountReceived: paymentData.amountReceived,
         change: paymentData.change,
         notes: paymentData.notes,
-        promoCode: POS.appliedPromo?.code || null
+        promoCode: POS.appliedPromo?.code || null,
+        // ✅ Add debt fields
+        paymentStatus: paymentData.paymentStatus,
+        paidAmount: paymentData.paidAmount,
+        remainingAmount: paymentData.total - paymentData.paidAmount,
+        dueDate: paymentData.dueDate,
+        isDebtMode: paymentData.isDebtMode
     };
     
     try {
@@ -746,6 +969,13 @@ async function processTransaction(modal, method, isDirect = false, directData = 
             if (DOM.promoInput) DOM.promoInput.value = '';
             document.dispatchEvent(new CustomEvent('resetCustomer'));
             refreshInvoiceNumber();
+            
+            // Reset debt mode
+            if (debtToggle) debtToggle.checked = false;
+            if (document.getElementById('debtOptionsPanel')) {
+                document.getElementById('debtOptionsPanel').style.display = 'none';
+            }
+            
             showSuccessModal(result.invoiceNumber, transactionData);
         } else {
             showError('Error', result.message || 'Transaksi gagal');

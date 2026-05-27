@@ -26,24 +26,24 @@
             <td><%= promo.name %></td>
             <td>
               <% if (promo.type === 'percent') { %>
-                <span class="badge bg-label-info">(%)</span>
+                <span class="badge badge-xs bg-label-info">(%)</span>
               <% } else { %>
-                <span class="badge bg-label-warning">Rp</span>
+                <span class="badge badge-xs bg-label-warning">Rp</span>
               <% } %>
             </td>
             <td>
               <% if (promo.applyType === 'all') { %>
-                  <span class="badge bg-secondary">Semua Produk</span>
+                  <span class="badge badge-xs bg-secondary">Semua Produk</span>
               <% } else if (promo.applyType === 'category' && promo.category) { %>
-                  <span class="badge bg-info">
+                  <span class="badge badge-xs bg-info">
                       <i class="bx bx-category"></i> <%= promo.category.name %>
                   </span>
               <% } else if (promo.applyType === 'product' && promo.product) { %>
-                  <span class="badge bg-primary">
+                  <span class="badge badge-xs bg-primary">
                       <i class="bx bx-package"></i> <%= promo.product.name %>
                   </span>
               <% } else { %>
-                  <span class="badge bg-secondary">-</span>
+                  <span class="badge badge-xs bg-secondary">-</span>
               <% } %>
             </td>
             <td>

@@ -41,13 +41,26 @@ module.exports = {
                 note: 'Supplier voucher dan PPOB',
                 createdAt: new Date(),
                 updatedAt: new Date()
+            },
+            {
+                code: 'SUP004',
+                name: 'CV Karya Digital',
+                phone: '081312345678',
+                email: 'karya@digital.com',
+                address: 'Jl. Digital No. 5',
+                city: 'Bandung',
+                postalCode: '40123',
+                country: 'Indonesia',
+                note: 'Supplier jasa desain grafis',
+                createdAt: new Date(),
+                updatedAt: new Date()
             }
         ]);
     },
 
     async down(queryInterface, Sequelize) {
         return queryInterface.bulkDelete('Suppliers', {
-            code: ['SUP001', 'SUP002', 'SUP003']
+            code: ['SUP001', 'SUP002', 'SUP003', 'SUP004']
         });
     }
 };

@@ -1,0 +1,63 @@
+<div id="userWrapper">
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nama Lengkap</th>
+        <th>Username / Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="userTbody">
+      <% if (users.length === 0) { %>
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">Tidak ada data user ditemukan.</td>
+        </tr>
+      <% } else { 
+        const startNumber = (pagination.page - 1) * pagination.limit + 1;
+        for (let i = 0; i < users.length; i++) {
+          const user = users[i]; %>
+          <tr>
+            <td><%= startNumber + i %></td>
+            <td><%= user.name %></td>
+            <td>
+                <%= user.username %><br>
+                <small class="text-muted"><%= user.email || '-' %></small>
+            </td>
+            <td>
+              <span class="badge bg-label-<%= user.role === 'admin' ? 'primary' : 'info' %> me-1">
+                <%= user.role.toUpperCase() %>
+              </span>
+            </td>
+            <td>
+                <span class="badge bg-<%= user.is_active ? 'success' : 'danger' %>">
+                    <%= user.is_active ? 'Aktif' : 'Nonaktif' %>
+                </span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-warning btn-edit"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalEdit"
+                      data-id="<%= user.id %>"
+                      data-name="<%= user.name %>"
+                      data-username="<%= user.username %>"
+                      data-email="<%= user.email %>"
+                      data-role="<%= user.role %>"
+                      data-active="<%= user.is_active %>">
+                <i class="bx bx-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-danger btn-delete" data-id="<%= user.id %>">
+                <i class="bx bx-trash"></i>
+              </button>
+            </td>
+          </tr>
+      <% } } %>
+    </tbody>
+  </table>
+
+  <div id="userPaginationWrapper">
+    <%- include('../partials/pagination', { pagination }) %>
+  </div>
+</div>

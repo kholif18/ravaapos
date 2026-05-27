@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>RavaaPOS | Login</title>
+    <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/auth/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <!-- Kolom Kiri - Hero dengan Gambar/Ilustrasi -->
+        <div class="hero-section">
+            <div class="floating-element floating-1"></div>
+            <div class="floating-element floating-2"></div>
+            <div class="floating-element floating-3"></div>
+            
+            <div class="brand">
+                <h1>Ravaa<span>POS</span></h1>
+            </div>
+
+            <div class="illustration-container">
+                <div class="pos-illustration">
+                    <!-- SVG Illustration - Modern POS Dashboard -->
+                    <svg width="280" height="280" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="50" y="80" width="300" height="240" rx="20" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+                        <rect x="70" y="100" width="80" height="15" rx="5" fill="rgba(255,255,255,0.3)"/>
+                        <rect x="160" y="100" width="120" height="15" rx="5" fill="rgba(255,255,255,0.2)"/>
+                        <rect x="70" y="130" width="260" height="1" fill="rgba(255,255,255,0.2)"/>
+                        
+                        <!-- Chart bars -->
+                        <rect x="80" y="180" width="30" height="80" rx="5" fill="#ffd700" opacity="0.8">
+                            <animate attributeName="height" values="60;80;60" dur="2s" repeatCount="indefinite"/>
+                            <animate attributeName="y" values="200;180;200" dur="2s" repeatCount="indefinite"/>
+                        </rect>
+                        <rect x="120" y="160" width="30" height="100" rx="5" fill="#ffd700" opacity="0.9">
+                            <animate attributeName="height" values="80;100;80" dur="2.5s" repeatCount="indefinite"/>
+                            <animate attributeName="y" values="180;160;180" dur="2.5s" repeatCount="indefinite"/>
+                        </rect>
+                        <rect x="160" y="140" width="30" height="120" rx="5" fill="#ffd700" opacity="1">
+                            <animate attributeName="height" values="100;120;100" dur="1.8s" repeatCount="indefinite"/>
+                            <animate attributeName="y" values="160;140;160" dur="1.8s" repeatCount="indefinite"/>
+                        </rect>
+                        <rect x="200" y="170" width="30" height="90" rx="5" fill="#ffd700" opacity="0.85">
+                            <animate attributeName="height" values="70;90;70" dur="2.2s" repeatCount="indefinite"/>
+                            <animate attributeName="y" values="190;170;190" dur="2.2s" repeatCount="indefinite"/>
+                        </rect>
+                        
+                        <!-- Line chart -->
+                        <polyline points="80,250 140,210 200,230 260,190 320,200" stroke="#ffd700" stroke-width="3" fill="none" opacity="0.7"/>
+                        
+                        <!-- Shopping cart icon -->
+                        <circle cx="310" cy="250" r="15" fill="rgba(255,215,0,0.2)" stroke="#ffd700" stroke-width="2"/>
+                        <text x="307" y="256" fill="#ffd700" font-size="16" font-weight="bold">🛒</text>
+                        
+                        <!-- User icons -->
+                        <circle cx="70" cy="280" r="12" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                        <circle cx="100" cy="280" r="12" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+                        <circle cx="130" cy="280" r="12" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+                        <circle cx="160" cy="280" r="12" fill="rgba(255,215,0,0.3)" stroke="#ffd700" stroke-width="1.5"/>
+                        
+                        <text x="260" y="310" fill="rgba(255,255,255,0.6)" font-size="12" text-anchor="middle">Real-time Analytics</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <i class="fas fa-shopping-cart"></i>
+                    <h3>10K+</h3>
+                    <p>Transactions Daily</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <h3>5K+</h3>
+                    <p>Happy Customers</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>99.9%</h3>
+                    <p>Uptime Guarantee</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan - Login Form -->
+        <div class="form-section">
+            <div class="login-card">
+                <div class="login-header">
+                    <h3>Welcome Back!</h3>
+                    <p>Sign in to access your dashboard</p>
+                </div>
+
+                <div id="alertContainer"></div>
+
+                <form id="loginForm">
+                    <input type="hidden" name="_csrf" id="csrfField" value="<%= csrfToken %>">
+
+                    <div class="input-group">
+                        <label>Username / Email</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="text" id="username" placeholder="Enter your username" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" placeholder="Enter your password" required>
+                            <i class="fas fa-eye-slash toggle-password"></i>
+                        </div>
+                    </div>
+
+                    <div class="options">
+                        <label class="checkbox">
+                            <input type="checkbox" id="rememberMe">
+                            <span>Remember me</span>
+                        </label>
+                        <a href="/forgot-password" class="forgot-link">Forgot Password?</a>
+                    </div>
+
+                    <button type="submit" class="login-button" id="loginBtn">
+                        <span>Sign In</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/auth/login.js"></script>
+</body>
+</html>

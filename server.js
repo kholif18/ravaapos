@@ -83,7 +83,17 @@ app.use('/', index);
 const PORT = process.env.PORT || 3000;
 db.sequelize.sync().then(() => {
   console.log('Database ready');
-  app.listen(PORT, () => console.log(`Server jalan di http://localhost:${PORT}`));
+  const server = app.listen(PORT, () => console.log(`Server jalan di http://localhost:${PORT}`));
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} sudah dipakai. Set PORT lain atau hentikan proses yang memakai port itu.`);
+    } else if (err.code === 'EPERM') {
+      console.error(`Tidak punya izin membuka port ${PORT}. Jalankan di environment yang mengizinkan listen port.`);
+    } else {
+      console.error('Server gagal start:', err);
+    }
+    process.exit(1);
+  });
 });
 
 module.exports = app;

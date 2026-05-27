@@ -124,7 +124,7 @@
                 <div class="pos-status-left">
                     <div class="status-item">
                         <i class="bx bx-user-circle"></i>
-                        <span id="cashierName">Kasir: Admin</span>
+                        <span id="cashierName">Kasir: <%= locals.user ? locals.user.fullName : 'Admin' %></span>
                     </div>
                     <div class="status-item">
                         <i class="bx bx-time"></i>
@@ -346,7 +346,7 @@
                     <i class="bx bx-navigation"></i> Navigation
                 </div>
                 <div class="action-buttons">
-                    <a href="/" class="action-btn with-arrow" style="text-decoration: none;">
+                    <a href="/dashboard" class="action-btn with-arrow" style="text-decoration: none;">
                         <div class="action-btn-content">
                             <i class="bx bx-home"></i>
                             <span>Dashboard</span>
@@ -478,10 +478,10 @@
                         </div>
                         <i class="bx bx-chevron-right arrow-icon"></i>
                     </button>
-                    <button class="action-btn btn-danger" id="logoutBtn">
-                        <i class="bx bx-log-out"></i>
-                        <span>Logout</span>
-                    </button>
+                    <a href="/logout" class="action-btn btn-danger">
+                        <i class="menu-icon tf-icons bx bx-power-off"></i>
+                        <div data-i18n="Logout">Logout</div>
+                    </a>
                 </div>
             </div>
         </div>

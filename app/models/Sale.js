@@ -29,8 +29,8 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: 0
         },
         paymentMethod: {
-            type: DataTypes.STRING,
-            allowNull: false
+            type: DataTypes.ENUM('cash', 'card', 'qris', 'transfer'),
+            allowNull: true
         },
         amountReceived: {
             type: DataTypes.DECIMAL(15, 2),
@@ -48,20 +48,37 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: true
         },
         status: {
-            type: DataTypes.STRING,
+            type: DataTypes.ENUM('completed', 'void', 'cancelled'),
+            defaultValue: 'completed',
+            allowNull: false
+        },
+        paymentStatus: {
+            type: DataTypes.ENUM('unpaid', 'partial', 'paid', 'cancelled'),
             defaultValue: 'paid',
             allowNull: false
+        },
+        paidAmount: {
+            type: DataTypes.DECIMAL(15, 2),
+            defaultValue: 0,
+            allowNull: false
+        },
+        remainingAmount: {
+            type: DataTypes.DECIMAL(15, 2),
+            defaultValue: 0,
+            allowNull: false
+        },
+        dueDate: {
+            type: DataTypes.DATEONLY,
+            allowNull: true
         },
         promoId: {
             type: DataTypes.INTEGER,
             allowNull: true
         },
-
         promoCode: {
             type: DataTypes.STRING,
             allowNull: true
         },
-
         promoDiscount: {
             type: DataTypes.FLOAT,
             defaultValue: 0
@@ -92,6 +109,18 @@ module.exports = (sequelize, DataTypes) => {
         Sale.belongsTo(models.Promo, {
             foreignKey: 'promoId',
             as: 'promo'
+        });
+        Sale.hasMany(models.SalePayment, {
+            foreignKey: 'saleId',
+            as: 'payments'
+        });
+        Sale.belongsTo(models.User, {
+            foreignKey: 'cashierId',
+            as: 'cashier'
+        });
+        Sale.belongsTo(models.User, {
+            foreignKey: 'voidedBy',
+            as: 'voider'
         });
     };
 

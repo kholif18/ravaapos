@@ -1,0 +1,116 @@
+<div class="card">
+  <div class="card-header">
+    <div class="d-flex flex-wrap justify-content-between mb-3">
+      <div class="d-flex gap-2">
+        <div class="me-2">
+          <input type="text" id="searchUser" class="form-control" placeholder="Cari User...">
+        </div>
+        <button class="btn btn-outline-secondary" id="resetFilter"><i class="bx bx-sync"></i> Reset</button>
+      </div>
+      <div class="gap-2">
+        <button class="btn btn-primary" id="btnOpenModalCreate" data-bs-toggle="modal" data-bs-target="#modalCreate">
+          + Tambah User
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <%- include('_partial', { users, pagination }) %>
+  </div>
+</div>
+
+<!-- Modal Create -->
+<div class="modal fade" id="modalCreate" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="formCreateUser" class="modal-content" action="/users" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="modal-header">
+        <h5 class="modal-title">Tambah User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" name="name" class="form-control" placeholder="Nama Lengkap" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" class="form-control" placeholder="Username" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" placeholder="Email (opsional)">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" placeholder="Password" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Role</label>
+          <select name="role" class="form-select" required>
+            <option value="kasir">Kasir</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="is_active" id="isActiveCreate" checked>
+            <label class="form-check-label" for="isActiveCreate">User Aktif</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Edit -->
+<div class="modal fade" id="modalEdit" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="formEditUser" class="modal-content" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" name="name" id="editName" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" id="editUsername" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" id="editEmail" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password (kosongkan jika tidak ingin diubah)</label>
+          <input type="password" name="password" id="editPassword" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Role</label>
+          <select name="role" id="editRole" class="form-select" required>
+            <option value="kasir">Kasir</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="is_active" id="editIsActive">
+            <label class="form-check-label" for="editIsActive">User Aktif</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Update</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module" src="/assets/js/pages/users.js"></script>

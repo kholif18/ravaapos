@@ -2,7 +2,10 @@ const dialect = process.env.DB_DIALECT || 'sqlite';
 
 const commonConfig = {
   dialect,
-  logging: false
+  logging: (sql, timing) => {
+    console.log(`${timing}ms`, sql);
+  },
+  benchmark: true
 };
 
 if (dialect === 'sqlite') {

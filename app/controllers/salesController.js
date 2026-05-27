@@ -2,6 +2,8 @@ const { Sale, SaleItem, Customer, Product } = require('../models');
 const { Op } = require('sequelize');
 const { formatRupiah } = require('../helpers/format');
 const pagination = require('../helpers/pagination');
+const db = require('../models');
+const transactionService = require('../services/transactionService');
 
 exports.index = async (req, res) => {
     try {
@@ -75,32 +77,26 @@ exports.getDetail = async (req, res) => {
 };
 
 exports.voidSale = async (req, res) => {
+    const t = await db.sequelize.transaction();
+
     try {
         const { id } = req.params;
         const { reason } = req.body;
 
-        const sale = await Sale.findByPk(id);
-        if (!sale) {
-            return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan' });
-        }
-
-        if (sale.status === 'void') {
-            return res.status(400).json({ success: false, message: 'Transaksi sudah dibatalkan sebelumnya' });
-        }
-
-        // Update status to void
-        await sale.update({
-            status: 'void',
-            voidReason: reason,
-            voidedAt: new Date()
+        await transactionService.voidTransaction({
+            saleId: id,
+            reason,
+            userId: req.user?.id || null,
+            transaction: t,
+            req
         });
 
-        // NOTE: In a real system, you would also need to revert stock levels here
-        // if the items sold were physical products.
+        await t.commit();
         
         res.json({ success: true, message: 'Transaksi berhasil dibatalkan' });
     } catch (err) {
+        await t.rollback();
         console.error('Error voiding sale:', err);
-        res.status(500).json({ success: false, message: 'Gagal membatalkan transaksi' });
+        res.status(400).json({ success: false, message: err.message || 'Gagal membatalkan transaksi' });
     }
 };

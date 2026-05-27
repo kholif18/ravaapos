@@ -54,8 +54,24 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.ENUM('active', 'inactive'),
             allowNull: false,
             defaultValue: 'active'
+        },
+        debt_limit: {
+            type: DataTypes.DECIMAL(15, 2),
+            defaultValue: 5000000, // Default limit 5 juta
+            allowNull: false
+        },
+        total_debt: {
+            type: DataTypes.DECIMAL(15, 2),
+            defaultValue: 0,
+            allowNull: false
         }
     });
 
+    Customer.associate = models => {
+        Customer.hasMany(models.Sale, {
+            foreignKey: 'customerId',
+            as: 'sales'
+        });
+    };
     return Customer;
 };

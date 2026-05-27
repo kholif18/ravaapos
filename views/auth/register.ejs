@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>RavaaPOS | Create Account</title>
+    <link rel="icon" type="image/x-icon" href="/assets/img/favicon/favicon.ico" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/auth/register.css">
+</head>
+<body>
+    <div class="login-container">
+        <!-- Kolom Kiri -->
+        <div class="hero-section">
+            <div class="floating-element floating-1"></div>
+            <div class="floating-element floating-2"></div>
+            
+            <div class="brand">
+                <h1>Ravaa<span>POS</span></h1>
+            </div>
+
+            <div class="illustration-container">
+                <svg width="250" height="250" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="50" y="80" width="300" height="240" rx="20" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+                    <rect x="70" y="100" width="80" height="15" rx="5" fill="rgba(255,255,255,0.3)"/>
+                    <rect x="160" y="100" width="120" height="15" rx="5" fill="rgba(255,255,255,0.2)"/>
+                    
+                    <!-- User plus icon for register -->
+                    <circle cx="200" cy="190" r="50" fill="rgba(255,215,0,0.15)" stroke="#ffd700" stroke-width="2"/>
+                    <circle cx="200" cy="180" r="20" stroke="#ffd700" stroke-width="2" fill="none"/>
+                    <path d="M170,225 C180,210 220,210 230,225" stroke="#ffd700" stroke-width="2" fill="none"/>
+                    
+                    <!-- Plus sign -->
+                    <circle cx="230" cy="160" r="15" fill="#ffd700"/>
+                    <line x1="230" y1="153" x2="230" y2="167" stroke="#1e3c72" stroke-width="2"/>
+                    <line x1="223" y1="160" x2="237" y2="160" stroke="#1e3c72" stroke-width="2"/>
+                    
+                    <text x="200" y="300" fill="rgba(255,255,255,0.6)" font-size="14" text-anchor="middle">Join Us Today</text>
+                </svg>
+            </div>
+
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <i class="fas fa-rocket"></i>
+                    <h3>Free</h3>
+                    <p>30-Day Trial</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-headset"></i>
+                    <h3>24/7</h3>
+                    <p>Support</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Grow</h3>
+                    <p>Your Business</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kolom Kanan - Register Form -->
+        <div class="form-section">
+            <div class="register-card">
+                <div class="register-header">
+                    <div class="icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <h3>Create Account</h3>
+                    <p>Join RavaaPOS and start managing your business</p>
+                </div>
+                <% if (locals.error && locals.error.length > 0) { %>
+                    <div class="alert-modern">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span><%= locals.error[0] %></span>
+                    </div>
+                <% } else if (locals.success && locals.success.length > 0) { %>
+                    <div class="alert-modern success">
+                        <i class="fas fa-check-circle"></i>
+                        <span><%= locals.success[0] %></span>
+                    </div>
+                <% } %>
+                <div id="alertContainer"></div>
+                <form id="registerForm" action="/register" method="POST">
+                    <input type="hidden" name="_csrf" id="csrfField" value="<%= csrfToken %>">
+
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="name" name="name" placeholder="Enter your full name" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Username</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-at"></i>
+                            <input type="text" id="username" name="username" placeholder="Choose a username" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Email Address</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" name="email" placeholder="Enter your email" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" name="password" placeholder="Create a password" required>
+                            <i class="fas fa-eye-slash toggle-password"></i>
+                        </div>
+                        <div class="password-requirements" id="passwordRequirements">
+                            <span id="lengthReq"><i class="fas fa-circle"></i> 8+ characters</span>
+                            <span id="upperReq"><i class="fas fa-circle"></i> Uppercase</span>
+                            <span id="numberReq"><i class="fas fa-circle"></i> Number</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Confirm Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your password" required>
+                            <i class="fas fa-eye-slash toggle-password"></i>
+                        </div>
+                    </div>
+
+                    <label class="terms">
+                        <input type="checkbox" id="termsCheckbox" name="terms" required>
+                        <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></span>
+                    </label>
+
+                    <button type="submit" class="register-button" id="registerBtn">
+                        <span>Create Account</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="login-link">
+                    Already have an account? <a href="/login">Sign In</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/auth/register.js"></script>
+</body>
+</html>

@@ -1,7 +1,18 @@
 // controllers/posController.js
 const db = require('../models');
-const { Product, Category, Customer, Sale, SaleItem, StockMovement, Promo } = db;
+const {
+    Product,
+    Category,
+    Customer,
+    Sale,
+    SaleItem,
+    StockMovement,
+    SalePayment,
+    Promo
+} = db;
 const { Op } = require('sequelize');
+const { recordAudit } = require('../helpers/audit');
+const transactionService = require('../services/transactionService');
 
 // Constanta untuk available product where clause
 const availableProductWhere = {
@@ -51,6 +62,44 @@ function normalizePromoCode(code) {
     return String(code || '').trim().toUpperCase();
 }
 
+function uniqueNumericIds(values) {
+    return [...new Set((values || [])
+        .map(value => parseInt(value, 10))
+        .filter(Number.isFinite))];
+}
+
+function isWalkInCustomer(customer) {
+    const name = String(customer?.name || '').trim().toLowerCase();
+    return name === 'walk-in customer' || name === 'umum';
+}
+
+async function bulkDecrementProductStock(stockDeltas, transaction) {
+    const entries = [...stockDeltas.entries()]
+        .map(([productId, qty]) => [parseInt(productId, 10), Number(qty)])
+        .filter(([productId, qty]) => Number.isFinite(productId) && Number.isFinite(qty) && qty > 0);
+
+    if (entries.length === 0) return;
+
+    const queryInterface = db.sequelize.getQueryInterface();
+    // Support for different Sequelize versions
+    const quoteTable = (table) => (queryInterface.queryGenerator.quoteTable ? queryInterface.queryGenerator.quoteTable(table) : queryInterface.quoteTable(table));
+    const quoteIdentifier = (id) => (queryInterface.queryGenerator.quoteIdentifier ? queryInterface.queryGenerator.quoteIdentifier(id) : queryInterface.quoteIdentifier(id));
+
+    const table = quoteTable(Product.getTableName());
+    const idColumn = quoteIdentifier('id');
+    const stockColumn = quoteIdentifier('stock');
+    
+    const caseSql = entries
+        .map(([productId, qty]) => `WHEN ${productId} THEN ${qty}`)
+        .join(' ');
+    const idsSql = entries.map(([productId]) => productId).join(', ');
+
+    await db.sequelize.query(
+        `UPDATE ${table} SET ${stockColumn} = ${stockColumn} - CASE ${idColumn} ${caseSql} ELSE 0 END WHERE ${idColumn} IN (${idsSql})`,
+        { transaction }
+    );
+}
+
 function getPromoValidationError(promo, subtotal, now = new Date()) {
     if (!promo) return 'Kode promo tidak ditemukan';
     if (!promo.isActive) return 'Promo tidak aktif';
@@ -63,7 +112,7 @@ function getPromoValidationError(promo, subtotal, now = new Date()) {
     return null;
 }
 
-async function calculatePromoDiscount({ code, items, subtotal, transaction = null }) {
+async function calculatePromoDiscount({ code, items, subtotal, transaction = null, productMap = null }) {
     const promoCode = normalizePromoCode(code);
     if (!promoCode) {
         return { promo: null, discount: 0, eligibleSubtotal: 0 };
@@ -79,17 +128,16 @@ async function calculatePromoDiscount({ code, items, subtotal, transaction = nul
         throw new Error(validationError);
     }
 
-    const productIds = (items || [])
-        .map(item => parseInt(item.productId, 10))
-        .filter(Boolean);
+    if (!productMap) {
+        const productIds = uniqueNumericIds((items || []).map(item => item.productId));
+        const products = await Product.findAll({
+            where: { id: productIds },
+            attributes: ['id', 'categoryId'],
+            transaction
+        });
 
-    const products = await Product.findAll({
-        where: { id: productIds },
-        attributes: ['id', 'categoryId'],
-        transaction
-    });
-
-    const productMap = new Map(products.map(product => [product.id, product]));
+        productMap = new Map(products.map(product => [product.id, product]));
+    }
     let eligibleSubtotal = 0;
 
     for (const item of items || []) {
@@ -409,262 +457,457 @@ exports.applyPromo = async (req, res) => {
     }
 };
 
-// POST: Save transaction (FULL VERSION)
+// POST: Save transaction (OPTIMIZED & ROBUST VERSION)
 exports.saveTransaction = async (req, res) => {
+    // 1. Pre-validation (Defensive Code)
+    const {
+        customerId,
+        items,
+        subtotal,
+        tax,
+        discount,
+        total,
+        grandTotal, // alternative field name
+        paymentMethod,
+        amountReceived,
+        change,
+        notes,
+        promoCode,
+        isDebtMode,
+        paidAmount,
+        dueDate,
+        invoiceNumber: requestedInvoiceNumber
+    } = req.body || {};
+
+    let inputTotal, inputSubtotal, inputTax, inputDiscount, inputPaidAmount;
+
+    try {
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: "Keranjang belanja kosong" });
+        }
+
+        inputTotal = parseFloat(total ?? grandTotal);
+        if (isNaN(inputTotal) || inputTotal < 0) {
+            return res.status(400).json({ success: false, message: "Total transaksi tidak valid" });
+        }
+
+        inputSubtotal = parseFloat(subtotal) || 0;
+        inputTax = parseFloat(tax) || 0;
+        inputDiscount = parseFloat(discount) || 0;
+        inputPaidAmount = parseFloat(paidAmount) || 0;
+
+        if (isDebtMode && !customerId) {
+            return res.status(400).json({ success: false, message: "Customer wajib dipilih untuk transaksi hutang/DP" });
+        }
+
+        if (isDebtMode && inputPaidAmount > inputTotal + 1) { // small epsilon for float rounding
+            return res.status(400).json({ success: false, message: "Jumlah pembayaran tidak boleh melebihi total transaksi" });
+        }
+
+        const allowedPaymentMethods = new Set(["cash", "card", "qris", "transfer"]);
+        if (inputPaidAmount > 0 && !allowedPaymentMethods.has(paymentMethod || "cash")) {
+            return res.status(400).json({ success: false, message: "Metode pembayaran tidak valid" });
+        }
+    } catch (validationErr) {
+        console.error("Pre-validation error:", validationErr);
+        return res.status(400).json({ success: false, message: "Format data tidak valid" });
+    }
+
     const t = await db.sequelize.transaction();
     
     try {
-        const {
-            customerId,
-            items,
-            subtotal,
-            tax,
-            discount,
-            total,
-            paymentMethod,
-            amountReceived,
-            change,
-            notes,
-            promoCode,
-            invoiceNumber: requestedInvoiceNumber
-        } = req.body;
-
-        if (!items || items.length === 0) {
-            throw new Error('Keranjang belanja kosong');
+        const productIds = uniqueNumericIds(items.map(i => i.productId));
+        
+        // Use queryGenerator for compatibility if needed, though findAll usually handles it
+        const findOptions = {
+            where: { id: productIds },
+            transaction: t
+        };
+        
+        // LOCK.UPDATE is not supported in SQLite, so we skip it to prevent errors
+        if (db.sequelize.getDialect() !== 'sqlite') {
+            findOptions.lock = t.LOCK.UPDATE;
         }
 
-        if (!paymentMethod) {
-            throw new Error('Metode pembayaran harus dipilih');
-        }
+        const products = await Product.findAll(findOptions);
+        const productMap = new Map(products.map(p => [p.id, p]));
+        const stockDeltas = new Map();
 
         let promo = null;
         let promoDiscount = 0;
-        let finalDiscount = parseFloat(discount) || 0;
-        let finalTotal = parseFloat(total);
+        let finalDiscount = inputDiscount;
+        let finalTotal = inputTotal;
 
         if (promoCode) {
             const promoResult = await calculatePromoDiscount({
                 code: promoCode,
                 items,
-                subtotal,
-                transaction: t
+                subtotal: inputSubtotal,
+                transaction: t,
+                productMap
             });
             promo = promoResult.promo;
             promoDiscount = promoResult.discount;
             finalDiscount = promoDiscount;
-            finalTotal = Math.max(0, (parseFloat(subtotal) || 0) + (parseFloat(tax) || 0) - promoDiscount);
+            finalTotal = Math.max(0, inputSubtotal + inputTax - promoDiscount);
         }
 
-        // VALIDASI PEMBAYARAN
-        if (paymentMethod === 'cash') {
-            const received = parseFloat(amountReceived) || 0;
-            const totalAmount = finalTotal;
+        // Final rounding to 2 decimal places
+        finalTotal = Math.round(finalTotal * 100) / 100;
+
+        const recordedPaidAmount = isDebtMode
+            ? Math.max(0, inputPaidAmount)
+            : finalTotal;
+        
+        const debtRemainingAmount = Math.max(0, Math.round((finalTotal - recordedPaidAmount) * 100) / 100);
+        
+        const finalPaymentStatus = debtRemainingAmount <= 0
+            ? "paid"
+            : (recordedPaidAmount > 0 ? "partial" : "unpaid");
+
+        let customer = null;
+        if (debtRemainingAmount > 0) {
+            const customerFindOptions = { transaction: t };
+            if (db.sequelize.getDialect() !== 'sqlite') {
+                customerFindOptions.lock = t.LOCK.UPDATE;
+            }
+            customer = await Customer.findByPk(customerId, customerFindOptions);
             
-            if (received < totalAmount) {
-                throw new Error(`Uang pembayaran kurang: Rp ${totalAmount - received} yang harus dibayar`);
+            if (!customer || isWalkInCustomer(customer)) {
+                throw new Error("Transaksi hutang/DP tidak boleh menggunakan customer umum/Walk-in Customer");
+            }
+
+            const currentDebt = Number(customer.total_debt || 0);
+            const newTotalDebt = Math.round((currentDebt + debtRemainingAmount) * 100) / 100;
+            
+            if (newTotalDebt > Number(customer.debt_limit || 0)) {
+                throw new Error(`Melebihi limit hutang customer. Limit: Rp ${Number(customer.debt_limit || 0).toLocaleString("id-ID")}`);
+            }
+
+            await customer.update({ total_debt: newTotalDebt }, { transaction: t });
+        }
+
+        if (!isDebtMode && (paymentMethod === "cash" || !paymentMethod)) {
+            const received = parseFloat(amountReceived) || 0;
+            if (received < finalTotal - 1) { // epsilon
+                throw new Error(`Uang pembayaran kurang: Rp ${Math.round(finalTotal - received)} yang harus dibayar`);
             }
         }
 
-        const invoiceNumber = String(requestedInvoiceNumber || '').trim() || generateInvoiceNumber();
+        const invoiceNumber = String(requestedInvoiceNumber || "").trim() || generateInvoiceNumber();
         const existingSale = await Sale.findOne({
             where: { invoiceNumber },
             transaction: t
         });
-
         if (existingSale) {
             throw new Error(`Nomor invoice ${invoiceNumber} sudah pernah digunakan`);
         }
 
-        // Create sale
         const sale = await Sale.create({
             invoiceNumber,
             customerId: customerId || null,
-            subtotal: parseFloat(subtotal),
-            tax: parseFloat(tax),
+            subtotal: inputSubtotal,
+            tax: inputTax,
             discount: finalDiscount,
             total: finalTotal,
-            paymentMethod,
+            paymentMethod: recordedPaidAmount > 0 ? (paymentMethod || "cash") : null,
             amountReceived: parseFloat(amountReceived) || 0,
             change: parseFloat(change) || 0,
             notes: notes || null,
             cashierId: req.user?.id || null,
-            status: 'paid',
+            status: "completed",
             promoId: promo ? promo.id : null,
             promoCode: promo ? promo.code : null,
-            promoDiscount
+            promoDiscount,
+            paymentStatus: finalPaymentStatus,
+            paidAmount: recordedPaidAmount,
+            remainingAmount: debtRemainingAmount,
+            dueDate: (finalPaymentStatus === "paid" || !isDebtMode) ? null : (dueDate || null)
         }, { transaction: t });
 
-        if (promo) {
-            await promo.increment('usedCount', { by: 1, transaction: t });
-        }
-
-        // Process items
+        const saleItemsData = [];
+        const stockMovementsData = [];
+        
         for (const item of items) {
-            const product = await Product.findByPk(item.productId, { transaction: t });
-            
+            const productId = parseInt(item.productId, 10);
+            if (isNaN(productId)) continue;
+
+            const quantity = Number(item.quantity) || 0;
+            const product = productMap.get(productId);
             if (!product) {
                 throw new Error(`Produk dengan ID ${item.productId} tidak ditemukan`);
             }
 
-            if (product.type === 'fisik' && product.stock < item.quantity) {
+            if (quantity <= 0) {
+                throw new Error(`Jumlah produk ${product.name} tidak valid`);
+            }
+
+            const previousRequestedQty = stockDeltas.get(productId) || 0;
+            const currentRequestedQty = previousRequestedQty + quantity;
+            if (product.type === "fisik" && Number(product.stock) < currentRequestedQty) {
                 throw new Error(`Stok ${product.name} tidak mencukupi (tersedia: ${product.stock})`);
             }
 
-            await SaleItem.create({
+            const itemPrice = parseFloat(item.price) || 0;
+            const itemSubtotal = parseFloat(item.subtotal) || (itemPrice * quantity);
+
+            saleItemsData.push({
                 saleId: sale.id,
                 productId: product.id,
-                qty: item.quantity,
-                price: parseFloat(item.price),
-                subtotal: parseFloat(item.subtotal),
+                qty: quantity,
+                price: itemPrice,
+                subtotal: itemSubtotal,
                 tax: parseFloat(item.tax) || 0,
                 discount: parseFloat(item.discount) || 0,
-                notes: item.notes || null
-            }, { transaction: t });
+                notes: item.notes || item.altDesc || null
+            });
 
-            // Update stock using decrement (atomic)
-            if (product.type === 'fisik') {
-                const beforeStock = product.stock;
-                await product.decrement('stock', {
-                    by: item.quantity,
-                    transaction: t
-                });
+            if (product.type === "fisik") {
+                const beforeStock = Number(product.stock) - previousRequestedQty;
+                const afterStock = Number(product.stock) - currentRequestedQty;
+                stockDeltas.set(productId, currentRequestedQty);
                 
-                // Reload to get after stock
-                await product.reload({ transaction: t });
-                
-                // Create stock movement record
-                await StockMovement.create({
+                stockMovementsData.push({
                     productId: product.id,
-                    qty: -item.quantity,
-                    type: 'sale',
+                    qty: -quantity,
+                    type: "sale",
                     referenceId: sale.id,
-                    referenceType: 'Sale',
+                    referenceType: "Sale",
                     beforeStock: beforeStock,
-                    afterStock: product.stock,
+                    afterStock: afterStock,
                     notes: `Penjualan invoice ${invoiceNumber}`,
                     createdBy: req.user?.id || null
-                }, { transaction: t });
+                });
             }
         }
 
+        await bulkDecrementProductStock(stockDeltas, t);
+        await SaleItem.bulkCreate(saleItemsData, { transaction: t });
+        if (stockMovementsData.length > 0) {
+            await StockMovement.bulkCreate(stockMovementsData, { transaction: t });
+        }
+
+        if (recordedPaidAmount > 0) {
+            await SalePayment.create({
+                saleId: sale.id,
+                amount: recordedPaidAmount,
+                paymentMethod: paymentMethod || "cash",
+                note: finalPaymentStatus === "paid" 
+                    ? `Pembayaran invoice ${invoiceNumber}` 
+                    : `Pembayaran awal / DP invoice ${invoiceNumber}`,
+                paidAt: new Date(),
+                createdBy: req.user?.id || null
+            }, { transaction: t });
+        }
+
+        if (promo) {
+            await promo.increment("usedCount", { by: 1, transaction: t });
+        }
+
+        await recordAudit(req, {
+            action: "create_sale",
+            entity: "Sale",
+            entityId: sale.id,
+            newValue: { invoiceNumber, total: finalTotal, paymentStatus: finalPaymentStatus },
+            transaction: t
+        });
+
         await t.commit();
 
-        res.json({
+        return res.json({
             success: true,
-            message: 'Transaksi berhasil disimpan',
+            message: "Transaksi berhasil disimpan",
             invoiceNumber: sale.invoiceNumber,
             saleId: sale.id
         });
 
     } catch (err) {
-        await t.rollback();
-        console.error('Error saving transaction:', err);
-        res.status(500).json({
+        console.error("FATAL ERROR IN saveTransaction:");
+        console.error(err);
+        if (err.stack) console.error(err.stack);
+
+        try {
+            if (t) await t.rollback();
+        } catch (rollbackErr) {
+            console.error("CRITICAL: Transaction rollback failed!");
+            console.error(rollbackErr);
+        }
+        
+        const isClientError = err.name === 'SequelizeValidationError' || 
+                             err.name === 'SequelizeUniqueConstraintError' ||
+                             !err.stack.includes('node_modules');
+
+        return res.status(isClientError ? 400 : 500).json({
             success: false,
-            message: err.message
+            message: err.message,
+            debug: process.env.NODE_ENV === 'development' ? {
+                name: err.name,
+                stack: err.stack,
+                errors: err.errors ? err.errors.map(e => e.message) : undefined
+            } : undefined
         });
     }
 };
 
-// VOID Transaction (NEW)
-exports.voidTransaction = async (req, res) => {
-    const t = await db.sequelize.transaction();
+// Checkout dengan support hutang/DP
+async function checkoutWithDebt(req, res) {
+    req.body = {
+        ...req.body,
+        total: req.body.total ?? req.body.grandTotal,
+        isDebtMode: true
+    };
+
+    return exports.saveTransaction(req, res);
+}
+
+// Pelunasan hutang
+async function settleDebt(req, res) {
+    const transaction = await db.sequelize.transaction();
     
     try {
-        const { saleId, reason } = req.body;
-        
-        if (!saleId) {
-            throw new Error('ID transaksi diperlukan');
-        }
-        
-        if (!reason) {
-            throw new Error('Alasan pembatalan harus diisi');
-        }
-        
-        // Find sale
-        const sale = await Sale.findByPk(saleId, {
-            include: [{
-                model: SaleItem,
-                as: 'items'
-            }],
-            transaction: t
+        const result = await transactionService.settleDebt({
+            ...req.body,
+            userId: req.user?.id || null,
+            transaction,
+            req
+        });
+
+        await transaction.commit();
+
+        res.json({
+            success: true,
+            message: 'Pembayaran berhasil dicatat',
+            data: {
+                saleId: result.sale.id,
+                invoiceNumber: result.sale.invoiceNumber,
+                paidAmount: result.paidAmount,
+                remainingAmount: result.remainingAmount,
+                paymentStatus: result.paymentStatus
+            }
         });
         
-        if (!sale) {
-            throw new Error('Transaksi tidak ditemukan');
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Settle debt error:', error);
+        res.status(400).json({ success: false, message: error.message });
+    }
+}
+
+// Get outstanding debts (piutang)
+async function getOutstandingDebts(req, res) {
+    try {
+        const { customerId, limit = 20, offset = 0 } = req.query;
+        const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
+        const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
+        
+        let whereCondition = {
+            remainingAmount: { [Op.gt]: 0 },
+            status: 'completed',
+            paymentStatus: { [Op.in]: ['unpaid', 'partial'] }
+        };
+        
+        if (customerId) {
+            whereCondition.customerId = customerId;
         }
+
+        const totalItems = await Sale.count({ where: whereCondition });
         
-        if (sale.status !== 'paid') {
-            throw new Error(`Transaksi dengan status ${sale.status} tidak dapat dibatalkan`);
-        }
+        const sales = await Sale.findAll({
+            where: whereCondition,
+            include: [
+                {
+                    model: Customer,
+                    as: 'customer',
+                    attributes: ['id', 'name', 'phone', 'debt_limit']
+                }
+            ],
+            order: [['dueDate', 'ASC'], ['createdAt', 'DESC']],
+            limit: parsedLimit,
+            offset: parsedOffset
+        });
         
-        // Update sale status
-        await sale.update({
-            status: 'void',
-            voidReason: reason,
-            voidedBy: req.user?.id || null,
-            voidedAt: new Date()
-        }, { transaction: t });
-        
-        // Return stock for physical products
-        for (const item of sale.items) {
-            const product = await Product.findByPk(item.productId, { transaction: t });
+        const today = new Date();
+        const categorizedSales = sales.map(sale => {
+            const createdAt = new Date(sale.createdAt);
+            const diffTime = Math.abs(today - createdAt);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             
-            if (product && product.type === 'fisik') {
-                const beforeStock = product.stock;
-                await product.increment('stock', {
-                    by: item.qty,
-                    transaction: t
-                });
-                
-                await product.reload({ transaction: t });
-                
-                // Create stock movement record
-                await StockMovement.create({
-                    productId: product.id,
-                    qty: item.qty,
-                    type: 'void_return',
-                    referenceId: sale.id,
-                    referenceType: 'Sale',
-                    beforeStock: beforeStock,
-                    afterStock: product.stock,
-                    notes: `Pembatalan transaksi ${sale.invoiceNumber}. Alasan: ${reason}`,
-                    createdBy: req.user?.id || null
-                }, { transaction: t });
+            let agingCategory = '0-30 hari';
+            if (diffDays > 90) agingCategory = '> 90 hari';
+            else if (diffDays > 60) agingCategory = '61-90 hari';
+            else if (diffDays > 30) agingCategory = '31-60 hari';
+
+            return {
+                ...sale.toJSON(),
+                agingDays: diffDays,
+                agingCategory
+            };
+        });
+
+        res.json({
+            success: true,
+            data: categorizedSales,
+            pagination: {
+                limit: parsedLimit,
+                offset: parsedOffset,
+                totalItems
+            },
+            summary: {
+                pageOutstanding: categorizedSales.reduce((sum, sale) => sum + Number(sale.remainingAmount || 0), 0)
             }
-        }
+        });
         
+    } catch (error) {
+        console.error('Get outstanding debts error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+}
+
+exports.voidTransaction = async (req, res) => {
+    const t = await db.sequelize.transaction();
+
+    try {
+        const { saleId, reason } = req.body;
+        const result = await transactionService.voidTransaction({
+            saleId,
+            reason,
+            userId: req.user?.id || null,
+            transaction: t,
+            req
+        });
+
         await t.commit();
-        
+
         res.json({
             success: true,
             message: 'Transaksi berhasil dibatalkan',
-            saleId: sale.id,
-            invoiceNumber: sale.invoiceNumber
+            saleId: result.sale.id,
+            invoiceNumber: result.sale.invoiceNumber,
+            restoredStockMovements: result.stockMovements.length
         });
-        
     } catch (err) {
         await t.rollback();
         console.error('Error voiding transaction:', err);
-        res.status(500).json({
+        res.status(400).json({
             success: false,
             message: err.message
         });
     }
 };
 
-// Get Transaction History with Pagination (UPDATED)
 exports.getTransactionHistory = async (req, res) => {
     try {
         const { limit = 50, offset = 0, status } = req.query;
-        
-        const whereClause = {};
+        const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+        const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
+        const where = {};
+
         if (status && status !== 'all') {
-            whereClause.status = status;
+            where.status = status;
         }
-        
+
         const { count, rows: sales } = await Sale.findAndCountAll({
-            where: whereClause,
+            where,
             include: [
                 {
                     model: Customer,
@@ -682,16 +925,17 @@ exports.getTransactionHistory = async (req, res) => {
                 }
             ],
             order: [['createdAt', 'DESC']],
-            limit: parseInt(limit),
-            offset: parseInt(offset)
+            limit: parsedLimit,
+            offset: parsedOffset,
+            distinct: true
         });
-        
+
         res.json({
             success: true,
             sales,
             total: count,
-            limit: parseInt(limit),
-            offset: parseInt(offset)
+            limit: parsedLimit,
+            offset: parsedOffset
         });
     } catch (err) {
         console.error('Error fetching transactions:', err);
@@ -719,7 +963,7 @@ exports.getDailySalesReport = async (req, res) => {
                 createdAt: {
                     [Op.between]: [startOfDay, endOfDay]
                 },
-                status: 'paid'
+                status: 'completed'
             },
             include: [{
                 model: SaleItem,
@@ -733,10 +977,21 @@ exports.getDailySalesReport = async (req, res) => {
         const totalDiscount = sales.reduce((sum, sale) => sum + parseFloat(sale.discount), 0);
         
         // Top products
+        const reportProductIds = uniqueNumericIds(
+            sales.flatMap(sale => sale.items.map(item => item.productId))
+        );
+        const reportProducts = reportProductIds.length > 0
+            ? await Product.findAll({
+                where: { id: reportProductIds },
+                attributes: ['id', 'name']
+            })
+            : [];
+        const reportProductMap = new Map(reportProducts.map(product => [product.id, product]));
         const productSales = {};
+
         for (const sale of sales) {
             for (const item of sale.items) {
-                const product = await Product.findByPk(item.productId);
+                const product = reportProductMap.get(item.productId);
                 if (product) {
                     if (!productSales[product.id]) {
                         productSales[product.id] = {
@@ -826,3 +1081,8 @@ exports.debug = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.checkoutWithDebt = checkoutWithDebt;
+exports.settleDebt = settleDebt;
+exports.getOutstandingDebts = getOutstandingDebts;
+exports.generateInvoiceNumber = generateInvoiceNumber;

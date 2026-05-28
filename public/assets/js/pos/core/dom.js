@@ -43,6 +43,7 @@ export const DOM = {
 
     // Buttons
     completeOrderBtn: document.getElementById('completeOrderBtn'),
+    completeOrderBtnMobile: document.getElementById('completeOrderBtnMobile'),
     cashPaymentBtn: document.getElementById('cashPaymentBtn'),
     cardPaymentBtn: document.getElementById('cardPaymentBtn'),
     qrisPaymentBtn: document.getElementById('qrisPaymentBtn'),
@@ -52,5 +53,18 @@ export const DOM = {
     voidTransactionBtn: document.getElementById('voidTransactionBtn'),
     holdTransactionBtn: document.getElementById('holdTransactionBtn'),
     resumeTransactionBtn: document.getElementById('resumeTransactionBtn'),
-    discountQuickBtn: document.getElementById('discountQuickBtn')
+    discountQuickBtn: document.getElementById('discountQuickBtn'),
+
+    // Slide Panel Buttons
+    savedTransactionBtn: document.getElementById('savedTransactionBtn'),
+    reprintReceiptBtn: document.getElementById('reprintReceiptBtn'),
+    clearCartBtnSlide: document.getElementById('clearCartBtnSlide'),
+    dailyReportBtnSlide: document.getElementById('dailyReportBtnSlide'),
+    xReadingBtnSlide: document.getElementById('xReadingBtnSlide'),
+    zReadingBtnSlide: document.getElementById('zReadingBtnSlide'),
+    bestSellerBtnSlide: document.getElementById('bestSellerBtnSlide'),
+    stockReportBtnSlide: document.getElementById('stockReportBtnSlide'),
+    printerSettingsBtn: document.getElementById('printerSettingsBtn'),
+    shiftSettingsBtn: document.getElementById('shiftSettingsBtn'),
+    userSettingsBtn: document.getElementById('userSettingsBtn')
 };

@@ -615,6 +615,7 @@ exports.saveTransaction = async (req, res) => {
             change: parseFloat(change) || 0,
             notes: notes || null,
             cashierId: req.user?.id || null,
+            sessionId: req.cashierSession?.id || null,
             status: "completed",
             promoId: promo ? promo.id : null,
             promoCode: promo ? promo.code : null,

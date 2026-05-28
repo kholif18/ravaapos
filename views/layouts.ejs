@@ -111,5 +111,36 @@
         <script async defer src="https://buttons.github.io/buttons.js"></script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                <% if (success && success.length > 0) { %>
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: '<%= success %>',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                <% } %>
+
+                <% if (error && error.length > 0) { %>
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kesalahan',
+                        text: '<%= error %>',
+                        confirmButtonText: 'Tutup'
+                    });
+                <% } %>
+
+                <% if (errors && errors.length > 0) { %>
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Kesalahan Validasi',
+                        html: '<ul class="text-start"><% errors.forEach(function(err){ %><li><%= err %></li><% }); %></ul>',
+                        confirmButtonText: 'Tutup'
+                    });
+                <% } %>
+            });
+        </script>
     </body>
 </html>

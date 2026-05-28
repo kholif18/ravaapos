@@ -1,0 +1,134 @@
+<div class="row">
+  <!-- Revenue Today -->
+  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title d-flex align-items-start justify-content-between">
+          <div class="avatar flex-shrink-0">
+            <span class="badge bg-label-primary p-2"><i class="bx bx-dollar text-primary"></i></span>
+          </div>
+        </div>
+        <span class="fw-semibold d-block mb-1">Pendapatan Hari Ini</span>
+        <h3 class="card-title mb-2"><%= formatRupiah(stats.todayRevenue) %></h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transactions Today -->
+  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title d-flex align-items-start justify-content-between">
+          <div class="avatar flex-shrink-0">
+            <span class="badge bg-label-success p-2"><i class="bx bx-cart text-success"></i></span>
+          </div>
+        </div>
+        <span class="fw-semibold d-block mb-1">Transaksi Hari Ini</span>
+        <h3 class="card-title mb-2"><%= stats.todayTransactions %></h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Products -->
+  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title d-flex align-items-start justify-content-between">
+          <div class="avatar flex-shrink-0">
+            <span class="badge bg-label-info p-2"><i class="bx bx-package text-info"></i></span>
+          </div>
+        </div>
+        <span class="fw-semibold d-block mb-1">Total Produk</span>
+        <h3 class="card-title mb-2"><%= stats.totalProducts %></h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Customers -->
+  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="card-title d-flex align-items-start justify-content-between">
+          <div class="avatar flex-shrink-0">
+            <span class="badge bg-label-warning p-2"><i class="bx bx-user text-warning"></i></span>
+          </div>
+        </div>
+        <span class="fw-semibold d-block mb-1">Total Pelanggan</span>
+        <h3 class="card-title mb-2"><%= stats.totalCustomers %></h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Payment Methods -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h5 class="card-title m-0 me-2">Metode Pembayaran (Hari Ini)</h5>
+      </div>
+      <div class="card-body">
+        <ul class="p-0 m-0">
+          <% paymentStats.forEach(stat => { %>
+          <li class="d-flex mb-4 pb-1">
+            <div class="avatar flex-shrink-0 me-3">
+              <span class="badge bg-label-secondary p-2"><i class="bx bx-wallet"></i></span>
+            </div>
+            <div class="d-flex w-100 flex-wrap align-items-center justify-content-between gap-2">
+              <div class="me-2">
+                <h6 class="mb-0 text-capitalize"><%= stat.paymentMethod %></h6>
+              </div>
+              <div class="user-progress d-flex align-items-center gap-1">
+                <h6 class="mb-0"><%= formatRupiah(stat.dataValues.total) %></h6>
+              </div>
+            </div>
+          </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Products -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <h5 class="card-title m-0 me-2">Produk Terlaris (Hari Ini)</h5>
+      </div>
+      <div class="card-body">
+        <ul class="p-0 m-0">
+          <% topProducts.forEach(item => { %>
+          <li class="d-flex mb-4 pb-1">
+            <div class="avatar flex-shrink-0 me-3">
+              <span class="badge bg-label-primary p-2"><i class="bx bx-package"></i></span>
+            </div>
+            <div class="d-flex w-100 flex-wrap align-items-center justify-content-between gap-2">
+              <div class="me-2">
+                <h6 class="mb-0"><%= item.product.name %></h6>
+                <small class="text-muted"><%= item.dataValues.totalQty %> terjual</small>
+              </div>
+              <div class="user-progress d-flex align-items-center gap-1">
+                <h6 class="mb-0"><%= formatRupiah(item.dataValues.totalRevenue) %></h6>
+              </div>
+            </div>
+          </li>
+          <% }) %>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <h5 class="card-header">Laporan Lainnya</h5>
+      <div class="card-body">
+        <div class="demo-inline-spacing">
+          <a href="/reports/sales" class="btn btn-outline-primary">Laporan Penjualan Detail</a>
+          <a href="/cashier/sessions" class="btn btn-outline-secondary">Riwayat Sesi Kasir</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

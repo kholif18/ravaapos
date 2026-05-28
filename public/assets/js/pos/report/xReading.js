@@ -3,9 +3,28 @@ import { formatCurrency, formatDate } from '../utils/formatter.js';
 
 export async function generateXReading() {
     const today = new Date();
-    const dateStr = formatDate(today, 'date');
+    const dateStrAPI = today.toISOString().split('T')[0];
+    const dateStrDisplay = formatDate(today, 'date');
     
-    // X-Reading shows current shift's transactions (not closed yet)
+    try {
+        const response = await fetch(`/api/reports/x-reading?date=${dateStrAPI}`);
+        if (response.ok) {
+            const data = await response.json();
+            // Ensure compatibility with the expected format
+            return {
+                ...data,
+                time: formatDate(new Date(), 'time'),
+                cashInDrawer: data.paymentMethods?.cash?.total || 0,
+                expectedCash: data.paymentMethods?.cash?.total || 0,
+                difference: 0,
+                isBalanced: true
+            };
+        }
+    } catch (error) {
+        console.error('API error for X-Reading:', error);
+    }
+
+    // Fallback to local data
     const transactions = getTodayTransactions();
     
     const cashInDrawer = calculateCashInDrawer(transactions);
@@ -13,7 +32,7 @@ export async function generateXReading() {
     const difference = cashInDrawer - expectedCash;
     
     return {
-        date: dateStr,
+        date: dateStrDisplay,
         time: formatDate(new Date(), 'time'),
         totalTransactions: transactions.length,
         totalSales: transactions.reduce((sum, t) => sum + t.total, 0),

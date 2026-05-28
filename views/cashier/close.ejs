@@ -1,0 +1,64 @@
+<div class="row">
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <h5 class="card-header">Ringkasan Sesi</h5>
+      <div class="card-body">
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <p class="mb-1 text-muted">Dibuka Oleh</p>
+            <h6><%= user.name %></h6>
+            <p class="mb-1 text-muted">Waktu Buka</p>
+            <h6><%= new Date(session.openingTime).toLocaleString('id-ID') %></h6>
+          </div>
+          <div class="col-md-6">
+            <p class="mb-1 text-muted">Modal Awal</p>
+            <h6><%= formatRupiah(session.openingBalance) %></h6>
+          </div>
+        </div>
+
+        <hr class="my-4" />
+
+        <div class="row mb-4">
+          <div class="col-md-4">
+            <div class="p-3 border rounded text-center">
+              <p class="mb-1 text-muted small">Total Penjualan</p>
+              <h5 class="mb-0"><%= formatRupiah(summary.totalSales) %></h5>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded text-center">
+              <p class="mb-1 text-muted small">Penjualan Tunai</p>
+              <h5 class="mb-0"><%= formatRupiah(summary.totalCashSales) %></h5>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="p-3 border rounded text-center bg-light">
+              <p class="mb-1 text-muted small">Ekspektasi Kas</p>
+              <h5 class="mb-0 text-primary"><%= formatRupiah(summary.expectedBalance) %></h5>
+            </div>
+          </div>
+        </div>
+
+        <form action="/cashier/close" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="mb-3">
+            <label for="closingBalance" class="form-label">Kas Aktual di Laci</label>
+            <div class="input-group input-group-merge">
+              <span class="input-group-text">Rp</span>
+              <input type="number" class="form-control" id="closingBalance" name="closingBalance" placeholder="0" required autofocus />
+            </div>
+            <div class="form-text">Hitung uang tunai di laci dan masukkan jumlahnya di sini.</div>
+          </div>
+          <div class="mb-3">
+            <label for="notes" class="form-label">Catatan Penutupan</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Contoh: Selisih Rp 500 karena tidak ada kembalian."><%= session.notes %></textarea>
+          </div>
+          <div class="mt-4">
+            <button type="submit" class="btn btn-danger me-2">Tutup Sesi & Cetak Laporan</button>
+            <a href="/" class="btn btn-outline-secondary">Kembali</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

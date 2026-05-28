@@ -53,5 +53,12 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true
   });
 
+  User.associate = models => {
+    User.hasMany(models.CashierSession, {
+      foreignKey: 'userId',
+      as: 'sessions'
+    });
+  };
+
   return User;
 };

@@ -8,6 +8,7 @@ const {
 const {
     Op
 } = require('sequelize');
+const reportController = require('../controllers/reportController');
 
 // Search produk
 router.get('/products/search', async (req, res) => {
@@ -99,5 +100,9 @@ router.get('/categories/search', async (req, res) => {
         });
     }
 });
+
+// Reports API
+router.get('/reports/daily', reportController.getDailyReportAPI);
+router.get('/reports/x-reading', reportController.getXReadingAPI);
 
 module.exports = router;

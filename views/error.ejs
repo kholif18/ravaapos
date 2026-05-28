@@ -54,10 +54,9 @@
     <!-- Error -->
     <div class="container-xxl container-p-y">
       <div class="misc-wrapper">
-        <h2 class="mb-2 mx-2">Page Not Found :(</h2>
-        <p class="mb-4 mx-2">Oops! 😖 The requested URL was not found on this server.</p>
-        <p><strong><%= message %></strong></p>
-          <% if (error && error.stack) { %>
+        <h2 class="mb-2 mx-2"><%= locals.title || 'Oops! Ada Kesalahan' %></h2>
+        <p class="mb-4 mx-2"><%= message || 'Maaf, terjadi kesalahan saat memproses permintaan Anda.' %></p>
+          <% if (locals.error && error.stack) { %>
             <pre><%= error.stack %></pre>
           <% } %>
         <a href="/" class="btn btn-primary">Back to home</a>

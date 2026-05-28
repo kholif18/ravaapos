@@ -1314,7 +1314,7 @@
     display: none;
 }
 
-.pos-slide-overlay.show {
+.pos-slide-overlay.active {
     display: block;
 }
 
@@ -1813,6 +1813,49 @@ MOBILE SEARCH DROPDOWN
    PAYMENT & SUCCESS MODAL STYLES (tetap)
    ======================================== */
 #paymentModal .modal-dialog { max-width: 500px; }
+
+/* Mobile Payment Modal Adjustments */
+@media (max-width: 576px) {
+    #paymentModal .modal-dialog {
+        margin: 10px;
+        max-width: none;
+    }
+    
+    #paymentModal .modal-content {
+        border-radius: 16px;
+    }
+    
+    #paymentModal .total-amount-card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    #paymentModal .total-amount-value {
+        font-size: 28px;
+    }
+    
+    #paymentModal .payment-methods {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    
+    #paymentModal .btn-payment {
+        padding: 12px 8px;
+        font-size: 0.85rem;
+    }
+
+    .quick-amounts {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
+    }
+    
+    .quick-amounts .btn {
+        padding: 10px 5px;
+    }
+}
+
 #paymentModal .modal-content { border-radius: 20px; }
 #paymentModal .total-amount-card {
     background: linear-gradient(135deg, #696cff, #5d5fce);

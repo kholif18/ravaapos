@@ -100,6 +100,17 @@ export function initPaymentHandlers() {
             showPaymentModal(POS.getTotal());
         });
     }
+
+    // Mobile checkout button
+    if (DOM.completeOrderBtnMobile) {
+        DOM.completeOrderBtnMobile.addEventListener('click', () => {
+            if (POS.cart.length === 0) {
+                showWarning('Keranjang kosong, tidak bisa checkout');
+                return;
+            }
+            showPaymentModal(POS.getTotal());
+        });
+    }
     
     // Cash payment button (Quick access - F9 - Direct Exact Cash)
     if (DOM.cashPaymentBtn) {

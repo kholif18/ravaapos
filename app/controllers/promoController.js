@@ -78,6 +78,7 @@ exports.index = async (req, res) => {
         // Langsung render, jangan redirect
         return res.render('promo/index', {
             title: 'Promo Management',
+            activePage: 'promo',
             promos,
             categories,
             products,

@@ -22,6 +22,8 @@ const promoRoutes = require('./promo');
 const apiRoutes = require('./api');
 const userRoutes = require('./users');
 const piutangRoutes = require('./piutang');
+const cashierRoutes = require('./cashier');
+const reportRoutes = require('./reports');
 
 // AUTH
 router.use('/', authRoutes);
@@ -33,6 +35,8 @@ router.get('/dashboard', isAuthenticated, dashboardController.index);
 router.use('/users', isAuthenticated, userRoutes);
 
 // Modules
+router.use('/reports', reportRoutes);
+router.use('/cashier', isAuthenticated, cashierRoutes);
 router.use('/piutang', isAuthenticated, piutangRoutes);
 router.use('/pos', isAuthenticated, posRouter);
 router.use('/categories', isAuthenticated, categoryRoutes);

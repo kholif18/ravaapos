@@ -3,20 +3,23 @@ import { formatCurrency, formatDate } from '../utils/formatter.js';
 
 export async function generateDailyReport(date) {
     const targetDate = date || new Date();
-    const dateStr = formatDate(targetDate, 'date');
+    // Use ISO format YYYY-MM-DD for API compatibility
+    const dateStrAPI = targetDate.toISOString().split('T')[0];
+    const dateStrDisplay = formatDate(targetDate, 'date');
     
     try {
         // Try to fetch from API
-        const response = await fetch(`/api/reports/daily?date=${dateStr}`);
+        const response = await fetch(`/api/reports/daily?date=${dateStrAPI}`);
         if (response.ok) {
-            return await response.json();
+            const data = await response.json();
+            return data;
         }
     } catch (error) {
         console.error('API error, using local data:', error);
     }
     
     // Fallback to local data
-    return generateLocalDailyReport(dateStr);
+    return generateLocalDailyReport(dateStrDisplay);
 }
 
 function generateLocalDailyReport(dateStr) {

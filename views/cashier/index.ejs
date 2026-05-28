@@ -1,0 +1,49 @@
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Daftar Sesi</h5>
+    <a href="/cashier/open" class="btn btn-primary btn-sm">Buka Sesi Baru</a>
+  </div>
+  <div class="table-responsive text-nowrap">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Waktu Buka</th>
+          <th>Waktu Tutup</th>
+          <th>Kasir</th>
+          <th>Modal Awal</th>
+          <th>Total Sales</th>
+          <th>Total Tunai</th>
+          <th>Status</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="table-border-bottom-0">
+        <% if (sessions.length === 0) { %>
+          <tr>
+            <td colspan="8" class="text-center">Belum ada riwayat sesi.</td>
+          </tr>
+        <% } %>
+        <% sessions.forEach(session => { %>
+        <tr>
+          <td><%= new Date(session.openingTime).toLocaleString('id-ID') %></td>
+          <td><%= session.closingTime ? new Date(session.closingTime).toLocaleString('id-ID') : '-' %></td>
+          <td><%= session.user.name %></td>
+          <td><%= formatRupiah(session.openingBalance) %></td>
+          <td><%= formatRupiah(session.totalSales) %></td>
+          <td><%= formatRupiah(session.totalCashSales) %></td>
+          <td>
+            <span class="badge bg-label-<%= session.status === 'open' ? 'success' : 'secondary' %>">
+              <%= session.status === 'open' ? 'Terbuka' : 'Ditutup' %>
+            </span>
+          </td>
+          <td>
+            <% if (session.status === 'open' && session.userId === user.id) { %>
+              <a href="/cashier/close" class="btn btn-sm btn-danger">Tutup</a>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

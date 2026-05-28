@@ -87,8 +87,14 @@ export function initMobileNavigation() {
     const mobilePaymentBtn = document.getElementById('mobilePaymentBtn');
     if (mobilePaymentBtn) {
         mobilePaymentBtn.addEventListener('click', () => {
-            const checkoutBtn = document.getElementById('completeOrderBtn');
-            if (checkoutBtn) checkoutBtn.click();
+            // First try mobile checkout button, then desktop
+            const mobileCheckout = document.getElementById('completeOrderBtnMobile');
+            if (mobileCheckout) {
+                mobileCheckout.click();
+            } else {
+                const desktopCheckout = document.getElementById('completeOrderBtn');
+                if (desktopCheckout) desktopCheckout.click();
+            }
         });
     }
 }

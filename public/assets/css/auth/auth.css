@@ -11,14 +11,16 @@ body {
     overflow-x: hidden;
 }
 
-/* Container 2 Kolom */
+/* Container 2 Kolom - digunakan di semua halaman */
 .login-container {
     display: flex;
     min-height: 100vh;
     width: 100%;
 }
 
-/* Kolom Kiri - Hero/Image Section */
+/* ==================== */
+/* Kolom Kiri (Hero Section) - Sama untuk semua halaman */
+/* ==================== */
 .hero-section {
     flex: 1;
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
@@ -30,7 +32,6 @@ body {
     overflow: hidden;
 }
 
-/* Animated Background */
 .hero-section::before {
     content: '';
     position: absolute;
@@ -47,7 +48,6 @@ body {
     100% { transform: translate(50px, 50px); }
 }
 
-/* Floating Elements */
 .floating-element {
     position: absolute;
     background: rgba(255, 255, 255, 0.08);
@@ -60,7 +60,6 @@ body {
     height: 300px;
     top: -100px;
     right: -100px;
-    animation-delay: 0s;
 }
 
 .floating-2 {
@@ -69,7 +68,6 @@ body {
     bottom: 50px;
     left: -80px;
     animation-delay: 2s;
-    animation-duration: 8s;
 }
 
 .floating-3 {
@@ -82,12 +80,8 @@ body {
 }
 
 @keyframes float {
-    0%, 100% {
-        transform: translateY(0) rotate(0deg);
-    }
-    50% {
-        transform: translateY(-30px) rotate(10deg);
-    }
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(10deg); }
 }
 
 .brand {
@@ -107,7 +101,6 @@ body {
     color: #ffd700;
 }
 
-/* Image/Illustration Container */
 .illustration-container {
     position: relative;
     z-index: 2;
@@ -181,7 +174,9 @@ body {
     }
 }
 
-/* Kolom Kanan - Login Form */
+/* ==================== */
+/* Kolom Kanan (Form Section) - Style dasar */
+/* ==================== */
 .form-section {
     flex: 1;
     background: white;
@@ -192,10 +187,18 @@ body {
     overflow-y: auto;
 }
 
-.login-card {
+/* Card styles untuk berbagai halaman */
+.login-card,
+.register-card,
+.forgot-card,
+.reset-card {
     width: 100%;
     max-width: 420px;
     animation: fadeIn 0.5s ease;
+}
+
+.register-card {
+    max-width: 440px;
 }
 
 @keyframes fadeIn {
@@ -209,26 +212,82 @@ body {
     }
 }
 
-.login-header {
+/* Header styles */
+.login-header,
+.register-header,
+.forgot-header,
+.reset-header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
 }
 
-.login-header h3 {
-    font-size: 32px;
+.login-header h3,
+.register-header h3,
+.forgot-header h3,
+.reset-header h3 {
+    font-size: 28px;
     font-weight: 700;
     color: #1a1a2e;
     margin-bottom: 12px;
 }
 
-.login-header p {
+.login-header p,
+.register-header p,
+.forgot-header p,
+.reset-header p {
     color: #666;
     font-size: 14px;
+    line-height: 1.5;
 }
 
-/* Input Groups */
-.input-group {
+.login-header h3 {
+    font-size: 32px;
+}
+
+/* Icon circle */
+.register-header .icon,
+.forgot-header .icon,
+.reset-header .icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+}
+
+.register-header .icon i,
+.forgot-header .icon i,
+.reset-header .icon i {
+    font-size: 40px;
+    color: white;
+}
+
+/* Back link */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #667eea;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
     margin-bottom: 24px;
+    transition: 0.3s;
+}
+
+.back-link:hover {
+    gap: 12px;
+    color: #764ba2;
+}
+
+/* ==================== */
+/* Form Elements - Digunakan bersama */
+/* ==================== */
+.input-group {
+    margin-bottom: 20px;
 }
 
 .input-group label {
@@ -275,13 +334,39 @@ body {
     cursor: pointer;
     color: #999;
     transition: 0.3s;
+    font-size: 18px;
+    z-index: 2;
 }
 
 .toggle-password:hover {
     color: #667eea;
 }
 
-/* Options */
+/* Password requirements */
+.password-requirements {
+    font-size: 11px;
+    color: #999;
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.password-requirements span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.password-requirements .valid {
+    color: #22c55e;
+}
+
+.password-requirements .invalid {
+    color: #999;
+}
+
+/* Options (checkbox & forgot link) */
 .options {
     display: flex;
     justify-content: space-between;
@@ -315,8 +400,35 @@ body {
     text-decoration: underline;
 }
 
-/* Login Button */
-.login-button {
+/* Terms checkbox khusus register */
+.terms {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0;
+    font-size: 12px;
+    color: #666;
+}
+
+.terms input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.terms a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+/* ==================== */
+/* Buttons */
+/* ==================== */
+.login-button,
+.register-button,
+.reset-button,
+.reset-button {
     width: 100%;
     padding: 14px;
     background: linear-gradient(135deg, #667eea, #764ba2);
@@ -334,12 +446,38 @@ body {
     margin-bottom: 24px;
 }
 
-.login-button:hover {
+.login-button:hover,
+.register-button:hover,
+.reset-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
-/* Divider */
+/* ==================== */
+/* Link ke halaman lain */
+/* ==================== */
+.login-link,
+.signup-link {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+}
+
+.login-link a,
+.signup-link a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.login-link a:hover,
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
+/* ==================== */
+/* Divider & Social Login */
+/* ==================== */
 .divider {
     text-align: center;
     margin: 24px 0;
@@ -364,8 +502,8 @@ body {
     font-size: 13px;
 }
 
-/* Social Login */
-.social-login {
+.social-login,
+.social-register {
     display: flex;
     gap: 16px;
     justify-content: center;
@@ -402,24 +540,9 @@ body {
     color: #333;
 }
 
-/* Sign Up Link */
-.signup-link {
-    text-align: center;
-    font-size: 14px;
-    color: #666;
-}
-
-.signup-link a {
-    color: #667eea;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.signup-link a:hover {
-    text-decoration: underline;
-}
-
-/* Alert Styles */
+/* ==================== */
+/* Alert / Notifikasi */
+/* ==================== */
 .alert-modern {
     background: #fee2e2;
     border-left: 4px solid #ef4444;
@@ -431,7 +554,7 @@ body {
     gap: 12px;
     font-size: 13px;
     color: #991b1b;
-    animation: shake 0.4s ease;
+    animation: slideDown 0.4s ease;
 }
 
 .alert-modern.success {
@@ -440,13 +563,34 @@ body {
     color: #166534;
 }
 
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Shake animation untuk error */
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
     75% { transform: translateX(5px); }
 }
 
-/* Loading Spinner */
+.alert-modern.error {
+    background: #fee2e2;
+    border-left-color: #ef4444;
+    color: #991b1b;
+    animation: shake 0.4s ease;
+}
+
+/* ==================== */
+/* Spinner Loading */
+/* ==================== */
 .spinner {
     display: inline-block;
     width: 18px;
@@ -461,7 +605,9 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* Demo Credentials */
+/* ==================== */
+/* Demo Credentials (khusus login) */
+/* ==================== */
 .demo-creds {
     margin-top: 24px;
     padding-top: 24px;
@@ -502,7 +648,9 @@ body {
     color: white;
 }
 
-/* Responsive */
+/* ==================== */
+/* Responsive Design */
+/* ==================== */
 @media (max-width: 900px) {
     .login-container {
         flex-direction: column;
@@ -510,7 +658,7 @@ body {
     
     .hero-section {
         padding: 40px 30px;
-        min-height: 500px;
+        min-height: 400px;
     }
     
     .stats-cards {
@@ -530,5 +678,10 @@ body {
     
     .stat-card {
         padding: 15px;
+    }
+    
+    .social-login,
+    .social-register {
+        flex-direction: column;
     }
 }

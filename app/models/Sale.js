@@ -94,6 +94,10 @@ module.exports = (sequelize, DataTypes) => {
         voidedAt: {
             type: DataTypes.DATE,
             allowNull: true
+        },
+        sessionId: {
+            type: DataTypes.INTEGER,
+            allowNull: true
         }
     });
 
@@ -121,6 +125,10 @@ module.exports = (sequelize, DataTypes) => {
         Sale.belongsTo(models.User, {
             foreignKey: 'voidedBy',
             as: 'voider'
+        });
+        Sale.belongsTo(models.CashierSession, {
+            foreignKey: 'sessionId',
+            as: 'session'
         });
     };
 

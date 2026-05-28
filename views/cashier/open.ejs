@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <h5 class="card-header">Mulai Sesi Baru</h5>
+      <div class="card-body">
+        <form action="/cashier/open" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="mb-3">
+            <label for="openingBalance" class="form-label">Modal Awal (Kas di Laci)</label>
+            <div class="input-group input-group-merge">
+              <span class="input-group-text">Rp</span>
+              <input type="number" class="form-control" id="openingBalance" name="openingBalance" placeholder="0" required autofocus />
+            </div>
+            <div class="form-text">Masukkan jumlah uang tunai yang ada di laci saat ini.</div>
+          </div>
+          <div class="mb-3">
+            <label for="notes" class="form-label">Catatan (Opsional)</label>
+            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+          </div>
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary me-2">Buka Sesi</button>
+            <a href="/" class="btn btn-outline-secondary">Batal</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

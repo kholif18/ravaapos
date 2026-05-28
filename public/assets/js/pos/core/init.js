@@ -12,6 +12,11 @@ import {
     initSlidePanel
 } from '../ui/slidePanel.js';
 import {
+    initMobileMenu,
+    initMobileNavigation,
+    adjustForMobile
+} from '../ui/mobileMenu.js';
+import {
     initCustomerSearch
 } from '../customer/customerSearch.js';
 import {
@@ -22,6 +27,10 @@ import {
     initPaymentHandlers,
     initPromoHandlers
 } from '../payment/paymentModal.js';
+import {
+    initReportHandlers,
+    initSlideMenuHandlers
+} from '../report/index.js';
 import {
     renderCart,
     renderMobileCart
@@ -42,10 +51,15 @@ export function initGlobalState() {
     // Initialize all modules
     initKeyboardShortcuts();
     initSlidePanel();
+    initMobileMenu();
+    initMobileNavigation();
+    adjustForMobile();
     initCustomerSearch();
     initProductSearch();
     initPaymentHandlers();
     initPromoHandlers();
+    initReportHandlers();
+    initSlideMenuHandlers();
     initTimeUpdater();
 
     // Initialize invoice from DOM

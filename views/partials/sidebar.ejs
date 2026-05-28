@@ -90,6 +90,22 @@
         </li>
 
         <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Cashier & Reports</span>
+        </li>
+        <li class="menu-item <%= activePage === 'cashier-session' ? 'active' : '' %>">
+            <a href="/cashier/sessions" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-lock-open"></i>
+                <div data-i18n="Cashier Session">Sesi Kasir</div>
+            </a>
+        </li>
+        <li class="menu-item <%= activePage === 'reports' ? 'active' : '' %>">
+            <a href="/reports" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
+                <div data-i18n="Reports">Laporan</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Inventory</span>
         </li>
         <li class="menu-item <%= activePage === 'products' ? 'active' : '' %>">

@@ -172,13 +172,6 @@
             <div class="card border shadow-none">
               <div class="card-body">
                 <h6 class="card-title mb-3">Pengaturan POS</h6>
-                <!-- Qty Input -->
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" name="requireQtyInput" id="requireQtyInput">
-                  <label class="form-check-label" for="requireQtyInput">Minta Qty Saat Produk Dipilih</label>
-                  <div class="form-text">Qty akan langsung fokus saat produk masuk ke cart.</div>
-                </div>
-
                 <!-- Price Editable --> 
                 <div class="form-check form-switch mb-3">
                   <input class="form-check-input" type="checkbox" name="priceChangeAllowed" id="priceChangeAllowed">
@@ -231,6 +224,35 @@
           <div class="col-md-4 mb-3">
             <label>Harga Jual</label>
             <input type="number" step="0.01" name="salePrice" min="0" id="inputSalePrice" class="form-control" required>
+          </div>
+        </div>
+
+        <!-- Harga Bertingkat -->
+        <div class="card border shadow-none mb-3">
+          <div class="card-body">
+            <h6 class="card-title d-flex justify-content-between align-items-center">
+              Harga Bertingkat (Quantity Pricing)
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddTierCreate">
+                <i class="bx bx-plus"></i> Tambah Harga
+              </button>
+            </h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mt-2">
+                <thead>
+                  <tr>
+                    <th>Qty Minimal</th>
+                    <th>Harga</th>
+                    <th style="width: 50px;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tierTableBodyCreate">
+                  <!-- Dynamic Rows -->
+                </tbody>
+              </table>
+            </div>
+            <div class="form-text mt-1">
+              Qty minimal harus > 1. Urutkan dari qty terkecil. Harga bertingkat hanya berlaku untuk qty yang sama atau melebihi batas.
+            </div>
           </div>
         </div>
 
@@ -366,13 +388,6 @@
                   Pengaturan POS
                 </h6>
 
-                <!-- Qty -->
-                <div class="form-check form-switch mb-3">
-                  <input class="form-check-input" type="checkbox" name="requireQtyInput" id="editRequireQtyInput">
-                  <label class="form-check-label" for="editRequireQtyInput">Minta Qty Saat Produk Dipilih</label>
-                  <div class="form-text">Qty akan langsung fokus saat produk masuk ke cart.</div>
-                </div>
-
                 <!-- Price Editable -->
                 <div class="form-check form-switch mb-3">
                   <input class="form-check-input" type="checkbox" name="priceChangeAllowed" id="editPriceChangeAllowed">
@@ -424,6 +439,32 @@
           <div class="col-md-4 mb-3">
             <label>Harga Jual</label>
             <input type="number" step="0.01" name="salePrice" min="0" id="editInputSalePrice" class="form-control" required>
+          </div>
+        </div>
+
+        <!-- Harga Bertingkat -->
+        <div class="card border shadow-none mb-3">
+          <div class="card-body">
+            <h6 class="card-title d-flex justify-content-between align-items-center">
+              Harga Bertingkat (Quantity Pricing)
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddTierEdit">
+                <i class="bx bx-plus"></i> Tambah Harga
+              </button>
+            </h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mt-2">
+                <thead>
+                  <tr>
+                    <th>Qty Minimal</th>
+                    <th>Harga</th>
+                    <th style="width: 50px;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="tierTableBodyEdit">
+                  <!-- Dynamic Rows -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

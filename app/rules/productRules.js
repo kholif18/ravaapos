@@ -22,7 +22,6 @@ const PRODUCT_RULES = {
             allow: true
         },
         pos: {
-            requireQtyInput: true,
             priceChangeAllowed: true
         }
     },
@@ -48,7 +47,6 @@ const PRODUCT_RULES = {
             allow: false
         },
         pos: {
-            requireQtyInput: false,
             priceChangeAllowed: true
         }
     },
@@ -74,7 +72,6 @@ const PRODUCT_RULES = {
             allow: false
         },
         pos: {
-            requireQtyInput: false,
             priceChangeAllowed: true
         }
     }

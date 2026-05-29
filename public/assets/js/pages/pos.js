@@ -574,18 +574,22 @@ function addProductToCart(product) {
         name: product.name,
         price: product.salePrice,
         originalPrice: product.salePrice,
+        priceTiers: product.priceTiers || [],
         stock: product.stock || 999999,
         code: product.code || '',
         tax: product.tax || 0,
         enableTax: product.enableInputTax || false,
         enableAltDesc: product.enableAltDesc || false,
         priceChangeAllowed: product.priceChangeAllowed || false,
-        requireQtyInput: product.requireQtyInput || false,
         type: product.type || 'fisik',
         isService: isService,
         isPPOB: isPPOB,
         altDesc: ''
     };
+
+    // Calculate initial price based on tiers if qty = 1 (default)
+    cartProduct.price = calculateTierPrice(cartProduct, 1);
+    cartProduct.originalPrice = cartProduct.price;
 
     // LANGSUNG TAMBAH KE CART, tanpa modal apapun
     addToCart(cartProduct);

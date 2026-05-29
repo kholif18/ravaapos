@@ -14,10 +14,6 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     unit: DataTypes.STRING,
-    requireQtyInput: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-    },
     type: {
       type: DataTypes.ENUM('fisik', 'service', 'ppob'),
       allowNull: false,
@@ -94,6 +90,11 @@ module.exports = (sequelize, DataTypes) => {
 
     Product.hasMany(models.PurchasingItem, {
       foreignKey: 'productId'
+    });
+
+    Product.hasMany(models.ProductPriceTier, {
+      foreignKey: 'productId',
+      as: 'priceTiers'
     });
   };
 

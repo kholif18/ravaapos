@@ -4,7 +4,8 @@ import {
 } from '../core/state.js';
 import {
     renderCart,
-    renderMobileCart
+    renderMobileCart,
+    updateCartSummary
 } from './cartRenderer.js';
 import {
     showSuccess,
@@ -23,6 +24,26 @@ function clearAppliedPromo() {
     if (DOM.promoInput) DOM.promoInput.value = '';
 }
 
+/**
+ * Helper logic: get price based on quantity and tiered pricing
+ * Fallback to originalPrice/salePrice if no tier matches.
+ */
+function getPriceByQty(product, quantity) {
+    const normalPrice = Number(product.originalPrice || product.salePrice || product.price || 0);
+
+    if (!product.priceTiers || product.priceTiers.length === 0) {
+        return normalPrice;
+    }
+
+    // Sort tiers descending based on minQty
+    const sortedTiers = [...product.priceTiers].sort((a, b) => b.minQty - a.minQty);
+    
+    // Find first tier where current quantity >= minQty
+    const tier = sortedTiers.find(t => Number(quantity) >= Number(t.minQty));
+    
+    return tier ? Number(tier.price) : normalPrice;
+}
+
 export function addToCart(product, quantity = 1) {
     if (POS.transactionLocked) {
         showWarning('Transaksi sedang dikunci, tidak bisa menambah item');
@@ -30,19 +51,25 @@ export function addToCart(product, quantity = 1) {
     }
 
     const canMerge = !product.priceChangeAllowed &&
-        !product.requireQtyInput &&
-        !product.defaultQty &&
         product.type !== 'service' &&
         product.type !== 'ppob';
+    
     const existing = canMerge ? POS.cart.find(item => item.id === product.id) : null;
 
     if (existing) {
-        existing.quantity += quantity;
+        existing.quantity += Number(quantity);
+        // Update price based on new total quantity
+        if (!existing.priceChangeAllowed) {
+            existing.price = getPriceByQty(existing, existing.quantity);
+        }
     } else {
-        const initialQuantity = product.quantity ?? product.qty ?? quantity;
+        const initialQuantity = Number(product.quantity ?? product.qty ?? quantity);
+        // Always calculate price based on tiers, even for initial add
+        const initialPrice = product.priceChangeAllowed ? (product.price || product.salePrice) : getPriceByQty(product, initialQuantity);
 
         POS.cart.push({
             ...product,
+            price: initialPrice,
             quantity: initialQuantity,
             discount: product.discount || 0,
             altDesc: product.altDesc || '',
@@ -52,7 +79,7 @@ export function addToCart(product, quantity = 1) {
 
     clearAppliedPromo();
     renderAll();
-    POS.saveToStorage();
+    saveCart();
     return true;
 }
 
@@ -65,7 +92,7 @@ export function removeFromCart(productId) {
     POS.cart = POS.cart.filter(item => item.id !== productId);
     clearAppliedPromo();
     renderAll();
-    POS.saveToStorage();
+    saveCart();
     return true;
 }
 
@@ -77,11 +104,15 @@ export function updateQuantity(productId, newQuantity) {
         if (newQuantity <= 0) {
             removeFromCart(productId);
         } else {
-            item.quantity = newQuantity;
+            item.quantity = Number(newQuantity);
+            // Re-calculate price based on new quantity if tiers are available
+            if (!item.priceChangeAllowed) {
+                item.price = getPriceByQty(item, item.quantity);
+            }
             clearAppliedPromo();
         }
         renderAll();
-        POS.saveToStorage();
+        saveCart();
         return true;
     }
     return false;
@@ -95,7 +126,7 @@ export function updatePrice(productId, newPrice) {
         item.price = newPrice;
         clearAppliedPromo();
         renderAll();
-        POS.saveToStorage();
+        saveCart();
         return true;
     }
     return false;
@@ -109,7 +140,7 @@ export function updateItemDiscount(productId, discountAmount) {
         item.discount = Math.min(discountAmount, item.price * item.quantity);
         clearAppliedPromo();
         renderAll();
-        POS.saveToStorage();
+        saveCart();
         return true;
     }
     return false;
@@ -127,7 +158,7 @@ export function clearCart() {
     if (DOM.discountInput) DOM.discountInput.value = 0;
     if (DOM.promoInput) DOM.promoInput.value = '';
     renderAll();
-    POS.saveToStorage();
+    saveCart();
     return true;
 }
 
@@ -139,39 +170,20 @@ export function voidLastItem() {
     }
 }
 
-function renderAll() {
-    renderCart();
-    renderMobileCart();
-    updateCartCount();
-    // POS.saveToStorage();
+export function saveCart() {
+    POS.saveToStorage();
 }
 
-function updateCartCount() {
-    if (document.readyState !== 'complete') {
-        setTimeout(updateCartCount, 100);
-        return;
-    }
-    
-    const totalItems = POS.cart.length;
-    const totalQuantity = POS.cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+export function renderAll() {
+    renderCart();
+    renderMobileCart();
+    updateCartSummary();
+}
 
-    // Update badge utama (jumlah item)
-    const cartItemCountEl = document.getElementById('cartItemCount');
-    if (cartItemCountEl) {
-        cartItemCountEl.textContent = totalItems;
-        cartItemCountEl.title = `${totalItems} jenis produk`;
-    }
-
-    // Update badge total qty
-    const totalQtyEl = document.getElementById('cartTotalQty');
-    if (totalQtyEl) {
-        totalQtyEl.textContent = totalQuantity;
-        totalQtyEl.title = `Total ${totalQuantity} unit`;
-    }
-
-    // Mobile badge (cukup total qty)
-    if (DOM.mobileCartCount) {
-        DOM.mobileCartCount.textContent = totalQuantity;
-        DOM.mobileCartCount.style.display = totalQuantity > 0 ? 'inline-flex' : 'none';
-    }
+/**
+ * Load cart from storage and initial render
+ */
+export function loadCart() {
+    // POS already loads from localStorage in state.js
+    renderAll();
 }

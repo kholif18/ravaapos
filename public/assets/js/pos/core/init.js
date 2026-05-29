@@ -32,9 +32,8 @@ import {
     initSlideMenuHandlers
 } from '../report/index.js';
 import {
-    renderCart,
-    renderMobileCart
-} from '../cart/cartRenderer.js';
+    loadCart
+} from '../cart/cartManager.js';
 
 // Hanya 1 deklarasi updateTime
 function updateTimeDisplay() {
@@ -69,8 +68,7 @@ export function initGlobalState() {
 
     // Initial Render for persisted cart
     setTimeout(() => {
-        renderCart();
-        renderMobileCart();
+        loadCart();
     }, 50);
 
 
@@ -85,8 +83,7 @@ export function initGlobalState() {
             POS.currentDiscount = parseInt(e.target.value) || 0;
             POS.saveToStorage();
             // Trigger re-render
-            renderCart();
-            renderMobileCart();
+            loadCart();
         });
     }
 

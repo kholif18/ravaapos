@@ -182,14 +182,21 @@ exports.index = async (req, res) => {
 
         const favoriteProducts = await Product.findAll({
             where: whereClause,
-            include: [{
-                model: Category,
-                as: 'category',
-                attributes: ['id', 'name']
-            }],
+            include: [
+                {
+                    model: Category,
+                    as: 'category',
+                    attributes: ['id', 'name']
+                },
+                {
+                    model: db.ProductPriceTier,
+                    as: 'priceTiers'
+                }
+            ],
             order: [
                 ['stock', 'DESC'],
-                ['name', 'ASC']
+                ['name', 'ASC'],
+                [{ model: db.ProductPriceTier, as: 'priceTiers' }, 'minQty', 'ASC']
             ],
             limit: 8
         });
@@ -271,8 +278,15 @@ exports.searchProducts = async (req, res) => {
         const products = await Product.findAll({
             where: whereClause,
             attributes: productAttributes,
+            include: [{
+                model: db.ProductPriceTier,
+                as: 'priceTiers'
+            }],
             limit: 50,
-            order: [['name', 'ASC']]
+            order: [
+                ['name', 'ASC'],
+                [{ model: db.ProductPriceTier, as: 'priceTiers' }, 'minQty', 'ASC']
+            ]
         });
 
         res.json({ success: true, products });
@@ -295,9 +309,14 @@ exports.getFavoriteProducts = async (req, res) => {
         const products = await Product.findAll({
             where: whereClause,
             attributes: productAttributes,
+            include: [{
+                model: db.ProductPriceTier,
+                as: 'priceTiers'
+            }],
             order: [
                 ['stock', 'DESC'],
-                ['name', 'ASC']
+                ['name', 'ASC'],
+                [{ model: db.ProductPriceTier, as: 'priceTiers' }, 'minQty', 'ASC']
             ],
             limit: parseInt(limit)
         });
@@ -333,7 +352,14 @@ exports.getProductByBarcode = async (req, res) => {
                     { ...availableProductWhere }
                 ]
             },
-            attributes: productAttributes
+            attributes: productAttributes,
+            include: [{
+                model: db.ProductPriceTier,
+                as: 'priceTiers'
+            }],
+            order: [
+                [{ model: db.ProductPriceTier, as: 'priceTiers' }, 'minQty', 'ASC']
+            ]
         });
 
         if (!product) {

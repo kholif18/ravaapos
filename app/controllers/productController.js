@@ -3,11 +3,13 @@ const fs = require('fs');
 const {
   validationResult
 } = require('express-validator');
+const db = require('../models');
 const {
   Product,
   Category,
-  Supplier
-} = require('../models');
+  Supplier,
+  ProductPriceTier
+} = db;
 const {
   PRODUCT_RULES
 } = require('../rules/productRules');
@@ -32,7 +34,6 @@ exports.viewProducts = async (req, res) => {
       category,
       supplierId,
       type,
-      requireQty,
       priceChange,
       altDesc,
       q
@@ -57,7 +58,6 @@ exports.viewProducts = async (req, res) => {
       selectedCategory: category || '',
       selectedSupplier: supplierId || '',
       selectedType: type || '',
-      selectedRequireQty: requireQty || '',
       selectedPriceChange: priceChange || '',
       selectedAltDesc: altDesc || '',
       search: q || ''
@@ -129,6 +129,7 @@ function handleNormalizeError(err) {
 
 // POST create (AJAX)
 exports.createProduct = async (req, res) => {
+    const t = await db.sequelize.transaction();
     try {
         const {
             name,
@@ -137,11 +138,12 @@ exports.createProduct = async (req, res) => {
             barcode,
             unit,
             supplierId,
-            requireQtyInput,
             type,
             priceChangeAllowed,
             enableAltDesc,
-            enableInputTax
+            enableInputTax,
+            tierMinQty,
+            tierPrice
         } = req.body;
 
         const errors = {};
@@ -160,6 +162,7 @@ exports.createProduct = async (req, res) => {
                 const minPrice = err.message.split(':')[1];
                 errors.salePrice = `Harga jual minimal Rp ${Number(minPrice).toLocaleString('id-ID')}`;
             } else {
+                await t.rollback();
                 return res.status(400).json({ success: false, message: err.message });
             }
         }
@@ -177,6 +180,7 @@ exports.createProduct = async (req, res) => {
         } = normalized;
 
         if (Object.keys(errors).length) {
+            await t.rollback();
             return res.status(400).json({ success: false, errors });
         }
 
@@ -194,7 +198,7 @@ exports.createProduct = async (req, res) => {
         }
 
         // CREATE PRODUCT
-        await Product.create({
+        const product = await Product.create({
             name: name?.trim(),
             categoryId: categoryId || null,
             code: code?.trim(),
@@ -202,7 +206,6 @@ exports.createProduct = async (req, res) => {
             unit: unit?.trim(),
             supplierId: supplierId || null,
 
-            requireQtyInput: requireQtyInput === 'on' || requireQtyInput === true,
             type: type,
 
             cost: cost,
@@ -224,11 +227,40 @@ exports.createProduct = async (req, res) => {
             enableAltDesc: enableAltDesc === 'on' || enableAltDesc === true,
 
             image: imagePath
-        });
+        }, { transaction: t });
 
+        // Handle Price Tiers
+        if (tierMinQty && tierPrice && Array.isArray(tierMinQty)) {
+            const tiers = [];
+            const seenQty = new Set();
+            for (let i = 0; i < tierMinQty.length; i++) {
+                const minQty = parseInt(tierMinQty[i]);
+                const price = parseFloat(tierPrice[i]);
+                
+                // minQty wajib > 1
+                // tidak boleh duplicate qty tier
+                // harga tier harus <= harga normal
+                if (minQty > 1 && price > 0 && !seenQty.has(minQty) && price <= salePrice) {
+                    tiers.push({
+                        productId: product.id,
+                        minQty,
+                        price
+                    });
+                    seenQty.add(minQty);
+                }
+            }
+            if (tiers.length > 0) {
+                // Sort ascending by minQty
+                tiers.sort((a, b) => a.minQty - b.minQty);
+                await ProductPriceTier.bulkCreate(tiers, { transaction: t });
+            }
+        }
+
+        await t.commit();
         return res.json({ success: true });
 
     } catch (err) {
+        await t.rollback();
         console.error('Error creating product:', err);
         
         // Handle unique constraint errors
@@ -251,10 +283,12 @@ exports.createProduct = async (req, res) => {
 
 // Update (AJAX)
 exports.updateProduct = async (req, res) => {
+    const t = await db.sequelize.transaction();
     try {
-        const product = await Product.findByPk(req.params.id);
+        const product = await Product.findByPk(req.params.id, { transaction: t });
 
         if (!product) {
+            await t.rollback();
             return res.status(404).json({
                 success: false,
                 message: 'Produk tidak ditemukan'
@@ -265,6 +299,7 @@ exports.updateProduct = async (req, res) => {
         const rule = PRODUCT_RULES[type];
 
         if (!rule) {
+            await t.rollback();
             return res.status(400).json({
                 success: false,
                 message: 'Type tidak valid'
@@ -284,7 +319,10 @@ exports.updateProduct = async (req, res) => {
         } catch (err) {
             const msg = handleNormalizeError(err);
             if (msg) errors.salePrice = `Minimal ${msg}`;
-            else throw err;
+            else {
+                await t.rollback();
+                throw err;
+            }
         }
 
         const {
@@ -306,6 +344,7 @@ exports.updateProduct = async (req, res) => {
         }
 
         if (Object.keys(errors).length) {
+            await t.rollback();
             return res.status(400).json({ success: false, errors });
         }
 
@@ -335,8 +374,6 @@ exports.updateProduct = async (req, res) => {
             categoryId: req.body.categoryId || null,
             supplierId: req.body.supplierId || null,
 
-            requireQtyInput: !!req.body.requireQtyInput,
-
             cost,
             markup,
             salePrice,
@@ -355,11 +392,47 @@ exports.updateProduct = async (req, res) => {
             enableAltDesc: !!req.body.enableAltDesc
         });
 
-        await product.save();
+        await product.save({ transaction: t });
 
+        // Handle Price Tiers
+        const { tierMinQty, tierPrice } = req.body;
+        // Delete old tiers
+        await ProductPriceTier.destroy({
+            where: { productId: product.id },
+            transaction: t
+        });
+
+        if (tierMinQty && tierPrice && Array.isArray(tierMinQty)) {
+            const tiers = [];
+            const seenQty = new Set();
+            for (let i = 0; i < tierMinQty.length; i++) {
+                const minQty = parseInt(tierMinQty[i]);
+                const price = parseFloat(tierPrice[i]);
+                
+                // minQty wajib > 1
+                // tidak boleh duplicate qty tier
+                // harga tier harus <= harga normal
+                if (minQty > 1 && price > 0 && !seenQty.has(minQty) && price <= salePrice) {
+                    tiers.push({
+                        productId: product.id,
+                        minQty,
+                        price
+                    });
+                    seenQty.add(minQty);
+                }
+            }
+            if (tiers.length > 0) {
+                // Sort ascending by minQty
+                tiers.sort((a, b) => a.minQty - b.minQty);
+                await ProductPriceTier.bulkCreate(tiers, { transaction: t });
+            }
+        }
+
+        await t.commit();
         return res.json({ success: true });
 
     } catch (err) {
+        await t.rollback();
         console.error(err);
         return res.status(500).json({ success: false });
     }
@@ -374,7 +447,6 @@ exports.getProductJson = async (req, res) => {
         category,
         supplierId,
         type,
-        requireQty,
         priceChange,
         altDesc,
         q
@@ -396,11 +468,6 @@ exports.getProductJson = async (req, res) => {
     // Filter type - LANGSUNG pakai value dari query
     if (type && allowedTypes.includes(type)) {
       where.type = type;
-    }
-
-    // Filter requireQtyInput
-    if (requireQty !== undefined && requireQty !== '') {
-      where.requireQtyInput = requireQty === 'true';
     }
 
     // Filter priceChangeAllowed
@@ -445,6 +512,10 @@ exports.getProductJson = async (req, res) => {
         {
           model: Supplier,
           as: 'supplier'
+        },
+        {
+          model: ProductPriceTier,
+          as: 'priceTiers'
         }
       ],
       offset: parsedOffset,
@@ -527,7 +598,14 @@ exports.getProductById = async (req, res) => {
         {
           model: Supplier,
           as: 'supplier'
+        },
+        {
+          model: db.ProductPriceTier,
+          as: 'priceTiers'
         }
+      ],
+      order: [
+        [{ model: db.ProductPriceTier, as: 'priceTiers' }, 'minQty', 'ASC']
       ]
     });
 
@@ -561,7 +639,6 @@ exports.downloadTemplateCSV = (req, res) => {
     'barcode',
     'unit',
     'supplierId',
-    'requireQtyInput',
     'type',
     'cost',
     'markup',
@@ -582,7 +659,6 @@ exports.downloadTemplateCSV = (req, res) => {
     '1234567890123',
     'pcs',
     '2',
-    'false',
     'fisik',
     '10000',
     '20',
@@ -663,7 +739,6 @@ exports.importCSV = async (req, res) => {
           barcode,
           unit,
           supplierId,
-          requireQtyInput,
           type,
           cost,
           markup,
@@ -686,7 +761,6 @@ exports.importCSV = async (req, res) => {
         }
 
         // Konversi boolean
-        const parsedRequireQtyInput = toBoolean(requireQtyInput);
         const parsedPriceChangeAllowed = toBoolean(priceChangeAllowed);
         const parsedLowStockWarning = toBoolean(lowStockWarning);
         const parsedEnableInputTax = toBoolean(enableInputTax);
@@ -710,7 +784,6 @@ exports.importCSV = async (req, res) => {
             barcode: barcode || null,
             unit,
             supplierId: supplierId || null,
-            requireQtyInput: parsedRequireQtyInput,
             type: productType,
             cost: parsedCost,
             markup: parsedMarkup,
@@ -1105,7 +1178,6 @@ exports.exportCSV = async (req, res) => {
     if (category && category !== '') where.categoryId = category;
     if (supplierId && supplierId !== '') where.supplierId = supplierId;
     if (type && type !== '') where.type = type;
-    if (requireQty && requireQty !== '') where.requireQtyInput = requireQty === 'true';
     if (priceChange && priceChange !== '') where.priceChangeAllowed = priceChange === 'true';
     if (altDesc && altDesc !== '') where.enableAltDesc = altDesc === 'true';
 

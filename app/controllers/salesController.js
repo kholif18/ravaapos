@@ -26,7 +26,7 @@ exports.index = async (req, res) => {
         }
 
         const { count, rows: sales } = await Sale.findAndCountAll({
-            attributes: ['id', 'invoiceNumber', 'total', 'createdAt', 'paymentMethod'],
+            attributes: ['id', 'invoiceNumber', 'total', 'createdAt', 'paymentMethod', 'status', 'paymentStatus', 'remainingAmount'],
             where: whereClause,
             include: [{ model: Customer, as: 'customer', attributes: ['name'] }],
             order: [['createdAt', 'DESC']],
@@ -56,7 +56,7 @@ exports.getDetail = async (req, res) => {
     try {
         const { id } = req.params;
         const sale = await Sale.findByPk(id, {
-            attributes: ['id', 'invoiceNumber', 'total', 'subtotal', 'tax', 'discount', 'amountReceived', 'change', 'notes', 'createdAt', 'paymentMethod'],
+            attributes: ['id', 'invoiceNumber', 'total', 'subtotal', 'tax', 'discount', 'amountReceived', 'change', 'notes', 'createdAt', 'paymentMethod', 'status', 'paymentStatus', 'paidAmount', 'remainingAmount', 'voidReason'],
             include: [
                 { model: Customer, as: 'customer' },
                 { 

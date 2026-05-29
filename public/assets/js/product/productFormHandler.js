@@ -3,6 +3,7 @@
 import { getElement, getFieldId } from './productUIRules.js';
 import { applyProductTypeRules, initToggleListeners } from './productTypeUI.js';
 import { initPriceSync } from './productPriceSync.js';
+import { clearTiers, loadTiers } from './productPriceTier.js';
 import { showToast } from '../utils/toast.js';
 import { resetModalForm } from '../utils/resetModal.js';
 import { showInputErrors, resetInputErrors } from '../utils/formError.js';
@@ -32,7 +33,7 @@ function prepareFormData(formData) {
         if (key === '_method') continue;
         
         // Convert boolean fields
-        if (['requireQtyInput', 'priceChangeAllowed', 'enableAltDesc', 'enableInputTax', 'lowStockWarning'].includes(key)) {
+        if (['priceChangeAllowed', 'enableAltDesc', 'enableInputTax', 'lowStockWarning'].includes(key)) {
             data[key] = value === 'on';
         } else {
             data[key] = value;
@@ -87,6 +88,7 @@ export function resetForm(context = 'create', modalElement = null) {
     if (form) {
         form.reset();
         resetInputErrors(form);
+        clearTiers(context);
     }
     
     // Reset type to 'fisik' and apply rules
@@ -122,7 +124,6 @@ export function resetForm(context = 'create', modalElement = null) {
     if (modalElement) {
         resetModalForm(modalElement, {
             defaults: {
-                requireQtyInput: false,
                 priceChangeAllowed: false,
                 enableAltDesc: false,
                 lowStockWarning: false,
@@ -217,7 +218,6 @@ export async function loadProductToEdit(productId) {
         getElement('supplier', 'edit').value = product.supplierId ?? '';
         
         // Checkboxes
-        getElement('requireQty', 'edit').checked = !!product.requireQtyInput;
         getElement('priceChange', 'edit').checked = !!product.priceChangeAllowed;
         getElement('lowStockWarning', 'edit').checked = !!product.lowStockWarning;
         getElement('taxCheckbox', 'edit').checked = !!product.enableInputTax;
@@ -225,6 +225,9 @@ export async function loadProductToEdit(productId) {
         // Enable Alt Desc checkbox (if exists)
         const enableAltDesc = document.getElementById('editEnableAltDesc');
         if (enableAltDesc) enableAltDesc.checked = !!product.enableAltDesc;
+
+        // Load Price Tiers
+        loadTiers(product.priceTiers, 'edit');
 
         // Numeric fields
         getElement('cost', 'edit').value = product.cost ?? '';

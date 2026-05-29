@@ -3,6 +3,7 @@
 import { setCsrfToken, initCreateForm, initEditForm, loadProductToEdit, resetForm } from './productFormHandler.js';
 import { initProductTypeListener, initToggleListeners } from './productTypeUI.js';
 import { initPriceSync } from './productPriceSync.js';
+import { initPriceTier } from './productPriceTier.js';
 import { 
     loadMoreProducts, 
     initSearch, 
@@ -47,6 +48,7 @@ function initCreateModal() {
         initProductTypeListener('create');
         initToggleListeners('create');
         initPriceSync('create');
+        initPriceTier('create');
     });
     
     // Reset form when modal is hidden
@@ -81,6 +83,7 @@ function initEditModal() {
             initProductTypeListener('edit');
             initToggleListeners('edit');
             initPriceSync('edit');
+            initPriceTier('edit');
             
             // Show modal
             bootstrap.Modal.getOrCreateInstance(modalEdit).show();

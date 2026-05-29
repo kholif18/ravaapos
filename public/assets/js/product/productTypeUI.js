@@ -19,7 +19,6 @@ export function applyProductTypeRules(context = 'create', preserveValues = false
         markup: getElement('markup', context),
         salePrice: getElement('salePrice', context),
         stockSection: getElement('stockSection', context),
-        requireQty: getElement('requireQty', context),
         priceChange: getElement('priceChange', context),
         reorderPoint: getElement('reorderPoint', context),
         preferredQty: getElement('preferredQty', context),
@@ -60,14 +59,6 @@ export function applyProductTypeRules(context = 'create', preserveValues = false
     if (elements.salePrice) {
         elements.salePrice.disabled = !rule.salePriceEnabled;
         elements.salePrice.required = rule.salePriceEnabled;
-    }
-
-    // 5. Require Qty Input
-    if (elements.requireQty) {
-        elements.requireQty.disabled = !rule.requireQtyInput;
-        if (!rule.requireQtyInput) {
-            elements.requireQty.checked = false;
-        }
     }
 
     // 6. Price Change Allowed

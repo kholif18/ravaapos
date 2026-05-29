@@ -57,7 +57,7 @@
                                             <td><span class="text-primary fw-bold"><%= formatRupiah(sale.total) %></span></td>
                                             <td>
                                                 <span class="badge bg-label-info">
-                                                    <%= sale.paymentMethod.toUpperCase() %>
+                                                    <%= sale.paymentMethod ? sale.paymentMethod.toUpperCase() : 'BELUM BAYAR' %>
                                                 </span>
                                             </td>
                                             <td>
@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <small class="text-muted text-uppercase">Informasi Transaksi</small>
                     <h5 class="mb-1">${sale.invoiceNumber}</h5>
                     <p class="mb-0 text-muted">${date}</p>
-                    <p class="mb-0">Metode: <span class="badge bg-label-info">${sale.paymentMethod.toUpperCase()}</span></p>
+                    <p class="mb-0">Metode: <span class="badge bg-label-info">${sale.paymentMethod ? sale.paymentMethod.toUpperCase() : 'BELUM BAYAR'}</span></p>
                 </div>
                 <div class="col-sm-6 text-sm-end mt-3 mt-sm-0">
                     <small class="text-muted text-uppercase">Customer</small>

@@ -1,0 +1,1220 @@
+/* =========================================================
+   POS COMPACT THEME FOR SNEAT
+   =========================================================
+   Fokus:
+   - Compact spacing
+   - Fast cashier workflow
+   - Better table density
+   - Better mobile POS usability
+   - Sidebar scalable
+   ========================================================= */
+
+/* =========================================================
+   ROOT VARIABLES
+   ========================================================= */
+
+:root {
+    --pos-sidebar-width: 230px;
+    --pos-sidebar-collapse-width: 72px;
+    --pos-navbar-height: 58px;
+    --pos-radius: 10px;
+    --pos-font-xs: 11px;
+    --pos-font-sm: 12px;
+    --pos-font-md: 13px;
+    --pos-font-lg: 14px;
+    --pos-input-height: 36px;
+    --pos-btn-height: 36px;
+    --pos-transition: 0.2s ease;
+    --pos-cart-width: 360px;
+    --pos-product-min-width: 140px;
+}
+
+/* =========================================================
+   GLOBAL & RESET
+   ========================================================= */
+
+html {
+    font-size: 14px;
+}
+
+body {
+    font-size: var(--pos-font-md);
+    overflow-x: hidden;
+    background-color: #f8f9fc;
+}
+
+/* Container spacing */
+.container-fluid,
+.container-xxl {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+}
+
+.content-wrapper {
+    padding: 1rem 0 0.75rem 0;
+}
+
+/* =========================================================
+   TYPOGRAPHY - COMPACT
+   ========================================================= */
+
+h1, .h1 { font-size: 1.7rem; margin-bottom: 0.75rem; }
+h2, .h2 { font-size: 1.45rem; margin-bottom: 0.65rem; }
+h3, .h3 { font-size: 1.25rem; margin-bottom: 0.55rem; }
+h4, .h4 { font-size: 1.05rem; margin-bottom: 0.5rem; }
+h5, .h5 { font-size: 0.95rem; margin-bottom: 0.45rem; }
+h6, .h6 { font-size: 0.85rem; margin-bottom: 0.4rem; }
+
+.small, small {
+    font-size: var(--pos-font-sm);
+}
+
+/* =========================================================
+   CARD - COMPACT
+   ========================================================= */
+
+.card {
+    border-radius: var(--pos-radius);
+    margin-bottom: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+    padding: 0.7rem 0.9rem;
+    min-height: auto;
+    background-color: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.card-header:first-child {
+    border-radius: calc(var(--pos-radius) - 1px) calc(var(--pos-radius) - 1px) 0 0;
+}
+
+.card-body {
+    padding: 0.85rem;
+}
+
+.card-footer {
+    padding: 0.65rem 0.85rem;
+    background-color: transparent;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Card with no padding variations */
+.card.card-nopadding .card-body {
+    padding: 0;
+}
+
+/* =========================================================
+   BUTTONS - COMPACT
+   ========================================================= */
+
+.btn {
+    height: var(--pos-btn-height);
+    padding: 0.4rem 0.8rem;
+    font-size: var(--pos-font-md);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all var(--pos-transition);
+    font-weight: 500;
+}
+
+.btn-sm {
+    height: 30px;
+    padding: 0.25rem 0.65rem;
+    font-size: var(--pos-font-sm);
+}
+
+.btn-lg {
+    height: 42px;
+    font-size: var(--pos-font-lg);
+    padding: 0.5rem 1rem;
+}
+
+/* POS action buttons */
+.btn-pos-primary {
+    background: linear-gradient(135deg, #696cff 0%, #5a5eff 100%);
+    border: none;
+    color: white;
+}
+
+.btn-pos-primary:hover {
+    background: linear-gradient(135deg, #5a5eff 0%, #4a4eff 100%);
+    transform: translateY(-1px);
+}
+
+.btn-pos-success {
+    background: linear-gradient(135deg, #71dd37 0%, #5ec82a 100%);
+    border: none;
+    color: white;
+}
+
+/* =========================================================
+   FORM ELEMENTS - COMPACT
+   ========================================================= */
+
+.form-label {
+    margin-bottom: 0.3rem;
+    font-size: var(--pos-font-md);
+    font-weight: 500;
+}
+
+.form-control,
+.form-select {
+    height: var(--pos-input-height);
+    min-height: var(--pos-input-height);
+    font-size: var(--pos-font-md);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    transition: all var(--pos-transition);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #696cff;
+    box-shadow: 0 0 0 2px rgba(105, 108, 255, 0.1);
+}
+
+textarea.form-control {
+    height: auto;
+    min-height: 80px;
+}
+
+.input-group-text {
+    height: var(--pos-input-height);
+    font-size: var(--pos-font-md);
+}
+
+.form-control-sm,
+.form-select-sm {
+    height: 30px;
+    min-height: 30px;
+    font-size: var(--pos-font-sm);
+}
+
+.form-control-lg,
+.form-select-lg {
+    height: 42px;
+    min-height: 42px;
+}
+
+.form-check-input {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+}
+
+.form-check-label {
+    font-size: var(--pos-font-md);
+}
+
+/* =========================================================
+   TABLE - ULTRA COMPACT FOR POS
+   ========================================================= */
+
+.table {
+    margin-bottom: 0;
+    font-size: var(--pos-font-md);
+}
+
+.table thead th {
+    font-size: var(--pos-font-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    border-bottom-width: 1px;
+    background-color: #f8f9fa;
+}
+
+.table th,
+.table td {
+    padding: 0.55rem 0.6rem;
+    vertical-align: middle;
+}
+
+.table-sm th,
+.table-sm td {
+    padding: 0.35rem 0.45rem;
+}
+
+.table-xs th,
+.table-xs td {
+    padding: 0.25rem 0.35rem;
+    font-size: var(--pos-font-sm);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Hover table */
+.table-hover tbody tr:hover {
+    background: rgba(105, 108, 255, 0.04);
+    cursor: pointer;
+}
+
+/* Striped table */
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+/* Borderless table for compact views */
+.table-borderless th,
+.table-borderless td {
+    border: none;
+}
+
+/* =========================================================
+   BADGE & TAGS
+   ========================================================= */
+
+.badge {
+    font-size: 11px;
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+.badge-sm {
+    font-size: 10px;
+    padding: 0.25em 0.5em;
+}
+
+/* =========================================================
+   DROPDOWN - COMPACT
+   ========================================================= */
+
+.dropdown-menu {
+    border-radius: 10px;
+    padding: 0.4rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dropdown-item {
+    border-radius: 6px;
+    font-size: var(--pos-font-md);
+    padding: 0.5rem 0.7rem;
+    transition: all var(--pos-transition);
+}
+
+.dropdown-item:hover {
+    background-color: rgba(105, 108, 255, 0.08);
+    padding-left: 0.85rem;
+}
+
+/* =========================================================
+   MODAL - COMPACT
+   ========================================================= */
+
+.modal-content {
+    border-radius: 14px;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.modal-body {
+    padding: 1rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Fullscreen modal for mobile payment */
+.modal-fullscreen-mobile {
+    border-radius: 0;
+}
+
+@media (max-width: 768px) {
+    .modal-fullscreen-mobile .modal-content {
+        border-radius: 0;
+        min-height: 100vh;
+    }
+    
+    .modal-fullscreen-mobile .modal-body {
+        max-height: calc(100vh - 120px);
+    }
+}
+
+/* =========================================================
+   ALERT - COMPACT
+   ========================================================= */
+
+.alert {
+    padding: 0.75rem 0.9rem;
+    border-radius: 10px;
+    font-size: var(--pos-font-md);
+    margin-bottom: 0.75rem;
+}
+
+.alert-dismissible {
+    padding-right: 2.5rem;
+}
+
+/* =========================================================
+   PAGINATION - COMPACT
+   ========================================================= */
+
+.pagination {
+    gap: 4px;
+    margin-bottom: 0;
+}
+
+.page-link {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 8px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--pos-font-md);
+    padding: 0;
+}
+
+.page-item:first-child .page-link,
+.page-item:last-child .page-link {
+    border-radius: 8px !important;
+}
+
+/* =========================================================
+   NAVBAR - COMPACT
+   ========================================================= */
+
+.layout-navbar {
+    height: var(--pos-navbar-height);
+    min-height: var(--pos-navbar-height);
+    padding: 0 1rem;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.navbar-nav .nav-link {
+    font-size: var(--pos-font-md);
+    padding: 0.5rem 0.75rem;
+}
+
+/* =========================================================
+   SIDEBAR - ULTRA COMPACT
+   ========================================================= */
+
+.layout-menu {
+    width: var(--pos-sidebar-width) !important;
+    transition: all var(--pos-transition);
+}
+
+/* Perkecil jarak antar menu */
+.menu-vertical .menu-inner > .menu-item {
+    margin: 0.05rem 0.5rem !important;
+}
+
+/* Perkecil padding menu link */
+.menu-vertical .menu-item .menu-link {
+    padding: 0.4rem 0.7rem !important;
+    border-radius: 8px;
+    font-size: var(--pos-font-md);
+    transition: all var(--pos-transition);
+    min-height: auto !important;
+}
+
+/* Perkecil icon menu */
+.menu-icon {
+    font-size: 1rem !important;
+    min-width: 1.6rem !important;
+}
+
+/* Perkecil submenu */
+.menu-vertical .menu-sub {
+    padding-left: 1.2rem !important;
+}
+
+.menu-vertical .menu-sub .menu-item .menu-link {
+    padding: 0.35rem 0.7rem !important;
+    font-size: var(--pos-font-sm) !important;
+}
+
+/* Perkecil menu header */
+.menu-header {
+    margin: 0.5rem 0 0.2rem !important;
+    padding-left: 1rem !important;
+    font-size: 10px !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(0, 0, 0, 0.4);
+}
+
+/* Hilangkan margin bottom berlebih pada menu inner */
+.menu-inner {
+    padding-bottom: 0.5rem !important;
+}
+
+/* Perkecil divider */
+.menu-divider {
+    margin: 0.5rem 1rem !important;
+}
+
+/* =========================================================
+   SIDEBAR COLLAPSE - ULTRA COMPACT
+   ========================================================= */
+
+/* Collapsed state */
+body.sidebar-collapsed .layout-menu {
+    width: var(--pos-sidebar-collapse-width) !important;
+}
+
+body.sidebar-collapsed .menu-text,
+body.sidebar-collapsed .app-brand-text,
+body.sidebar-collapsed .menu-header {
+    display: none !important;
+}
+
+body.sidebar-collapsed .menu-inner-shadow {
+    display: none;
+}
+
+body.sidebar-collapsed .menu-link {
+    justify-content: center;
+    padding: 0.5rem !important;
+}
+
+body.sidebar-collapsed .menu-icon {
+    margin-right: 0 !important;
+    font-size: 1.15rem;
+}
+
+body.sidebar-collapsed .layout-page {
+    padding-left: var(--pos-sidebar-collapse-width) !important;
+}
+
+body.sidebar-collapsed .menu-item {
+    text-align: center;
+}
+
+/* Hover effect on collapsed sidebar */
+body.sidebar-collapsed .menu-item .menu-link:hover .menu-text {
+    display: inline-block !important;
+    position: absolute;
+    left: 100%;
+    background: #fff;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+    z-index: 1000;
+    margin-left: 5px;
+    font-size: 12px;
+}
+
+/* =========================================================
+   ACTIVE MENU INDICATOR - FIX FOR COMPACT
+   ========================================================= */
+
+/* Matikan indicator default Sneat yang tidak sinkron */
+.layout-wrapper:not(.layout-horizontal) .bg-menu-theme .menu-inner > .menu-item.active:before,
+.menu-vertical .menu-item.active:before {
+    display: none !important;
+}
+
+/* Active menu item styling yang compact */
+.menu-vertical .menu-item.active > .menu-link {
+    background: linear-gradient(135deg, rgba(105, 108, 255, 0.12) 0%, rgba(105, 108, 255, 0.08) 100%) !important;
+    color: #696cff !important;
+    font-weight: 600;
+    position: relative;
+}
+
+/* Left border indicator yang dinamis */
+.menu-vertical .menu-item.active > .menu-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: min(28px, calc(100% - 12px));
+    background: #696cff;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Untuk collapsed mode */
+body.sidebar-collapsed .menu-vertical .menu-item.active > .menu-link::before {
+    height: 24px;
+}
+
+/* =========================================================
+   BRAND / LOGO AREA - COMPACT
+   ========================================================= */
+
+.layout-menu .app-brand {
+    padding: 0.8rem 0.8rem !important;
+    min-height: auto !important;
+}
+
+.app-brand-link {
+    gap: 0.5rem !important;
+}
+
+.app-brand-logo {
+    font-size: 1.3rem !important;
+}
+
+.app-brand-text {
+    font-size: 1rem !important;
+    font-weight: 600;
+}
+
+/* =========================================================
+   SIDEBAR FOOTER - COMPACT
+   ========================================================= */
+
+.layout-menu .menu-footer {
+    padding: 0.5rem !important;
+    margin-top: 0.5rem;
+}
+
+/* =========================================================
+   REMOVE EXTRA SPACING
+   ========================================================= */
+
+/* Hilangkan spacing berlebih di menu wrapper */
+.menu-wrapper {
+    padding-top: 0.5rem !important;
+}
+
+/* Perkecil jarak antar menu level */
+.menu-vertical .menu-inner .menu-inner {
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.15rem !important;
+}
+
+/* Untuk menu yang memiliki icon only ketika collapsed */
+@media (max-width: 1199px) {
+    .menu-vertical .menu-item .menu-link {
+        padding: 0.4rem 0.6rem !important;
+    }
+}
+
+/* =========================================================
+   SEARCH INPUT FOR POS
+   ========================================================= */
+
+.pos-search {
+    height: 42px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 12px;
+    background: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.pos-search::placeholder {
+    font-weight: 400;
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.pos-search:focus {
+    background: white;
+}
+
+/* =========================================================
+   PRODUCT GRID FOR POS
+   ========================================================= */
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+    padding: 0.25rem;
+}
+
+.product-card {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    padding: 0.7rem;
+    cursor: pointer;
+    transition: all var(--pos-transition);
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+}
+
+.product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    border-color: rgba(105, 108, 255, 0.3);
+}
+
+.product-card:active {
+    transform: translateY(0);
+}
+
+.product-card img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+    background: #f8f9fa;
+}
+
+.product-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 0.55rem;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.product-card-price {
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 0.3rem;
+    color: #696cff;
+}
+
+.product-card-stock {
+    font-size: 10px;
+    color: rgba(0, 0, 0, 0.5);
+    margin-top: 0.25rem;
+}
+
+/* Product grid compact */
+.product-grid-compact {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.product-grid-compact .product-card {
+    padding: 0.5rem;
+}
+
+.product-grid-compact .product-card img {
+    height: 100px;
+}
+
+/* =========================================================
+   CART SIDEBAR / CONTAINER
+   ========================================================= */
+
+.cart-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 100px);
+    background: #fff;
+    border-radius: 12px;
+}
+
+.cart-header {
+    padding: 0.85rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    font-weight: 600;
+}
+
+.cart-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+/* Cart item row */
+.cart-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.6rem;
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
+    background: #f8f9fa;
+    transition: all var(--pos-transition);
+}
+
+.cart-item:hover {
+    background: rgba(105, 108, 255, 0.05);
+}
+
+.cart-item-img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.cart-item-details {
+    flex: 1;
+}
+
+.cart-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.cart-item-price {
+    font-size: 12px;
+    color: #696cff;
+    font-weight: 500;
+}
+
+.cart-item-qty {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cart-item-qty button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+}
+
+.cart-summary {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.85rem;
+    background: #fff;
+    border-radius: 0 0 12px 12px;
+}
+
+.cart-total {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #696cff;
+}
+
+.cart-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: var(--pos-font-md);
+}
+
+/* =========================================================
+   TWO COLUMN POS LAYOUT
+   ========================================================= */
+
+.pos-layout {
+    display: flex;
+    gap: 1rem;
+    min-height: calc(100vh - 80px);
+}
+
+.pos-products {
+    flex: 1;
+    min-width: 0;
+}
+
+.pos-cart {
+    width: var(--pos-cart-width);
+    flex-shrink: 0;
+}
+
+@media (max-width: 992px) {
+    .pos-layout {
+        flex-direction: column;
+    }
+    
+    .pos-cart {
+        width: 100%;
+        position: sticky;
+        bottom: 0;
+        background: white;
+        z-index: 100;
+    }
+    
+    .cart-container {
+        height: auto;
+        max-height: 400px;
+    }
+}
+
+/* =========================================================
+   SCROLLBAR CUSTOM
+   ========================================================= */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    transition: all var(--pos-transition);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* =========================================================
+   UTILITIES CLASSES
+   ========================================================= */
+
+/* Font sizes */
+.fs-11 { font-size: 11px !important; }
+.fs-12 { font-size: 12px !important; }
+.fs-13 { font-size: 13px !important; }
+.fs-14 { font-size: 14px !important; }
+.fs-15 { font-size: 15px !important; }
+.fs-16 { font-size: 16px !important; }
+
+/* Spacing utilities compact */
+.m-0 { margin: 0 !important; }
+.mt-05 { margin-top: 0.25rem !important; }
+.mb-05 { margin-bottom: 0.25rem !important; }
+.p-05 { padding: 0.25rem !important; }
+.pt-05 { padding-top: 0.25rem !important; }
+.pb-05 { padding-bottom: 0.25rem !important; }
+
+/* Border radius */
+.rounded-8 { border-radius: 8px !important; }
+.rounded-10 { border-radius: 10px !important; }
+.rounded-12 { border-radius: 12px !important; }
+
+/* Shadows */
+.shadow-soft {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-hover:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Cursor */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Disable text selection for buttons (better touch experience) */
+.btn, 
+.product-card,
+.cart-item {
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* =========================================================
+   TOAST NOTIFICATIONS
+   ========================================================= */
+
+.toast {
+    border-radius: 10px;
+    font-size: var(--pos-font-md);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.toast-header {
+    padding: 0.5rem 0.75rem;
+    font-size: var(--pos-font-sm);
+}
+
+.toast-body {
+    padding: 0.65rem 0.75rem;
+}
+
+/* =========================================================
+   NUMERIC KEYPAD FOR POS
+   ========================================================= */
+
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 0.5rem;
+}
+
+.keypad button {
+    height: 55px;
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 12px;
+    background: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: all var(--pos-transition);
+}
+
+.keypad button:active {
+    transform: scale(0.96);
+    background: #e9ecef;
+}
+
+.keypad .keypad-number {
+    font-weight: 700;
+    font-size: 20px;
+}
+
+.keypad .keypad-action {
+    background: #696cff;
+    color: white;
+}
+
+/* =========================================================
+   MOBILE OPTIMIZATIONS
+   ========================================================= */
+
+@media (max-width: 991px) {
+    :root {
+        --pos-btn-height: 44px;
+        --pos-input-height: 44px;
+    }
+    
+    .container-fluid,
+    .container-xxl {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .card-body {
+        padding: 0.7rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.45rem;
+    }
+
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .product-card img {
+        height: 100px;
+    }
+    
+    .cart-container {
+        height: auto;
+        max-height: 60vh;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    /* Touch friendly buttons */
+    .btn,
+    .product-card,
+    .cart-item,
+    .dropdown-item {
+        min-height: 44px;
+    }
+}
+
+/* =========================================================
+   MOBILE POS BOTTOM BAR
+   ========================================================= */
+
+@media (max-width: 768px) {
+    .layout-navbar {
+        padding: 0 0.7rem;
+    }
+
+    .btn {
+        font-size: 13px;
+    }
+
+    .form-control,
+    .form-select {
+        font-size: 14px;
+    }
+
+    .table {
+        font-size: 12px;
+    }
+
+    .hide-mobile {
+        display: none !important;
+    }
+
+    .show-mobile {
+        display: block !important;
+    }
+
+    .mobile-bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #fff;
+        padding: 0.7rem;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+        z-index: 1050;
+    }
+
+    body {
+        padding-bottom: 75px;
+    }
+    
+    /* Adjust product card for touch */
+    .product-card {
+        padding: 0.6rem;
+    }
+    
+    .product-card-title {
+        font-size: 12px;
+    }
+    
+    /* Modal fullscreen for payment on mobile */
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+    }
+    
+    .modal-content {
+        border-radius: 20px 20px 0 0;
+        min-height: auto;
+    }
+}
+
+/* =========================================================
+   DARK MODE SUPPORT
+   ========================================================= */
+
+[data-theme="theme-dark"] body {
+    background-color: #1a1a2e;
+}
+
+[data-theme="theme-dark"] .product-card {
+    background: #2b2c40;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="theme-dark"] .product-card:hover {
+    background: #32334a;
+}
+
+[data-theme="theme-dark"] .table-hover tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="theme-dark"] ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="theme-dark"] .cart-container,
+[data-theme="theme-dark"] .cart-summary {
+    background: #2b2c40;
+}
+
+[data-theme="theme-dark"] .cart-item {
+    background: #32334a;
+}
+
+[data-theme="theme-dark"] .form-control,
+[data-theme="theme-dark"] .form-select {
+    background: #2b2c40;
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+[data-theme="theme-dark"] .card {
+    background: #2b2c40;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="theme-dark"] .table thead th {
+    background: #232438;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="theme-dark"] .mobile-bottom-bar {
+    background: #2b2c40;
+}
+
+[data-theme="theme-dark"] .menu-vertical .menu-item.active > .menu-link {
+    background: linear-gradient(135deg, rgba(105, 108, 255, 0.2) 0%, rgba(105, 108, 255, 0.15) 100%) !important;
+}
+
+[data-theme="theme-dark"] .menu-vertical .menu-item.active > .menu-link::before {
+    background: #696cff;
+}
+
+[data-theme="theme-dark"] body.sidebar-collapsed .menu-item .menu-link:hover .menu-text {
+    background: #2b2c40;
+    color: #fff;
+}
+
+/* =========================================================
+   PRINT STYLES FOR RECEIPT
+   ========================================================= */
+
+@media print {
+    .layout-menu,
+    .layout-navbar,
+    .btn,
+    .mobile-bottom-bar,
+    .no-print {
+        display: none !important;
+    }
+    
+    .layout-page {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    body {
+        padding: 0;
+        background: white;
+    }
+}
+
+/* =========================================================
+   ADDITIONAL FIXES FOR SPECIFIC ELEMENTS
+   ========================================================= */
+
+/* Fix for dropdown toggle buttons */
+.dropdown-toggle::after {
+    vertical-align: middle;
+}
+
+/* Fix for input group */
+.input-group .btn {
+    height: var(--pos-input-height);
+}
+
+/* Fix for select2 or other plugins if used */
+.select2-container .select2-selection--single {
+    height: var(--pos-input-height) !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: var(--pos-input-height) !important;
+}
+
+/* Fix for datepicker */
+.datepicker-dropdown {
+    font-size: var(--pos-font-md);
+}
+
+/* Animation for sidebar collapse */
+.layout-menu,
+.layout-page {
+    transition: all var(--pos-transition);
+}

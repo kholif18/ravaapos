@@ -50,7 +50,7 @@ export function renderCart() {
         bindCartItemEvents();
     }
 
-    calculateAndDisplayTotals();
+    updateCartSummary();
 }
 
 function createCartItemRow(item, index) {
@@ -62,16 +62,14 @@ function createCartItemRow(item, index) {
     const isPPOB = item.type === 'ppob';
     const hasStockLimit = !isService && !isPPOB;
     const isPriceEditable = (item.priceChangeAllowed === true || item.priceChangeAllowed === 1) && !isPPOB;
-    const needQtyInput = item.requireQtyInput || item.defaultQty || isService || isPPOB;
     const stock = Number(item.stock) || 0;
 
     let badgeHtml = '';
     if (isService) badgeHtml += '<span class="badge bg-warning">SVC</span>';
     if (isPPOB) badgeHtml += '<span class="badge bg-info">PPOB</span>';
-    if (item.requireQtyInput || item.defaultQty) badgeHtml += '<span class="badge bg-secondary ms-1">Qty</span>';
 
     return `
-        <div class="cart-item ${quantity === 0 ? 'need-qty' : ''}" data-id="${item.id}" data-index="${index}">
+        <div class="cart-item" data-id="${item.id}" data-index="${index}">
             <div class="cart-row">
                 <div class="cart-col product">
                     <div class="cart-product-name" title="${escapeHtml(item.name)}">
@@ -100,14 +98,13 @@ function createCartItemRow(item, index) {
                 </div>
                 <div class="cart-col qty">
                     <input type="number"
-                        class="form-control form-control-sm qty-input ${needQtyInput && quantity === 0 ? 'highlight-qty' : ''}"
+                        class="form-control form-control-sm qty-input"
                         value="${quantity}"
                         data-id="${item.id}"
                         data-field="qty"
-                        min="${needQtyInput ? '0' : '1'}"
+                        min="1"
                         step="1"
-                        ${hasStockLimit ? `max="${stock}"` : ''}
-                        placeholder="${needQtyInput ? 'Isi qty' : ''}">
+                        ${hasStockLimit ? `max="${stock}"` : ''}>
                 </div>
                 <div class="cart-col disc">
                     <input type="number"
@@ -249,55 +246,55 @@ export function renderMobileCart() {
     if (POS.cart.length === 0) {
         DOM.mobileCartItems.innerHTML = '<div class="text-center p-3">Keranjang kosong</div>';
     } else {
-        DOM.mobileCartItems.innerHTML = POS.cart.map(item => `
-            <div class="mobile-cart-item">
-                <div class="mobile-cart-item-info">
-                    <div class="mobile-cart-item-name">${escapeHtml(item.name)}</div>
-                    <div class="mobile-cart-item-price">${formatRupiah(item.price)}</div>
-                </div>
-                <div class="mobile-cart-item-actions">
-                    <div class="mobile-cart-item-qty">
-                        <button class="btn-qty-minus-mobile" data-id="${item.id}" data-delta="-1">-</button>
-                        <span class="qty-value">${item.quantity}</span>
-                        <button class="btn-qty-plus-mobile" data-id="${item.id}" data-delta="1">+</button>
+        DOM.mobileCartItems.innerHTML = POS.cart.map(item => {
+            const quantity = Number(item.quantity) || 0;
+            const price = Number(item.price) || 0;
+            const discount = Number(item.discount) || 0;
+            const itemTotal = Math.max(0, (price * quantity) - discount);
+
+            return `
+                <div class="mobile-cart-item" data-id="${item.id}">
+                    <div class="mobile-cart-item-info">
+                        <div class="mobile-cart-item-name">
+                            ${escapeHtml(item.name)}
+                            ${item.discount ? '<span class="badge bg-warning">Disc</span>' : ''}
+                        </div>
+                        <div class="mobile-cart-item-price">${formatRupiah(item.price)}</div>
                     </div>
-                    <div class="mobile-cart-item-total">${formatRupiah(item.price * item.quantity)}</div>
-                    <button class="btn-remove-mobile" data-id="${item.id}">
-                        <i class="bx bx-trash"></i>
-                    </button>
+                    <div class="mobile-cart-item-actions">
+                        <div class="mobile-cart-item-qty">
+                            <button class="btn-qty btn-qty-minus-mobile" data-id="${item.id}" data-delta="-1">-</button>
+                            <span class="qty-value">${item.quantity}</span>
+                            <button class="btn-qty btn-qty-plus-mobile" data-id="${item.id}" data-delta="1">+</button>
+                        </div>
+                        <div class="mobile-cart-item-total">${formatRupiah(itemTotal)}</div>
+                        <button class="btn-remove btn-remove-mobile" data-id="${item.id}">
+                            <i class="bx bx-trash"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
 
         bindMobileCartEvents();
     }
 
-    if (DOM.mobileTotal) DOM.mobileTotal.textContent = formatRupiah(POS.getTotal());
+    updateCartSummary();
 }
 
 function bindMobileCartEvents() {
-    document.querySelectorAll('.btn-qty-mobile').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            const delta = parseInt(btn.dataset.delta);
-            const item = POS.cart.find(i => i.id === id);
-            if (item) updateQuantity(id, item.quantity + delta);
-        };
+    document.querySelectorAll('.btn-qty-minus-mobile, .btn-qty-plus-mobile').forEach(btn => {
+        btn.addEventListener('click', handleQtyClick);
     });
 
     document.querySelectorAll('.btn-remove-mobile').forEach(btn => {
-        btn.onclick = () => {
-            const id = parseInt(btn.dataset.id);
-            removeFromCart(id);
-        };
+        btn.addEventListener('click', handleRemoveClick);
     });
 }
 
-export function updateCartBadges() {
+export function updateCartSummary() {
     const totalItems = POS.cart.length;
     const totalQuantity = POS.cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
-
-    console.log('updateCartBadges - totalItems:', totalItems, 'totalQuantity:', totalQuantity);
 
     // Update badge jumlah jenis produk
     const cartItemCountEl = document.getElementById('cartItemCount');
@@ -318,4 +315,7 @@ export function updateCartBadges() {
         DOM.mobileCartCount.textContent = totalQuantity;
         DOM.mobileCartCount.style.display = totalQuantity > 0 ? 'inline-flex' : 'none';
     }
+
+    // Also update totals (subtotal, tax, total)
+    calculateAndDisplayTotals();
 }

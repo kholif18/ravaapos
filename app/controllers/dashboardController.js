@@ -19,6 +19,7 @@ exports.index = async (req, res) => {
 
         // Basic Stats
         const todaySales = await Sale.findAll({
+            attributes: ['id', 'total', 'status', 'createdAt'],
             where: {
                 createdAt: { [Op.between]: [startOfDay, endOfDay] },
                 status: 'completed'
@@ -34,6 +35,7 @@ exports.index = async (req, res) => {
 
         // Recent Sales
         const recentSales = await Sale.findAll({
+            attributes: ['id', 'invoiceNumber', 'total', 'createdAt'],
             include: [{ model: Customer, as: 'customer', attributes: ['name'] }],
             order: [['createdAt', 'DESC']],
             limit: 5

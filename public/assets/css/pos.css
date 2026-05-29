@@ -1647,6 +1647,76 @@ MOBILE SEARCH DROPDOWN
     padding: 2px 6px;
 }
 
+/* ========================================
+   FULL SCREEN BUTTON STYLES
+   ======================================== */
+
+.pos-status-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #f8f9fa;
+    border: 1px solid var(--pos-border);
+    border-radius: 8px;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-fullscreen:hover {
+    background: var(--pos-primary);
+    border-color: var(--pos-primary);
+    color: white;
+    transform: scale(1.05);
+}
+
+.btn-fullscreen:active {
+    transform: scale(0.95);
+}
+
+.btn-fullscreen i {
+    font-size: 1.1rem;
+}
+
+/* Tooltip untuk fullscreen button */
+.btn-fullscreen {
+    position: relative;
+}
+
+.btn-fullscreen:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2c3e50;
+    color: white;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* Untuk monitor yang lebih besar, tampilkan semua */
+@media (min-width: 992px) {
+    .btn-payment span {
+        display: inline;
+    }
+    
+    .btn-payment {
+        padding: 12px;
+    }
+}
+
 /* Responsive untuk mobile kecil */
 @media (max-width: 576px) {
     .search-dropdown-mobile {
@@ -1667,6 +1737,171 @@ MOBILE SEARCH DROPDOWN
 /* ========================================
    RESPONSIVE BREAKPOINTS
    ======================================== */
+   @media (min-width: 768px) and (max-width: 1199px) {
+    .pos-desktop-layout {
+        gap: 8px;
+        padding: 8px;
+    }
+    
+    /* Kolom kiri tetap proporsional */
+    .pos-cart {
+        flex: 5;
+    }
+    
+    /* Kolom kanan lebih compact */
+    .pos-actions-desktop {
+        flex: 3;
+        gap: 8px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .pos-actions-desktop {
+        flex: 3.5;
+    }
+}
+
+/* Compact mode untuk monitor kecil */
+@media (min-width: 768px) and (max-width: 991px) {
+    .pos-actions-desktop {
+        flex: 4;
+    }
+    
+    /* Perkecil padding semua section */
+    .pos-customer-section,
+    .pos-promo-section,
+    .pos-payment-section,
+    .pos-quick-actions {
+        padding: 10px 12px;
+    }
+    
+    /* Perkecil font dan spacing */
+    .customer-selector-label {
+        font-size: 0.65rem;
+        margin-bottom: 6px;
+    }
+    
+    .selected-customer-name {
+        font-size: 0.85rem;
+    }
+    
+    .selected-customer-phone {
+        font-size: 0.65rem;
+    }
+    
+    .customer-badge {
+        padding: 2px 6px;
+        font-size: 0.55rem;
+    }
+    
+    /* Payment methods lebih compact */
+    .payment-methods {
+        gap: 6px;
+    }
+    
+    .btn-payment {
+        padding: 10px 6px;
+        font-size: 0.7rem;
+    }
+    
+    .btn-payment span {
+        display: none; /* Sembunyikan teks, hanya icon */
+    }
+    
+    .btn-payment i {
+        font-size: 1.2rem;
+    }
+    
+    .btn-payment kbd {
+        display: none;
+    }
+    
+    /* Quick actions lebih compact */
+    .quick-actions-grid {
+        gap: 6px;
+    }
+    
+    .quick-action-btn {
+        padding: 8px 6px;
+        font-size: 0.7rem;
+    }
+    
+    .quick-action-btn span {
+        font-size: 0.7rem;
+    }
+    
+    .quick-action-btn kbd {
+        display: none;
+    }
+    
+    /* Status bar lebih compact */
+    .pos-status-bar {
+        padding: 6px 12px;
+    }
+    
+    .status-item {
+        font-size: 0.7rem;
+    }
+    
+    .btn-menu-in-status span {
+        display: none;
+    }
+    
+    .btn-menu-in-status {
+        padding: 4px 8px;
+    }
+    
+    /* Promo section */
+    .input-promo-box {
+        gap: 6px;
+    }
+    
+    .input-promo-box .form-control {
+        font-size: 0.75rem;
+        padding: 6px 10px;
+    }
+    
+    .btn-promo {
+        padding: 6px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+/* Extra compact untuk layar sangat kecil (768-850px) */
+@media (min-width: 768px) and (max-width: 850px) {
+    .pos-customer-section,
+    .pos-promo-section,
+    .pos-payment-section,
+    .pos-quick-actions {
+        padding: 8px 10px;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr; /* Stack jadi 1 kolom */
+    }
+    
+    .payment-methods {
+        flex-wrap: wrap;
+    }
+    
+    .btn-payment {
+        flex: 1;
+        min-width: 50px;
+    }
+    
+    .pos-summary-card {
+        padding: 8px 12px;
+    }
+    
+    .pos-summary-row {
+        font-size: 0.75rem;
+    }
+    
+    .pos-summary-total {
+        font-size: 1.5rem;
+    }
+}
+
 @media (min-width: 768px) {
     .pos-desktop-layout {
         display: flex;

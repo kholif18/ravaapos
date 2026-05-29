@@ -62,39 +62,31 @@
                                             </td>
                                             <td>
                                                 <% if (sale.status === 'void') { %>
-                                                    <span class="badge bg-danger">
-                                                        VOID
+                                                    <span class="badge bg-danger">VOID</span>
+                                                <% } else { 
+                                                    let statusLabel = 'LUNAS';
+                                                    let statusClass = 'success';
+                                                    let pStatus = sale.paymentStatus || 'paid';
+                                                    
+                                                    if (pStatus === 'partial') {
+                                                        statusLabel = 'SEBAGIAN';
+                                                        statusClass = 'warning text-dark';
+                                                    } else if (pStatus === 'unpaid') {
+                                                        statusLabel = 'PIUTANG';
+                                                        statusClass = 'danger';
+                                                    } else if (pStatus === 'cancelled') {
+                                                        statusLabel = 'BATAL';
+                                                        statusClass = 'secondary';
+                                                    }
+                                                %>
+                                                    <span class="badge bg-<%= statusClass %>">
+                                                        <%= statusLabel %>
                                                     </span>
-                                                <% } else if (sale.paymentStatus === 'paid') { %>
-                                                    <span class="badge bg-success">
-                                                        LUNAS
-                                                    </span>
-                                                <% } else if (sale.paymentStatus === 'partial') { %>
-                                                    <span class="badge bg-warning text-dark">
-                                                        DP / SEBAGIAN
-                                                    </span>
-                                                    <% if (sale.remainingAmount > 0) { %>
+                                                    <% if ((pStatus === 'partial' || pStatus === 'unpaid') && sale.remainingAmount > 0) { %>
                                                         <small class="text-danger d-block mt-1">
                                                             Sisa: <%= formatRupiah(sale.remainingAmount) %>
                                                         </small>
                                                     <% } %>
-                                                <% } else if (sale.paymentStatus === 'unpaid') { %>
-                                                    <span class="badge bg-danger">
-                                                        BELUM BAYAR
-                                                    </span>
-                                                    <% if (sale.remainingAmount > 0) { %>
-                                                        <small class="text-danger d-block mt-1">
-                                                            Sisa: <%= formatRupiah(sale.remainingAmount) %>
-                                                        </small>
-                                                    <% } %>
-                                                <% } else if (sale.paymentStatus === 'cancelled') { %>
-                                                    <span class="badge bg-secondary">
-                                                        DIBATALKAN
-                                                    </span>
-                                                <% } else { %>
-                                                    <span class="badge bg-dark">
-                                                        UNKNOWN
-                                                    </span>
                                                 <% } %>
                                             </td>
                                             <td class="text-center position-static">

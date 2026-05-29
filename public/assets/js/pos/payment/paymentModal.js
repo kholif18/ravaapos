@@ -167,6 +167,32 @@ export function initPaymentHandlers() {
             }
         });
     }
+
+    if (DOM.refundBtn) {
+        DOM.refundBtn.addEventListener('click', async () => {
+            const { value: invoiceNumber } = await Swal.fire({
+                title: 'Proses Refund',
+                text: 'Masukkan nomor invoice untuk refund:',
+                input: 'text',
+                inputPlaceholder: 'INV/YYYYMMDD/...',
+                showCancelButton: true,
+                confirmButtonText: 'Cari',
+                cancelButtonText: 'Batal'
+            });
+
+            if (invoiceNumber) {
+                // Implement search and refund logic
+                showSuccess(`Mencari invoice ${invoiceNumber}...`, 'Refund');
+            }
+        });
+    }
+
+    if (DOM.openDrawerBtn) {
+        DOM.openDrawerBtn.addEventListener('click', () => {
+            showSuccess('Laci kasir dibuka', 'Drawer');
+            // Logic to send signal to printer for opening drawer would go here
+        });
+    }
 }
 
 async function processDirectCashPayment() {

@@ -57,6 +57,18 @@ export function initKeyboardShortcuts() {
             e.preventDefault();
             DOM.voidTransactionBtn?.click();
         }
+
+        // Ctrl + R: Refund
+        if (e.ctrlKey && e.key.toLowerCase() === 'r') {
+            e.preventDefault();
+            DOM.refundBtn?.click();
+        }
+
+        // Ctrl + O: Open Drawer
+        if (e.ctrlKey && e.key.toLowerCase() === 'o') {
+            e.preventDefault();
+            DOM.openDrawerBtn?.click();
+        }
         
         // Ctrl+D: Discount
         if (e.ctrlKey && e.key.toLowerCase() === 'd') {

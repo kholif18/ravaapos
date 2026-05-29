@@ -26,6 +26,7 @@ exports.index = async (req, res) => {
         }
 
         const { count, rows: sales } = await Sale.findAndCountAll({
+            attributes: ['id', 'invoiceNumber', 'total', 'createdAt', 'paymentMethod'],
             where: whereClause,
             include: [{ model: Customer, as: 'customer', attributes: ['name'] }],
             order: [['createdAt', 'DESC']],
@@ -47,7 +48,7 @@ exports.index = async (req, res) => {
         });
     } catch (err) {
         console.error('Error fetching sales history:', err);
-        res.status(500).render('error', { message: 'Gagal memuat riwayat transaksi' });
+        res.status(500).render('error', { message: 'Gagal memuat riwayat transaksi: ' + err.message });
     }
 };
 
@@ -55,6 +56,7 @@ exports.getDetail = async (req, res) => {
     try {
         const { id } = req.params;
         const sale = await Sale.findByPk(id, {
+            attributes: ['id', 'invoiceNumber', 'total', 'subtotal', 'tax', 'discount', 'amountReceived', 'change', 'notes', 'createdAt', 'paymentMethod'],
             include: [
                 { model: Customer, as: 'customer' },
                 { 

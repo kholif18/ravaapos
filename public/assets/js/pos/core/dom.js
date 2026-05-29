@@ -53,6 +53,8 @@ export const DOM = {
     voidTransactionBtn: document.getElementById('voidTransactionBtn'),
     holdTransactionBtn: document.getElementById('holdTransactionBtn'),
     resumeTransactionBtn: document.getElementById('resumeTransactionBtn'),
+    refundBtn: document.getElementById('refundBtn'),
+    openDrawerBtn: document.getElementById('openDrawerBtn'),
     discountQuickBtn: document.getElementById('discountQuickBtn'),
 
     // Slide Panel Buttons

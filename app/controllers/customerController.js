@@ -83,7 +83,15 @@ exports.getAll = async (req, res) => {
         const sort = req.query.sort || 'name';
         const order = req.query.order === 'desc' ? 'DESC' : 'ASC';
 
+        // Check columns to be safe
+        const attributes = ['id', 'name', 'type', 'email', 'phone', 'status', 'createdAt'];
+        const tableInfo = await Customer.sequelize.getQueryInterface().describeTable('Customers');
+        if (tableInfo.memberCode) attributes.push('memberCode');
+        if (tableInfo.total_debt) attributes.push('total_debt');
+        if (tableInfo.debt_limit) attributes.push('debt_limit');
+
         const rows = await Customer.findAll({
+            attributes,
             where,
             limit,
             offset,
@@ -106,7 +114,7 @@ exports.getAll = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).send('Gagal memuat data pelanggan');
+        res.status(500).render('error', { message: 'Gagal memuat data pelanggan: ' + err.message });
     }
 };
 
@@ -256,10 +264,18 @@ exports.getListAJAX = async (req, res) => {
         const sort = req.query.sort || 'createdAt';
         const order = req.query.order === 'desc' ? 'DESC' : 'ASC';
 
+        // Check columns to be safe
+        const attributes = ['id', 'name', 'type', 'email', 'phone', 'status', 'createdAt'];
+        const tableInfo = await Customer.sequelize.getQueryInterface().describeTable('Customers');
+        if (tableInfo.memberCode) attributes.push('memberCode');
+        if (tableInfo.total_debt) attributes.push('total_debt');
+        if (tableInfo.debt_limit) attributes.push('debt_limit');
+
         const {
             count,
             rows
         } = await Customer.findAndCountAll({
+            attributes,
             where,
             limit,
             offset,
@@ -280,7 +296,7 @@ exports.getListAJAX = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({
-            message: 'Gagal mengambil data customer'
+            message: 'Gagal mengambil data customer: ' + err.message
         });
     }
 };
@@ -297,10 +313,18 @@ exports.getPartial = async (req, res) => {
         const sort = req.query.sort || 'createdAt';
         const order = req.query.order === 'desc' ? 'DESC' : 'ASC';
 
+        // Check columns to be safe
+        const attributes = ['id', 'name', 'type', 'email', 'phone', 'status', 'createdAt'];
+        const tableInfo = await Customer.sequelize.getQueryInterface().describeTable('Customers');
+        if (tableInfo.memberCode) attributes.push('memberCode');
+        if (tableInfo.total_debt) attributes.push('total_debt');
+        if (tableInfo.debt_limit) attributes.push('debt_limit');
+
         const {
             count,
             rows
         } = await Customer.findAndCountAll({
+            attributes,
             where,
             limit,
             offset,
@@ -322,7 +346,7 @@ exports.getPartial = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).send('Gagal memuat data customer');
+        res.status(500).send('Gagal memuat data customer: ' + err.message);
     }
 };
 

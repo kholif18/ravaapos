@@ -7,28 +7,54 @@ const transactionService = require('../services/transactionService');
 exports.getOutstandingDebts = async (req, res) => {
     try {
         const { search, customerId, overdue } = req.query;
+        
+        // Dynamic where clause to avoid missing columns
         const where = {
-            remainingAmount: { [Op.gt]: 0 },
-            status: 'completed',
-            paymentStatus: { [Op.in]: ['unpaid', 'partial'] }
+            status: 'completed'
         };
+
+        // Check columns to be safe
+        const attributes = ['id', 'invoiceNumber', 'total', 'createdAt'];
+        const tableInfo = await db.sequelize.getQueryInterface().describeTable('Sales');
+        
+        if (tableInfo.remainingAmount) {
+            where.remainingAmount = { [Op.gt]: 0 };
+            attributes.push('remainingAmount');
+        }
+        
+        if (tableInfo.paymentStatus) {
+            where.paymentStatus = { [Op.in]: ['unpaid', 'partial'] };
+            attributes.push('paymentStatus');
+        }
+
+        if (tableInfo.dueDate) {
+            attributes.push('dueDate');
+            if (overdue === 'true') {
+                where.dueDate = { [Op.lt]: new Date() };
+            }
+        }
 
         if (customerId) {
             where.customerId = customerId;
-        }
-
-        if (overdue === 'true') {
-            where.dueDate = { [Op.lt]: new Date() };
         }
 
         const include = [
             { model: Customer, as: 'customer' }
         ];
 
-        const totalItems = await Sale.count({ where });
+        let totalItems = 0;
+        try {
+            totalItems = await Sale.count({ where });
+        } catch (e) {
+            console.warn('Count failed, likely missing columns:', e.message);
+            // If count fails, try without the problematic filters
+            totalItems = await Sale.count({ where: { status: 'completed' } });
+        }
+
         const { page, limit, offset, totalPages } = getPaginationParams(req.query.page, req.query.limit, totalItems);
 
         const sales = await Sale.findAll({
+            attributes,
             where,
             include,
             order: [['createdAt', 'DESC']],

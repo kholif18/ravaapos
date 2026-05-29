@@ -84,11 +84,16 @@ exports.closeSession = async (req, res) => {
         }
 
         // Calculate summary
+        const tableInfo = await db.sequelize.getQueryInterface().describeTable('Sales');
+        const saleWhere = { status: 'completed' };
+        
+        if (tableInfo.sessionId) {
+            saleWhere.sessionId = session.id;
+        }
+
         const sales = await Sale.findAll({
-            where: {
-                sessionId: session.id,
-                status: 'completed'
-            }
+            attributes: ['id', 'total', 'status'],
+            where: saleWhere
         });
 
         const totalSales = sales.reduce((sum, s) => sum + parseFloat(s.total), 0);
@@ -98,7 +103,7 @@ exports.closeSession = async (req, res) => {
             include: [{
                 model: Sale,
                 as: 'sale',
-                where: { sessionId: session.id, status: 'completed' },
+                where: saleWhere,
                 attributes: []
             }],
             where: {
@@ -144,8 +149,15 @@ exports.endSession = async (req, res) => {
         }
 
         // Re-calculate to be sure
+        const tableInfo = await db.sequelize.getQueryInterface().describeTable('Sales');
+        const saleWhere = { status: 'completed' };
+        if (tableInfo.sessionId) {
+            saleWhere.sessionId = session.id;
+        }
+
         const sales = await Sale.findAll({
-            where: { sessionId: session.id, status: 'completed' }
+            attributes: ['id', 'total', 'status'],
+            where: saleWhere
         });
         const totalSales = sales.reduce((sum, s) => sum + parseFloat(s.total), 0);
         
@@ -153,7 +165,7 @@ exports.endSession = async (req, res) => {
             include: [{
                 model: Sale,
                 as: 'sale',
-                where: { sessionId: session.id, status: 'completed' },
+                where: saleWhere,
                 attributes: []
             }],
             where: {

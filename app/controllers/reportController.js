@@ -10,7 +10,11 @@ exports.index = async (req, res) => {
         const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
         // Stats for Dashboard/Report Index
+        // Explicitly list attributes to avoid crashes if columns are missing
+        const saleAttributes = ['id', 'total', 'tax', 'discount', 'status', 'createdAt'];
+        
         const todaySales = await Sale.findAll({
+            attributes: saleAttributes,
             where: {
                 createdAt: { [Op.between]: [startOfDay, endOfDay] },
                 status: 'completed'
@@ -76,7 +80,11 @@ exports.index = async (req, res) => {
         });
     } catch (err) {
         console.error('Error generating report index:', err);
-        res.status(500).render('error', { message: 'Gagal memuat halaman laporan: ' + err.message });
+        let message = 'Gagal memuat halaman laporan: ' + err.message;
+        if (err.message.includes('no such column')) {
+            message = 'Database schema mismatch. Mohon jalankan "node sync-db-seed.js" dengan setting DB_SYNC_ALTER=true untuk memperbarui database.';
+        }
+        res.status(500).render('error', { message });
     }
 };
 
@@ -186,12 +194,74 @@ exports.salesReport = async (req, res) => {
             whereClause.createdAt = {
                 [Op.between]: [new Date(dateFrom), new Date(dateTo + ' 23:59:59')]
             };
+        } else if (dateFrom) {
+            whereClause.createdAt = { [Op.gte]: new Date(dateFrom) };
+        } else if (dateTo) {
+            whereClause.createdAt = { [Op.lte]: new Date(dateTo + ' 23:59:59') };
         }
 
         const sales = await Sale.findAll({
+            attributes: ['id', 'invoiceNumber', 'total', 'tax', 'discount', 'paymentMethod', 'status', 'createdAt'],
             where: whereClause,
-            include: [{ model: Customer, as: 'customer', attributes: ['name'] }],
+            include: [
+                { model: Customer, as: 'customer', attributes: ['name'] },
+                { 
+                    model: SaleItem, 
+                    as: 'items',
+                    include: [
+                        { 
+                            model: Product, 
+                            as: 'product', 
+                            attributes: ['name'],
+                            include: [{ model: Category, as: 'category', attributes: ['name'] }]
+                        }
+                    ]
+                },
+                { model: SalePayment, as: 'payments' }
+            ],
             order: [['createdAt', 'DESC']]
+        });
+
+        // Calculate Stats
+        let totalSales = 0;
+        let totalTax = 0;
+        let totalDiscount = 0;
+        let totalItems = 0;
+        
+        const paymentBreakdown = {};
+        const categoryBreakdown = {};
+        const productBreakdown = {};
+
+        sales.forEach(sale => {
+            totalSales += parseFloat(sale.total);
+            totalTax += parseFloat(sale.tax || 0);
+            totalDiscount += parseFloat(sale.discount || 0);
+            
+            // Payment Breakdown
+            if (sale.payments && sale.payments.length > 0) {
+                sale.payments.forEach(p => {
+                    const method = p.paymentMethod || 'cash';
+                    paymentBreakdown[method] = (paymentBreakdown[method] || 0) + parseFloat(p.amount);
+                });
+            } else {
+                const method = sale.paymentMethod || 'cash';
+                paymentBreakdown[method] = (paymentBreakdown[method] || 0) + parseFloat(sale.total);
+            }
+
+            // Items breakdown
+            if (sale.items) {
+                sale.items.forEach(item => {
+                    totalItems += parseInt(item.qty);
+                    
+                    // Product Breakdown
+                    const productName = item.product ? item.product.name : 'Produk Dihapus';
+                    productBreakdown[productName] = (productBreakdown[productName] || 0) + parseInt(item.qty);
+
+                    // Category Breakdown
+                    const catName = (item.product && item.product.category) ? item.product.category.name : 'Tanpa Kategori';
+                    categoryBreakdown[catName] = (categoryBreakdown[catName] || 0) + parseInt(item.qty);
+                });
+            }
         });
 
         res.render('reports/sales', {
@@ -200,10 +270,26 @@ exports.salesReport = async (req, res) => {
             sales,
             dateFrom,
             dateTo,
-            formatRupiah
+            formatRupiah,
+            stats: {
+                totalSales,
+                totalTax,
+                totalDiscount,
+                totalItems,
+                netSales: totalSales - totalTax,
+                paymentBreakdown,
+                categoryBreakdown,
+                productBreakdown
+            }
         });
     } catch (err) {
         console.error('Error generating sales report:', err);
-        res.status(500).render('error', { message: 'Gagal memuat laporan penjualan' });
+        // Fallback if paymentStatus or other columns are missing
+        if (err.message.includes('no such column')) {
+             return res.status(500).render('error', { 
+                message: 'Database schema mismatch. Mohon jalankan "node sync-db-seed.js" dengan setting DB_SYNC_ALTER=true di environment Anda.' 
+            });
+        }
+        res.status(500).render('error', { message: 'Gagal memuat laporan penjualan: ' + err.message });
     }
 };

@@ -1,0 +1,107 @@
+<link rel="stylesheet" href="/assets/css/reports-compact.css">
+
+<div class="container-xxl flex-grow-1 container-p-y print-area">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Reports /</span> Stock Movement</h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="window.print()">
+                <i class="bx bx-printer me-1"></i> Print
+            </button>
+        </div>
+    </div>
+    
+    <div class="d-none d-print-block mb-3">
+        <h4>Laporan Mutasi Stok</h4>
+        <p>Periode: <%= filters.dateFrom %> s/d <%= filters.dateTo %></p>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section mb-4 no-print">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Date From</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm" value="<%= filters.dateFrom %>">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date To</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm" value="<%= filters.dateTo %>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Product</label>
+                <select name="productId" class="form-select form-select-sm select2">
+                    <option value="">All Products</option>
+                    <% products.forEach(p => { %>
+                        <option value="<%= p.id %>" <%= filters.productId == p.id ? 'selected' : '' %>><%= p.name %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">All Types</option>
+                    <option value="sale" <%= filters.type == 'sale' ? 'selected' : '' %>>Sale</option>
+                    <option value="purchase" <%= filters.type == 'purchase' ? 'selected' : '' %>>Purchase</option>
+                    <option value="adjustment" <%= filters.type == 'adjustment' ? 'selected' : '' %>>Adjustment</option>
+                    <option value="return" <%= filters.type == 'return' ? 'selected' : '' %>>Return</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bx bx-filter-alt me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card report-card">
+        <div class="table-responsive text-nowrap">
+            <table class="table table-compact table-hover sticky-header">
+                <thead>
+                    <tr>
+                        <th>Date Time</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-center">Before</th>
+                        <th class="text-center">After</th>
+                        <th>Reference</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                    <% movements.forEach(m => { %>
+                    <tr>
+                        <td><%= new Date(m.createdAt).toLocaleString('id-ID') %></td>
+                        <td>
+                            <strong><%= m.product ? m.product.name : 'Unknown Product' %></strong>
+                            <br><small class="text-muted"><%= m.product ? m.product.code : '' %></small>
+                        </td>
+                        <td>
+                            <% 
+                                let badgeColor = 'secondary';
+                                if (m.type === 'sale') badgeColor = 'danger';
+                                if (m.type === 'purchase') badgeColor = 'success';
+                                if (m.type === 'adjustment') badgeColor = 'warning';
+                            %>
+                            <span class="badge bg-label-<%= badgeColor %>"><%= m.type.toUpperCase() %></span>
+                        </td>
+                        <td class="text-center fw-bold <%= m.qty > 0 ? 'text-success' : 'text-danger' %>">
+                            <%= m.qty > 0 ? '+' : '' %><%= m.qty %>
+                        </td>
+                        <td class="text-center"><%= m.beforeStock %></td>
+                        <td class="text-center"><%= m.afterStock %></td>
+                        <td><%= m.referenceType %> #<%= m.referenceId %></td>
+                        <td><small><%= m.notes || '-' %></small></td>
+                    </tr>
+                    <% }) %>
+                    <% if (movements.length === 0) { %>
+                        <tr><td colspan="8" class="text-center py-4">No stock movements found</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center no-print">
+            <small class="text-muted">Showing <%= movements.length %> entries</small>
+        </div>
+    </div>
+</div>

@@ -482,3 +482,26 @@ SEARCH DROPDOWN - COMPACT WITH STOCK
     max-height: 300px;
     overflow: auto;
 }
+
+/* POS Compact Sidebar - Tambahkan di styles.css atau app.css */
+.menu-vertical .menu-item .menu-link {
+    padding: 0.45rem 1rem;
+    min-height: 36px;
+    font-size: 0.875rem;
+}
+
+.menu-vertical .menu-icon {
+    font-size: 1.05rem;
+}
+
+.menu-header {
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+}
+
+.menu-sub .menu-item .menu-link {
+    padding-left: 2.5rem;
+    font-size: 0.8rem;
+}

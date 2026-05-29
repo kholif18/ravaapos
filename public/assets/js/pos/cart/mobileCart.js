@@ -42,7 +42,7 @@ export function renderMobileCartView() {
     }
 
     DOM.mobileCartItems.innerHTML = POS.cart.map(item => `
-        <div class="mobile-cart-item" data-id="${item.id}">
+        <div class="mobile-cart-item" data-cart-id="${item.cartId}">
             <div class="mobile-cart-item-info">
                 <div class="mobile-cart-item-name">
                     ${escapeHtml(item.name)}
@@ -52,18 +52,18 @@ export function renderMobileCartView() {
             </div>
             <div class="mobile-cart-item-actions">
                 <div class="mobile-cart-item-qty">
-                    <button class="btn-qty-mobile" data-id="${item.id}" data-delta="-1">
+                    <button class="btn-qty-mobile" data-cart-id="${item.cartId}" data-delta="-1">
                         <i class="bx bx-minus"></i>
                     </button>
                     <span class="qty-value">${item.quantity}</span>
-                    <button class="btn-qty-mobile" data-id="${item.id}" data-delta="1">
+                    <button class="btn-qty-mobile" data-cart-id="${item.cartId}" data-delta="1">
                         <i class="bx bx-plus"></i>
                     </button>
                 </div>
                 <div class="mobile-cart-item-total">
                     ${formatRupiah((item.price * item.quantity) - (item.discount || 0))}
                 </div>
-                <button class="btn-remove-mobile" data-id="${item.id}">
+                <button class="btn-remove-mobile" data-cart-id="${item.cartId}">
                     <i class="bx bx-trash"></i>
                 </button>
             </div>

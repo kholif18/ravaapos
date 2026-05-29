@@ -96,7 +96,20 @@
                     <p>Sign in to access your dashboard</p>
                 </div>
 
-                <div id="alertContainer"></div>
+                <div id="alertContainer">
+                    <% if (error && error.length > 0) { %>
+                        <div class="alert-modern">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span><%= error %></span>
+                        </div>
+                    <% } %>
+                    <% if (success && success.length > 0) { %>
+                        <div class="alert-modern success">
+                            <i class="fas fa-check-circle"></i>
+                            <span><%= success %></span>
+                        </div>
+                    <% } %>
+                </div>
 
                 <form id="loginForm">
                     <input type="hidden" name="_csrf" id="csrfField" value="<%= csrfToken %>">

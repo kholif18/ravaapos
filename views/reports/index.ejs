@@ -1,134 +1,235 @@
-<div class="row">
-  <!-- Revenue Today -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title d-flex align-items-start justify-content-between">
-          <div class="avatar flex-shrink-0">
-            <span class="badge bg-label-primary p-2"><i class="bx bx-dollar text-primary"></i></span>
-          </div>
-        </div>
-        <span class="fw-semibold d-block mb-1">Pendapatan Hari Ini</span>
-        <h3 class="card-title mb-2"><%= formatRupiah(stats.todayRevenue) %></h3>
-      </div>
-    </div>
-  </div>
+<link rel="stylesheet" href="/assets/css/reports-compact.css">
 
-  <!-- Transactions Today -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title d-flex align-items-start justify-content-between">
-          <div class="avatar flex-shrink-0">
-            <span class="badge bg-label-success p-2"><i class="bx bx-cart text-success"></i></span>
-          </div>
+<div class="container-xxl flex-grow-1 container-p-y print-area">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Reports /</span> Dashboard Summary</h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="window.print()">
+                <i class="bx bx-printer me-1"></i> Print
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+                <i class="bx bx-refresh me-1"></i> Refresh
+            </button>
         </div>
-        <span class="fw-semibold d-block mb-1">Transaksi Hari Ini</span>
-        <h3 class="card-title mb-2"><%= stats.todayTransactions %></h3>
-      </div>
     </div>
-  </div>
+    
+    <div class="d-none d-print-block mb-3">
+        <h4>Summary Laporan Penjualan Harian</h4>
+        <p>Tanggal: <%= new Date().toLocaleDateString('id-ID') %></p>
+    </div>
 
-  <!-- Total Products -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title d-flex align-items-start justify-content-between">
-          <div class="avatar flex-shrink-0">
-            <span class="badge bg-label-info p-2"><i class="bx bx-package text-info"></i></span>
-          </div>
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 col-6 mb-4">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="fw-semibold d-block mb-1">Sales Today</span>
+                            <h3 class="card-title mb-2"><%= formatRupiah(stats.sales) %></h3>
+                            <small class="<%= stats.salesComparison >= 0 ? 'text-success' : 'text-danger' %> fw-semibold">
+                                <i class="bx bx-up-arrow-alt"></i> <%= stats.salesComparison.toFixed(1) %>%
+                            </small>
+                            <small class="text-muted">vs yesterday</small>
+                        </div>
+                        <div class="report-stats-icon bg-label-primary">
+                            <i class="bx bx-dollar"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <span class="fw-semibold d-block mb-1">Total Produk</span>
-        <h3 class="card-title mb-2"><%= stats.totalProducts %></h3>
-      </div>
+        <div class="col-lg-3 col-md-6 col-6 mb-4">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="fw-semibold d-block mb-1">Transactions</span>
+                            <h3 class="card-title mb-2"><%= stats.transactions %></h3>
+                            <small class="text-muted">Orders completed</small>
+                        </div>
+                        <div class="report-stats-icon bg-label-info">
+                            <i class="bx bx-cart"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-6 mb-4">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="fw-semibold d-block mb-1">Average Order</span>
+                            <h3 class="card-title mb-2"><%= formatRupiah(stats.avgTransaction) %></h3>
+                            <small class="text-muted">Per customer</small>
+                        </div>
+                        <div class="report-stats-icon bg-label-success">
+                            <i class="bx bx-trending-up"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-6 mb-4">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="fw-semibold d-block mb-1">Low Stock</span>
+                            <h3 class="card-title mb-2"><%= stats.lowStock %></h3>
+                            <small class="text-danger fw-semibold">Items need reorder</small>
+                        </div>
+                        <div class="report-stats-icon bg-label-danger">
+                            <i class="bx bx-error"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <!-- Total Customers -->
-  <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
-    <div class="card">
-      <div class="card-body">
-        <div class="card-title d-flex align-items-start justify-content-between">
-          <div class="avatar flex-shrink-0">
-            <span class="badge bg-label-warning p-2"><i class="bx bx-user text-warning"></i></span>
-          </div>
+    <div class="row">
+        <!-- Top Products -->
+        <div class="col-md-8 mb-4">
+            <div class="card h-100 report-card">
+                <div class="card-header d-flex align-items-center justify-content-between pb-0">
+                    <div class="card-title mb-0">
+                        <h5 class="m-0 me-2">Top Selling Products (Today)</h5>
+                        <small class="text-muted">Based on quantity sold</small>
+                    </div>
+                </div>
+                <div class="card-body pt-4">
+                    <div class="table-responsive">
+                        <table class="table table-compact table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Category</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Revenue</th>
+                                    <th class="text-end">Profit (Est)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% topProducts.forEach(item => { %>
+                                <tr>
+                                    <td><strong><%= item.product.name %></strong></td>
+                                    <td><span class="badge bg-label-secondary"><%= item.product.category ? item.product.category.name : '-' %></span></td>
+                                    <td class="text-center"><%= item.totalQty %></td>
+                                    <td class="text-end"><%= formatRupiah(item.totalRevenue) %></td>
+                                    <td class="text-end text-success"><%= formatRupiah(item.estimatedProfit) %></td>
+                                </tr>
+                                <% }) %>
+                                <% if (topProducts.length === 0) { %>
+                                    <tr><td colspan="5" class="text-center py-4">No sales data for today</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-        <span class="fw-semibold d-block mb-1">Total Pelanggan</span>
-        <h3 class="card-title mb-2"><%= stats.totalCustomers %></h3>
-      </div>
+
+        <!-- Payment Breakdown -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 report-card">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="card-title m-0">Payment Methods</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="paymentChart"></canvas>
+                    </div>
+                    <div class="mt-4">
+                        <% paymentStats.forEach(p => { %>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span><i class="bx bx-circle me-2"></i> <%= p.paymentMethod.toUpperCase() %></span>
+                            <span class="fw-semibold"><%= formatRupiah(p.get('totalAmount')) %></span>
+                        </div>
+                        <% }) %>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- Navigation Menu -->
+    <div class="row mt-2 no-print">
+        <div class="col-12">
+            <h5 class="mb-3">Detailed Reports</h5>
+            <div class="row">
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/reports/sales" class="btn btn-outline-primary w-100 py-3">
+                        <i class="bx bx-receipt mb-2 d-block fs-3"></i>
+                        Sales Report
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/reports/best-sellers" class="btn btn-outline-primary w-100 py-3">
+                        <i class="bx bx-star mb-2 d-block fs-3"></i>
+                        Best Sellers
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/reports/cashier" class="btn btn-outline-primary w-100 py-3">
+                        <i class="bx bx-user mb-2 d-block fs-3"></i>
+                        Cashier Performance
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/reports/stock-movement" class="btn btn-outline-primary w-100 py-3">
+                        <i class="bx bx-transfer mb-2 d-block fs-3"></i>
+                        Stock Movement
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/reports/low-stock" class="btn btn-outline-danger w-100 py-3">
+                        <i class="bx bx-error-circle mb-2 d-block fs-3"></i>
+                        Low Stock
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/reports/profit-loss" class="btn btn-outline-success w-100 py-3">
+                        <i class="bx bx-line-chart mb-2 d-block fs-3"></i>
+                        Profit & Loss
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/reports/payments" class="btn btn-outline-info w-100 py-3">
+                        <i class="bx bx-credit-card mb-2 d-block fs-3"></i>
+                        Payments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="row">
-  <!-- Payment Methods -->
-  <div class="col-md-6 mb-4">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <h5 class="card-title m-0 me-2">Metode Pembayaran (Hari Ini)</h5>
-      </div>
-      <div class="card-body">
-        <ul class="p-0 m-0">
-          <% paymentStats.forEach(stat => { %>
-          <li class="d-flex mb-4 pb-1">
-            <div class="avatar flex-shrink-0 me-3">
-              <span class="badge bg-label-secondary p-2"><i class="bx bx-wallet"></i></span>
-            </div>
-            <div class="d-flex w-100 flex-wrap align-items-center justify-content-between gap-2">
-              <div class="me-2">
-                <h6 class="mb-0 text-capitalize"><%= stat.paymentMethod %></h6>
-              </div>
-              <div class="user-progress d-flex align-items-center gap-1">
-                <h6 class="mb-0"><%= formatRupiah(stat.dataValues.total) %></h6>
-              </div>
-            </div>
-          </li>
-          <% }) %>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- Top Products -->
-  <div class="col-md-6 mb-4">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <h5 class="card-title m-0 me-2">Produk Terlaris (Hari Ini)</h5>
-      </div>
-      <div class="card-body">
-        <ul class="p-0 m-0">
-          <% topProducts.forEach(item => { %>
-          <li class="d-flex mb-4 pb-1">
-            <div class="avatar flex-shrink-0 me-3">
-              <span class="badge bg-label-primary p-2"><i class="bx bx-package"></i></span>
-            </div>
-            <div class="d-flex w-100 flex-wrap align-items-center justify-content-between gap-2">
-              <div class="me-2">
-                <h6 class="mb-0"><%= item.product.name %></h6>
-                <small class="text-muted"><%= item.dataValues.totalQty %> terjual</small>
-              </div>
-              <div class="user-progress d-flex align-items-center gap-1">
-                <h6 class="mb-0"><%= formatRupiah(item.dataValues.totalRevenue) %></h6>
-              </div>
-            </div>
-          </li>
-          <% }) %>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row">
-  <div class="col-12">
-    <div class="card">
-      <h5 class="card-header">Laporan Lainnya</h5>
-      <div class="card-body">
-        <div class="demo-inline-spacing">
-          <a href="/reports/sales" class="btn btn-outline-primary">Laporan Penjualan Detail</a>
-          <a href="/cashier/sessions" class="btn btn-outline-secondary">Riwayat Sesi Kasir</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('paymentChart').getContext('2d');
+    const paymentData = <%- JSON.stringify(paymentStats) %>;
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: paymentData.map(p => p.paymentMethod.toUpperCase()),
+            datasets: [{
+                data: paymentData.map(p => p.totalAmount),
+                backgroundColor: ['#696cff', '#03c3ec', '#71dd37', '#ff3e1d', '#ffab00'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            cutout: '70%'
+        }
+    });
+});
+</script>

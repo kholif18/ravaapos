@@ -5,6 +5,10 @@ import { clearCart } from '../cart/cartManager.js';
 import { formatCurrency } from '../utils/formatter.js';
 import { showSuccess, showWarning, showError, confirmDialog } from '../ui/notifications.js';
 import { showSuccessModal } from './successModal.js';
+import { showMobilePaymentSheet, hideMobilePaymentSheet } from './mobilePaymentSheet.js';
+import {
+    processRefund
+} from '../refund/refundService.js';
 
 let isProcessingPayment = false;
 
@@ -97,18 +101,31 @@ export function initPaymentHandlers() {
                 showWarning('Keranjang kosong, tidak bisa checkout');
                 return;
             }
-            showPaymentModal(POS.getTotal());
+            initiatePayment();
         });
     }
 
-    // Mobile checkout button
-    if (DOM.completeOrderBtnMobile) {
-        DOM.completeOrderBtnMobile.addEventListener('click', () => {
+    // Mobile Checkout Button
+    const mobilePaymentBtn = document.getElementById('mobilePaymentBtn');
+    if (mobilePaymentBtn) {
+        mobilePaymentBtn.addEventListener('click', () => {
             if (POS.cart.length === 0) {
-                showWarning('Keranjang kosong, tidak bisa checkout');
+                showWarning('Keranjang kosong');
                 return;
             }
-            showPaymentModal(POS.getTotal());
+            initiatePayment();
+        });
+    }
+
+    // Mobile Cash Button (Direct pas)
+    const mobileCashBtn = document.getElementById('mobileCashBtn');
+    if (mobileCashBtn) {
+        mobileCashBtn.addEventListener('click', () => {
+            if (POS.cart.length === 0) {
+                showWarning('Keranjang kosong');
+                return;
+            }
+            processDirectCashPayment();
         });
     }
     
@@ -170,19 +187,115 @@ export function initPaymentHandlers() {
 
     if (DOM.refundBtn) {
         DOM.refundBtn.addEventListener('click', async () => {
-            const { value: invoiceNumber } = await Swal.fire({
-                title: 'Proses Refund',
-                text: 'Masukkan nomor invoice untuk refund:',
-                input: 'text',
-                inputPlaceholder: 'INV/YYYYMMDD/...',
-                showCancelButton: true,
-                confirmButtonText: 'Cari',
-                cancelButtonText: 'Batal'
-            });
+            try {
+                const {
+                    value: invoiceNumber
+                } = await Swal.fire({
+                    title: 'Refund Transaksi',
+                    html: `
+                        <div class="text-start">
+                            <label class="form-label">Nomor Invoice</label>
+                            <input id="swal-invoice" class="form-control" placeholder="INV/2026/...">
+                            <small class="text-muted">Masukkan invoice untuk dicari</small>
+                        </div>
+                    `,
+                    focusConfirm: false,
+                    showCancelButton: true,
+                    confirmButtonText: 'Cari',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        popup: 'sneat-modal',
+                        confirmButton: 'btn btn-primary',
+                        cancelButton: 'btn btn-outline-secondary'
+                    },
+                    buttonsStyling: false,
+                    preConfirm: () => {
+                        const val = document.getElementById('swal-invoice').value;
+                        if (!val) {
+                            Swal.showValidationMessage('Invoice wajib diisi');
+                        }
+                        return val;
+                    }
+                });
 
-            if (invoiceNumber) {
-                // Implement search and refund logic
-                showSuccess(`Mencari invoice ${invoiceNumber}...`, 'Refund');
+                if (!invoiceNumber) return;
+
+                // 1. Fetch transaksi
+                const res = await fetch(`/pos/transaction/${invoiceNumber}`);
+                const data = await res.json();
+
+                if (!data.success) {
+                    return showError('Invoice tidak ditemukan');
+                }
+
+                const trx = data.transaction;
+
+                // 2. Validasi status
+                if (trx.status === 'refunded') {
+                    return showWarning('Transaksi sudah direfund');
+                }
+
+                // 3. Confirm refund
+                const confirm = await Swal.fire({
+                    title: 'Konfirmasi Refund',
+                    html: `
+                        <div class="text-start p-2">
+                            <div class="mb-2">
+                                <small class="text-muted">Invoice</small>
+                                <div class="fw-bold">${trx.invoiceNumber}</div>
+                            </div>
+
+                            <div class="mb-2">
+                                <small class="text-muted">Total</small>
+                                <div class="fw-bold text-primary">Rp ${trx.total}</div>
+                            </div>
+
+                            <div class="mb-2">
+                                <small class="text-muted">Customer</small>
+                                <div>${trx.customerName || '-'}</div>
+                            </div>
+
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bx bx-info-circle"></i>
+                                Transaksi akan dikembalikan & stok akan di-restore
+                            </div>
+                        </div>
+                    `,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Refund',
+                    cancelButtonText: 'Batal',
+                    customClass: {
+                        popup: 'sneat-modal',
+                        confirmButton: 'btn btn-danger',
+                        cancelButton: 'btn btn-outline-secondary'
+                    },
+                    buttonsStyling: false
+                });
+
+                if (!confirm.isConfirmed) return;
+
+                // 4. Process refund
+                const result = await processRefund(invoiceNumber);
+
+                if (!result.success) {
+                    return showError(result.message || 'Refund gagal');
+                }
+
+                showSuccess('Refund berhasil');
+
+                // 5. Reset POS state kalau transaksi aktif
+                clearCart();
+                POS.cart = [];
+                POS.selectedCustomer = null;
+                POS.currentDiscount = 0;
+
+                if (DOM.discountInput) DOM.discountInput.value = 0;
+                if (DOM.promoInput) DOM.promoInput.value = '';
+
+            } catch (err) {
+                console.error(err);
+                showError('Terjadi kesalahan refund');
             }
         });
     }
@@ -192,6 +305,38 @@ export function initPaymentHandlers() {
             showSuccess('Laci kasir dibuka', 'Drawer');
             // Logic to send signal to printer for opening drawer would go here
         });
+    }
+
+    // Listen for mobile payment sheet confirmation
+    document.addEventListener('mpsConfirmPayment', async (e) => {
+        const { method, isDebt, notes, amountReceived, dueDate } = e.detail;
+        const total = POS.getTotal();
+        
+        await processTransaction(null, method, false, {
+            total,
+            amountReceived,
+            change: method === 'cash' ? (amountReceived - total) : 0,
+            notes,
+            customerId: POS.selectedCustomer?.id || null,
+            isDebtMode: isDebt,
+            paidAmount: amountReceived,
+            dueDate: isDebt ? dueDate : null,
+            paymentStatus: isDebt ? (amountReceived >= total ? 'paid' : (amountReceived > 0 ? 'partial' : 'unpaid')) : 'paid'
+        });
+        
+        hideMobilePaymentSheet();
+    });
+}
+
+/**
+ * Responsive payment initiator
+ */
+function initiatePayment() {
+    const total = POS.getTotal();
+    if (window.innerWidth < 768) {
+        showMobilePaymentSheet(total);
+    } else {
+        showPaymentModal(total);
     }
 }
 

@@ -7,6 +7,7 @@ import { showSuccess, showWarning, showError } from '../ui/notifications.js';
 // Customer data store
 let customers = [];
 let currentSelectedCustomer = null;
+let selectedIndex = -1;
 
 // Debounce helper function
 function debounce(func, wait) {
@@ -143,6 +144,8 @@ export async function searchCustomers(query) {
 function renderCustomerResults(results) {
     if (!DOM.customerResultsList) return;
     
+    selectedIndex = -1;
+    
     if (!results || results.length === 0) {
         DOM.customerResultsList.innerHTML = `
             <div class="customer-dropdown-empty">
@@ -153,8 +156,8 @@ function renderCustomerResults(results) {
         return;
     }
     
-    DOM.customerResultsList.innerHTML = results.map(customer => `
-        <div class="customer-dropdown-item" data-customer-id="${customer.id}">
+    DOM.customerResultsList.innerHTML = results.map((customer, index) => `
+        <div class="customer-dropdown-item" data-customer-id="${customer.id}" data-index="${index}">
             <div class="customer-dropdown-info">
                 <div class="customer-dropdown-name">
                     ${escapeHtml(customer.name)}
@@ -180,6 +183,17 @@ function renderCustomerResults(results) {
                 selectCustomer(selected);
             }
         });
+    });
+}
+
+function updateSelectedHighlight(items) {
+    items.forEach((item, index) => {
+        if (index === selectedIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
     });
 }
 
@@ -221,13 +235,31 @@ export function initCustomerSearch() {
         DOM.customerSearchInput.addEventListener('input', debouncedSearch);
         
         DOM.customerSearchInput.addEventListener('keydown', (e) => {
+            const items = DOM.customerResultsList?.querySelectorAll('.customer-dropdown-item');
+            
             if (e.key === 'Escape') {
                 closeCustomerDropdown();
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (items && items.length > 0) {
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateSelectedHighlight(items);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (items && items.length > 0) {
+                    selectedIndex = Math.max(selectedIndex - 1, 0);
+                    updateSelectedHighlight(items);
+                }
             } else if (e.key === 'Enter') {
                 e.preventDefault();
-                const firstItem = document.querySelector('.customer-dropdown-item');
-                if (firstItem) {
-                    firstItem.click();
+                if (selectedIndex >= 0 && items && items[selectedIndex]) {
+                    items[selectedIndex].click();
+                } else {
+                    const firstItem = document.querySelector('.customer-dropdown-item');
+                    if (firstItem) {
+                        firstItem.click();
+                    }
                 }
             }
         });

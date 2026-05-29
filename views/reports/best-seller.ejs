@@ -1,0 +1,179 @@
+<link rel="stylesheet" href="/assets/css/reports-compact.css">
+
+<div class="container-xxl flex-grow-1 container-p-y print-area">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Reports /</span> Best Sellers</h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="window.print()">
+                <i class="bx bx-printer me-1"></i> Print
+            </button>
+        </div>
+    </div>
+    
+    <div class="d-none d-print-block mb-3">
+        <h4>Laporan Produk Terlaris</h4>
+        <p>Periode: <%= filters.dateFrom %> s/d <%= filters.dateTo %></p>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section mb-4 no-print">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Date From</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm" value="<%= filters.dateFrom %>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Date To</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm" value="<%= filters.dateTo %>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Category</label>
+                <select name="categoryId" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                    <% categories.forEach(c => { %>
+                        <option value="<%= c.id %>" <%= filters.categoryId == c.id ? 'selected' : '' %>><%= c.name %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bx bx-filter-alt me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="row">
+        <!-- Chart -->
+        <div class="col-12 mb-4">
+            <div class="card report-card">
+                <div class="card-body">
+                    <canvas id="bestSellerChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="col-12">
+            <div class="card report-card">
+                <div class="table-responsive text-nowrap">
+                    <table class="table table-compact table-hover sticky-header">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th class="text-center">Qty Sold</th>
+                                <th class="text-end">Revenue</th>
+                                <th class="text-end">Avg Price</th>
+                                <th class="text-end">Profit (Est)</th>
+                                <th class="text-center">Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody">
+                            <% items.forEach((item, index) => { %>
+                            <tr>
+                                <td><span class="badge bg-label-primary"><%= index + 1 %></span></td>
+                                <td><strong><%= item.product.name %></strong></td>
+                                <td><%= item.product.category ? item.product.category.name : '-' %></td>
+                                <td class="text-center fw-bold"><%= item.totalQty %></td>
+                                <td class="text-end"><%= formatRupiah(item.totalRevenue) %></td>
+                                <td class="text-end"><%= formatRupiah(item.totalRevenue / item.totalQty) %></td>
+                                <td class="text-end text-success fw-bold"><%= formatRupiah(item.estimatedProfit) %></td>
+                                <td class="text-center">
+                                    <span class="badge bg-<%= item.product.stock <= 5 ? 'danger' : 'success' %>">
+                                        <%= item.product.stock %>
+                                    </span>
+                                </td>
+                            </tr>
+                            <% }) %>
+                            <% if (items.length === 0) { %>
+                                <tr><td colspan="8" class="text-center py-4">No data found for this period</td></tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let myChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    renderChart(<%- JSON.stringify(items) %>);
+});
+
+document.getElementById('filterForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const params = new URLSearchParams(new FormData(this)).toString();
+    
+    fetch('/reports/best-sellers?ajax=1&' + params)
+        .then(res => res.json())
+        .then(data => {
+            updateTable(data.items);
+            renderChart(data.items);
+        });
+});
+
+function renderChart(items) {
+    const ctx = document.getElementById('bestSellerChart').getContext('2d');
+    if (myChart) myChart.destroy();
+
+    myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: items.map(i => i.product.name),
+            datasets: [
+                {
+                    label: 'Quantity Sold',
+                    data: items.map(i => i.totalQty),
+                    backgroundColor: '#696cff',
+                    borderRadius: 5
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+function updateTable(items) {
+    const tbody = document.getElementById('reportTableBody');
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No data found for this period</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = items.map((item, index) => `
+        <tr>
+            <td><span class="badge bg-label-primary">${index + 1}</span></td>
+            <td><strong>${item.product.name}</strong></td>
+            <td>${item.product.category ? item.product.category.name : '-'}</td>
+            <td class="text-center fw-bold">${item.totalQty}</td>
+            <td class="text-end">${formatMoney(item.totalRevenue)}</td>
+            <td class="text-end">${formatMoney(item.totalRevenue / item.totalQty)}</td>
+            <td class="text-end text-success fw-bold">${formatMoney(item.estimatedProfit)}</td>
+            <td class="text-center">
+                <span class="badge bg-${item.product.stock <= 5 ? 'danger' : 'success'}">
+                    ${item.product.stock}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function formatMoney(amount) {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+}
+</script>

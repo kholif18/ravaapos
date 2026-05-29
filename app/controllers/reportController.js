@@ -1,7 +1,8 @@
-const { Sale, SaleItem, Product, Category, Customer, User, SalePayment } = require('../models');
-const { Op } = require('sequelize');
+const reportService = require('../services/reportService');
 const { formatRupiah } = require('../helpers/format');
+const { User, Customer, Category, Product, Sale, SaleItem, SalePayment } = require('../models');
 const db = require('../models');
+const { Op } = require('sequelize');
 
 exports.index = async (req, res) => {
     try {
@@ -9,82 +10,21 @@ exports.index = async (req, res) => {
         const startOfDay = new Date(today.setHours(0, 0, 0, 0));
         const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
-        // Stats for Dashboard/Report Index
-        // Explicitly list attributes to avoid crashes if columns are missing
-        const saleAttributes = ['id', 'total', 'tax', 'discount', 'status', 'createdAt'];
-        
-        const todaySales = await Sale.findAll({
-            attributes: saleAttributes,
-            where: {
-                createdAt: { [Op.between]: [startOfDay, endOfDay] },
-                status: 'completed'
-            }
-        });
-
-        const stats = {
-            todayRevenue: todaySales.reduce((sum, s) => sum + parseFloat(s.total), 0),
-            todayTransactions: todaySales.length,
-            totalProducts: await Product.count(),
-            totalCustomers: await Customer.count()
-        };
-
-        // Sales by payment method (Today)
-        const paymentStats = await SalePayment.findAll({
-            attributes: [
-                [db.sequelize.col('SalePayment.paymentMethod'), 'paymentMethod'],
-                [db.sequelize.fn('SUM', db.sequelize.col('amount')), 'total']
-            ],
-            include: [{
-                model: Sale,
-                as: 'sale',
-                where: {
-                    createdAt: { [Op.between]: [startOfDay, endOfDay] },
-                    status: 'completed'
-                },
-                attributes: []
-            }],
-            group: [db.sequelize.col('SalePayment.paymentMethod')]
-        });
-
-        // Top selling products (Today)
-        const topProducts = await SaleItem.findAll({
-            attributes: [
-                'productId',
-                [db.sequelize.fn('SUM', db.sequelize.col('qty')), 'totalQty'],
-                [db.sequelize.fn('SUM', db.sequelize.col('SaleItem.subtotal')), 'totalRevenue']
-            ],
-            include: [
-                { 
-                    model: Sale, 
-                    as: 'sale',
-                    where: {
-                        createdAt: { [Op.between]: [startOfDay, endOfDay] },
-                        status: 'completed'
-                    },
-                    attributes: []
-                },
-                { model: Product, as: 'product', attributes: ['name'] }
-            ],
-            group: ['productId', 'product.name'],
-            order: [[db.sequelize.literal('totalQty'), 'DESC']],
-            limit: 5
-        });
+        const stats = await reportService.getDashboardStats(startOfDay, endOfDay);
+        const topProducts = await reportService.getBestSellers({ dateFrom: startOfDay.toISOString().split('T')[0], dateTo: endOfDay.toISOString().split('T')[0], limit: 5 });
+        const paymentStats = await reportService.getPaymentReport(startOfDay.toISOString().split('T')[0], endOfDay.toISOString().split('T')[0]);
 
         res.render('reports/index', {
-            title: 'Laporan',
-            activePage: 'reports',
+            title: 'Dashboard Laporan',
+            activePage: 'reports-summary',
             stats,
-            paymentStats,
             topProducts,
+            paymentStats,
             formatRupiah
         });
     } catch (err) {
-        console.error('Error generating report index:', err);
-        let message = 'Gagal memuat halaman laporan: ' + err.message;
-        if (err.message.includes('no such column')) {
-            message = 'Database schema mismatch. Mohon jalankan "node sync-db-seed.js" dengan setting DB_SYNC_ALTER=true untuk memperbarui database.';
-        }
-        res.status(500).render('error', { message });
+        console.error('Error report index:', err);
+        res.status(500).render('error', { message: err.message });
     }
 };
 
@@ -181,115 +121,219 @@ exports.getDailyReportAPI = async (req, res) => {
 };
 
 exports.getXReadingAPI = async (req, res) => {
-    // Similar to daily report but could be scoped to current session if needed
     return exports.getDailyReportAPI(req, res);
 };
 
 exports.salesReport = async (req, res) => {
     try {
-        const { dateFrom, dateTo } = req.query;
-        const whereClause = { status: 'completed' };
+        const filters = {
+            dateFrom: req.query.dateFrom || new Date().toISOString().split('T')[0],
+            dateTo: req.query.dateTo || new Date().toISOString().split('T')[0],
+            cashierId: req.query.cashierId,
+            customerId: req.query.customerId,
+            paymentMethod: req.query.paymentMethod,
+            status: req.query.status,
+            limit: req.query.limit || 10,
+            offset: req.query.offset || 0
+        };
 
-        if (dateFrom && dateTo) {
-            whereClause.createdAt = {
-                [Op.between]: [new Date(dateFrom), new Date(dateTo + ' 23:59:59')]
-            };
-        } else if (dateFrom) {
-            whereClause.createdAt = { [Op.gte]: new Date(dateFrom) };
-        } else if (dateTo) {
-            whereClause.createdAt = { [Op.lte]: new Date(dateTo + ' 23:59:59') };
+        const data = await reportService.getSalesReport(filters);
+        const cashiers = await User.findAll({ attributes: ['id', 'name'] });
+        const customers = await Customer.findAll({ attributes: ['id', 'name'] });
+
+        if (req.xhr || req.query.ajax) {
+            return res.json({ success: true, ...data });
         }
-
-        const sales = await Sale.findAll({
-            attributes: ['id', 'invoiceNumber', 'total', 'tax', 'discount', 'paymentMethod', 'status', 'createdAt'],
-            where: whereClause,
-            include: [
-                { model: Customer, as: 'customer', attributes: ['name'] },
-                { 
-                    model: SaleItem, 
-                    as: 'items',
-                    include: [
-                        { 
-                            model: Product, 
-                            as: 'product', 
-                            attributes: ['name'],
-                            include: [{ model: Category, as: 'category', attributes: ['name'] }]
-                        }
-                    ]
-                },
-                { model: SalePayment, as: 'payments' }
-            ],
-            order: [['createdAt', 'DESC']]
-        });
-
-        // Calculate Stats
-        let totalSales = 0;
-        let totalTax = 0;
-        let totalDiscount = 0;
-        let totalItems = 0;
-        
-        const paymentBreakdown = {};
-        const categoryBreakdown = {};
-        const productBreakdown = {};
-
-        sales.forEach(sale => {
-            totalSales += parseFloat(sale.total);
-            totalTax += parseFloat(sale.tax || 0);
-            totalDiscount += parseFloat(sale.discount || 0);
-            
-            // Payment Breakdown
-            if (sale.payments && sale.payments.length > 0) {
-                sale.payments.forEach(p => {
-                    const method = p.paymentMethod || 'cash';
-                    paymentBreakdown[method] = (paymentBreakdown[method] || 0) + parseFloat(p.amount);
-                });
-            } else {
-                const method = sale.paymentMethod || 'cash';
-                paymentBreakdown[method] = (paymentBreakdown[method] || 0) + parseFloat(sale.total);
-            }
-
-            // Items breakdown
-            if (sale.items) {
-                sale.items.forEach(item => {
-                    totalItems += parseInt(item.qty);
-                    
-                    // Product Breakdown
-                    const productName = item.product ? item.product.name : 'Produk Dihapus';
-                    productBreakdown[productName] = (productBreakdown[productName] || 0) + parseInt(item.qty);
-
-                    // Category Breakdown
-                    const catName = (item.product && item.product.category) ? item.product.category.name : 'Tanpa Kategori';
-                    categoryBreakdown[catName] = (categoryBreakdown[catName] || 0) + parseInt(item.qty);
-                });
-            }
-        });
 
         res.render('reports/sales', {
             title: 'Laporan Penjualan',
-            activePage: 'reports',
-            sales,
-            dateFrom,
-            dateTo,
-            formatRupiah,
-            stats: {
-                totalSales,
-                totalTax,
-                totalDiscount,
-                totalItems,
-                netSales: totalSales - totalTax,
-                paymentBreakdown,
-                categoryBreakdown,
-                productBreakdown
-            }
+            activePage: 'reports-sales',
+            ...data,
+            cashiers,
+            customers,
+            filters,
+            formatRupiah
         });
     } catch (err) {
-        console.error('Error generating sales report:', err);
-        // Fallback if paymentStatus or other columns are missing
-        if (err.message.includes('no such column')) {
-             return res.status(500).render('error', { 
-                message: 'Database schema mismatch. Mohon jalankan "node sync-db-seed.js" dengan setting DB_SYNC_ALTER=true di environment Anda.' 
-            });
+        console.error('Error sales report:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.bestSellerReport = async (req, res) => {
+    try {
+        const filters = {
+            dateFrom: req.query.dateFrom || new Date().toISOString().split('T')[0],
+            dateTo: req.query.dateTo || new Date().toISOString().split('T')[0],
+            categoryId: req.query.categoryId,
+            limit: req.query.limit || 10
+        };
+
+        const items = await reportService.getBestSellers(filters);
+        const categories = await Category.findAll({ attributes: ['id', 'name'] });
+
+        if (req.xhr || req.query.ajax) {
+            return res.json({ success: true, items });
         }
-        res.status(500).render('error', { message: 'Gagal memuat laporan penjualan: ' + err.message });
+
+        res.render('reports/best-seller', {
+            title: 'Laporan Produk Terlaris',
+            activePage: 'reports-best-sellers',
+            items,
+            categories,
+            filters,
+            formatRupiah
+        });
+    } catch (err) {
+        console.error('Error best seller report:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.paymentReport = async (req, res) => {
+    try {
+        const dateFrom = req.query.dateFrom || new Date().toISOString().split('T')[0];
+        const dateTo = req.query.dateTo || new Date().toISOString().split('T')[0];
+
+        const payments = await reportService.getPaymentReport(dateFrom, dateTo);
+
+        if (req.xhr || req.query.ajax) {
+            return res.json({ success: true, payments });
+        }
+
+        res.render('reports/payments', {
+            title: 'Laporan Metode Pembayaran',
+            activePage: 'reports-payments',
+            payments,
+            filters: { dateFrom, dateTo },
+            formatRupiah
+        });
+    } catch (err) {
+        console.error('Error payment report:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.cashierReport = async (req, res) => {
+    try {
+        const dateFrom = req.query.dateFrom || new Date().toISOString().split('T')[0];
+        const dateTo = req.query.dateTo || new Date().toISOString().split('T')[0];
+
+        const reports = await reportService.getCashierReport(dateFrom, dateTo);
+
+        if (req.xhr || req.query.ajax) {
+            return res.json({ success: true, reports });
+        }
+
+        res.render('reports/cashier', {
+            title: 'Laporan Performa Kasir',
+            activePage: 'reports-cashier',
+            reports,
+            filters: { dateFrom, dateTo },
+            formatRupiah
+        });
+    } catch (err) {
+        console.error('Error cashier report:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.stockMovementReport = async (req, res) => {
+    try {
+        const filters = {
+            dateFrom: req.query.dateFrom || new Date().toISOString().split('T')[0],
+            dateTo: req.query.dateTo || new Date().toISOString().split('T')[0],
+            productId: req.query.productId,
+            type: req.query.type,
+            limit: req.query.limit || 20,
+            offset: req.query.offset || 0
+        };
+
+        const data = await reportService.getStockMovement(filters);
+        const products = await Product.findAll({ attributes: ['id', 'name', 'code'], limit: 100 });
+
+        if (req.xhr || req.query.ajax) {
+            return res.json({ success: true, ...data });
+        }
+
+        res.render('reports/stock-movement', {
+            title: 'Laporan Mutasi Stok',
+            activePage: 'reports-stock-movement',
+            ...data,
+            products,
+            filters,
+            formatRupiah
+        });
+    } catch (err) {
+        console.error('Error stock movement report:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.lowStockReport = async (req, res) => {
+    try {
+        const items = await reportService.getLowStock();
+
+        if (req.xhr || req.query.ajax) {
+            return res.json({ success: true, items });
+        }
+
+        res.render('reports/low-stock', {
+            title: 'Laporan Stok Menipis',
+            activePage: 'reports-low-stock',
+            items,
+            formatRupiah
+        });
+    } catch (err) {
+        console.error('Error low stock report:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.profitLossReport = async (req, res) => {
+    try {
+        const dateFrom = req.query.dateFrom || new Date().toISOString().split('T')[0];
+        const dateTo = req.query.dateTo || new Date().toISOString().split('T')[0];
+
+        const data = await reportService.getProfitLoss(dateFrom, dateTo);
+
+        if (req.xhr || req.query.ajax) {
+            return res.json({ success: true, ...data });
+        }
+
+        res.render('reports/profit-loss', {
+            title: 'Laporan Laba Rugi',
+            activePage: 'reports-profit-loss',
+            ...data,
+            filters: { dateFrom, dateTo },
+            formatRupiah
+        });
+    } catch (err) {
+        console.error('Error profit loss report:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+exports.exportSalesReport = async (req, res) => {
+    try {
+        const filters = {
+            ...req.query,
+            limit: 1000, // Large limit for export
+            offset: 0
+        };
+
+        const { sales } = await reportService.getSalesReport(filters);
+        
+        const { Parser } = require('json2csv');
+        const fields = ['invoiceNumber', 'createdAt', 'cashier.name', 'customer.name', 'paymentMethod', 'total', 'status'];
+        const json2csvParser = new Parser({ fields });
+        const csv = json2csvParser.parse(sales);
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment(`sales-report-${new Date().toISOString().split('T')[0]}.csv`);
+        return res.send(csv);
+    } catch (err) {
+        console.error('Export Error:', err);
+        res.status(500).send('Gagal export data: ' + err.message);
     }
 };

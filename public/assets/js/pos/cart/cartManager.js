@@ -83,26 +83,26 @@ export function addToCart(product, quantity = 1) {
     return true;
 }
 
-export function removeFromCart(productId) {
+export function removeFromCart(cartId) {
     if (POS.transactionLocked) {
         showWarning('Transaksi sedang dikunci');
         return false;
     }
 
-    POS.cart = POS.cart.filter(item => item.id !== productId);
+    POS.cart = POS.cart.filter(item => item.cartId !== cartId);
     clearAppliedPromo();
     renderAll();
     saveCart();
     return true;
 }
 
-export function updateQuantity(productId, newQuantity) {
+export function updateQuantity(cartId, newQuantity) {
     if (POS.transactionLocked) return false;
 
-    const item = POS.cart.find(item => item.id === productId);
+    const item = POS.cart.find(item => item.cartId === cartId);
     if (item) {
         if (newQuantity <= 0) {
-            removeFromCart(productId);
+            removeFromCart(cartId);
         } else {
             item.quantity = Number(newQuantity);
             // Re-calculate price based on new quantity if tiers are available
@@ -118,10 +118,10 @@ export function updateQuantity(productId, newQuantity) {
     return false;
 }
 
-export function updatePrice(productId, newPrice) {
+export function updatePrice(cartId, newPrice) {
     if (POS.transactionLocked) return false;
 
-    const item = POS.cart.find(item => item.id === productId);
+    const item = POS.cart.find(item => item.cartId === cartId);
     if (item && newPrice > 0) {
         item.price = newPrice;
         clearAppliedPromo();
@@ -132,10 +132,10 @@ export function updatePrice(productId, newPrice) {
     return false;
 }
 
-export function updateItemDiscount(productId, discountAmount) {
+export function updateItemDiscount(cartId, discountAmount) {
     if (POS.transactionLocked) return false;
 
-    const item = POS.cart.find(item => item.id === productId);
+    const item = POS.cart.find(item => item.cartId === cartId);
     if (item) {
         item.discount = Math.min(discountAmount, item.price * item.quantity);
         clearAppliedPromo();

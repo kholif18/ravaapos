@@ -561,7 +561,7 @@
 
 .btn-checkout-large {
     width: 100%;
-    padding: 20px;
+    padding: 10px;
     background: linear-gradient(135deg, #2ecc71, #27ae60);
     border: none;
     border-radius: 16px;
@@ -597,7 +597,7 @@
     justify-content: center;
     gap: 8px;
     flex: 1;
-    padding: 15px 12px;
+    padding: 10px 8px;
     background: #f8f9fa;
     border: 1px solid var(--pos-border);
     border-radius: 12px;
@@ -1713,7 +1713,7 @@ MOBILE SEARCH DROPDOWN
     }
     
     .btn-payment {
-        padding: 12px;
+        padding: 10px;
     }
 }
 

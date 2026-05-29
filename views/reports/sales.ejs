@@ -1,265 +1,182 @@
-<div class="card mb-4 no-print">
-  <div class="card-body">
-    <form action="/reports/sales" method="GET" class="row g-3">
-      <div class="col-md-4">
-        <label for="dateFrom" class="form-label">Dari Tanggal</label>
-        <input type="date" class="form-control" id="dateFrom" name="dateFrom"
-          value="<%= typeof dateFrom !== 'undefined' ? dateFrom : '' %>">
-      </div>
+<link rel="stylesheet" href="/assets/css/reports-compact.css">
 
-      <div class="col-md-4">
-        <label for="dateTo" class="form-label">Sampai Tanggal</label>
-        <input type="date" class="form-control" id="dateTo" name="dateTo"
-          value="<%= typeof dateTo !== 'undefined' ? dateTo : '' %>">
-      </div>
+<div class="container-xxl flex-grow-1 container-p-y print-area">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Reports /</span> Sales Detail</h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" onclick="exportExcel()">
+                <i class="bx bx-download me-1"></i> Excel
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="window.print()">
+                <i class="bx bx-printer me-1"></i> Print
+            </button>
+        </div>
+    </div>
+    
+    <div class="d-none d-print-block mb-3">
+        <h4>Laporan Penjualan Detail</h4>
+        <p>Periode: <%= filters.dateFrom %> s/d <%= filters.dateTo %></p>
+    </div>
 
-      <div class="col-md-4 d-flex align-items-end">
-        <button type="submit" class="btn btn-primary me-2">Filter</button>
-        <a href="/reports/sales" class="btn btn-outline-secondary">Reset</a>
-      </div>
-    </form>
-  </div>
+    <!-- Filter Section -->
+    <div class="filter-section mb-4 no-print">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Date From</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm" value="<%= filters.dateFrom %>">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date To</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm" value="<%= filters.dateTo %>">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Cashier</label>
+                <select name="cashierId" class="form-select form-select-sm">
+                    <option value="">All Cashiers</option>
+                    <% cashiers.forEach(c => { %>
+                        <option value="<%= c.id %>" <%= filters.cashierId == c.id ? 'selected' : '' %>><%= c.name %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Payment</label>
+                <select name="paymentMethod" class="form-select form-select-sm">
+                    <option value="">All Methods</option>
+                    <option value="cash" <%= filters.paymentMethod == 'cash' ? 'selected' : '' %>>Cash</option>
+                    <option value="card" <%= filters.paymentMethod == 'card' ? 'selected' : '' %>>Card</option>
+                    <option value="qris" <%= filters.paymentMethod == 'qris' ? 'selected' : '' %>>QRIS</option>
+                    <option value="transfer" <%= filters.paymentMethod == 'transfer' ? 'selected' : '' %>>Transfer</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="completed" <%= filters.status == 'completed' ? 'selected' : '' %>>Completed</option>
+                    <option value="void" <%= filters.status == 'void' ? 'selected' : '' %>>Void</option>
+                    <option value="" <%= filters.status == '' ? 'selected' : '' %>>All</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bx bx-filter-alt me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Section -->
+    <div class="card report-card">
+        <div class="table-responsive text-nowrap">
+            <table class="table table-compact table-hover sticky-header">
+                <thead>
+                    <tr>
+                        <th>Invoice</th>
+                        <th>Date Time</th>
+                        <th>Cashier</th>
+                        <th>Customer</th>
+                        <th>Payment</th>
+                        <th class="text-end">Total</th>
+                        <th>Status</th>
+                        <th class="text-center no-print">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="salesTableBody">
+                    <% sales.forEach(sale => { %>
+                    <tr>
+                        <td><strong><%= sale.invoiceNumber %></strong></td>
+                        <td><%= new Date(sale.createdAt).toLocaleString('id-ID') %></td>
+                        <td><%= sale.cashier ? sale.cashier.name : '-' %></td>
+                        <td><%= sale.customer ? sale.customer.name : 'Walking Customer' %></td>
+                        <td>
+                            <span class="badge bg-label-info"><%= sale.paymentMethod || 'cash' %></span>
+                        </td>
+                        <td class="text-end fw-bold"><%= formatRupiah(sale.total) %></td>
+                        <td>
+                            <span class="badge bg-<%= sale.status === 'completed' ? 'success' : 'danger' %>">
+                                <%= sale.status %>
+                            </span>
+                        </td>
+                        <td class="text-center no-print">
+                            <button class="btn btn-icon btn-sm btn-outline-primary" onclick="viewDetail('<%= sale.id %>')">
+                                <i class="bx bx-show"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <% }) %>
+                    <% if (sales.length === 0) { %>
+                        <tr><td colspan="8" class="text-center py-4">No transactions found</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination Placeholder -->
+        <div class="card-footer d-flex justify-content-between align-items-center no-print">
+            <small class="text-muted" id="tableInfo">Showing <%= sales.length %> transactions</small>
+            <nav id="pagination">
+                <!-- AJAX Pagination will be rendered here -->
+            </nav>
+        </div>
+    </div>
 </div>
 
-<!-- AREA PRINT -->
-<div id="printArea">
-  <div class="row mb-4 no-print">
-    <div class="col-md-3">
-      <div class="card bg-primary text-white">
-        <div class="card-body">
-          <h6 class="card-title text-white">Total Penjualan</h6>
-          <h4><%= formatRupiah(stats.totalSales) %></h4>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-success text-white">
-        <div class="card-body">
-          <h6 class="card-title text-white">Penjualan Bersih</h6>
-          <h4><%= formatRupiah(stats.netSales) %></h4>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-info text-white">
-        <div class="card-body">
-          <h6 class="card-title text-white">Total Pajak</h6>
-          <h4><%= formatRupiah(stats.totalTax) %></h4>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card bg-warning text-white">
-        <div class="card-body">
-          <h6 class="card-title text-white">Total Item Terjual</h6>
-          <h4><%= stats.totalItems %> Item</h4>
-        </div>
-      </div>
-    </div>
-  </div>
+<script>
+document.getElementById('filterForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const params = new URLSearchParams(formData);
+    
+    // Show Loading
+    document.getElementById('salesTableBody').innerHTML = '<tr><td colspan="8" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></td></tr>';
 
-  <div class="row mb-4 no-print">
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-header">Metode Pembayaran</div>
-        <div class="card-body">
-          <ul class="list-group list-group-flush">
-            <% Object.entries(stats.paymentBreakdown).forEach(([method, total]) => { %>
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span class="text-capitalize"><%= method %></span>
-                <span><%= formatRupiah(total) %></span>
-              </li>
-            <% }) %>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-header">Top Kategori</div>
-        <div class="card-body">
-          <ul class="list-group list-group-flush">
-            <% Object.entries(stats.categoryBreakdown).sort((a,b) => b[1]-a[1]).slice(0, 5).forEach(([name, qty]) => { %>
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span><%= name %></span>
-                <span class="badge bg-primary rounded-pill"><%= qty %></span>
-              </li>
-            <% }) %>
-          </ul>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card h-100">
-        <div class="card-header">Top Produk</div>
-        <div class="card-body">
-          <ul class="list-group list-group-flush">
-            <% Object.entries(stats.productBreakdown).sort((a,b) => b[1]-a[1]).slice(0, 5).forEach(([name, qty]) => { %>
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span class="text-truncate" style="max-width: 150px;"><%= name %></span>
-                <span class="badge bg-info rounded-pill"><%= qty %></span>
-              </li>
-            <% }) %>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </div>
+    fetch('/reports/sales?ajax=1&' + params.toString())
+        .then(res => res.json())
+        .then(data => {
+            renderTable(data.sales);
+            document.getElementById('tableInfo').innerText = `Showing ${data.sales.length} of ${data.total} transactions`;
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Gagal memuat data');
+        });
+});
 
-  <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center no-print">
-      <h5 class="mb-0">Data Penjualan</h5>
-      <button class="btn btn-success btn-sm" onclick="window.print()">
-        <i class="bx bx-printer me-1"></i> Cetak Laporan
-      </button>
-    </div>
+function renderTable(sales) {
+    const tbody = document.getElementById('salesTableBody');
+    if (sales.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4">No transactions found</td></tr>';
+        return;
+    }
 
-    <div class="card-body print-header d-none">
-      <div class="text-center mb-4">
-        <h2 class="mb-1">LAPORAN PENJUALAN</h2>
-        <% if (dateFrom || dateTo) { %>
-          <p class="mb-0">Periode: <%= dateFrom || '...' %> s/d <%= dateTo || '...' %></p>
-        <% } %>
-        <p class="small text-muted">Dicetak pada: <%= new Date().toLocaleString('id-ID') %></p>
-      </div>
-
-      <div class="row mb-4">
-        <div class="col-6">
-          <table class="table table-sm table-borderless">
-            <tr><td>Total Penjualan</td><td>:</td><td class="text-end"><strong><%= formatRupiah(stats.totalSales) %></strong></td></tr>
-            <tr><td>Penjualan Bersih</td><td>:</td><td class="text-end"><%= formatRupiah(stats.netSales) %></td></tr>
-            <tr><td>Total Pajak</td><td>:</td><td class="text-end"><%= formatRupiah(stats.totalTax) %></td></tr>
-          </table>
-        </div>
-        <div class="col-6">
-          <table class="table table-sm table-borderless">
-            <tr><td>Total Item</td><td>:</td><td class="text-end"><%= stats.totalItems %></td></tr>
-            <tr><td>Total Transaksi</td><td>:</td><td class="text-end"><%= sales.length %></td></tr>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="table-responsive text-nowrap">
-      <table class="table table-striped table-hover">
-        <thead>
-          <tr>
-            <th>Tanggal</th>
-            <th>Invoice</th>
-            <th>Pelanggan</th>
-            <th>Total</th>
-            <th>Metode</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <% if (sales.length === 0) { %>
-            <tr>
-              <td colspan="6" class="text-center">Tidak ada data penjualan.</td>
-            </tr>
-          <% } %>
-
-          <% sales.forEach(sale => { %>
-            <tr>
-              <td><%= new Date(sale.createdAt).toLocaleString('id-ID') %></td>
-              <td><strong><%= sale.invoiceNumber %></strong></td>
-              <td><%= sale.customer ? sale.customer.name : 'Umum' %></td>
-              <td><%= formatRupiah(sale.total) %></td>
-              <td><span class="text-capitalize"><%= sale.paymentMethod || '-' %></span></td>
-              <td>
-                <% if (sale.status === 'void') { %>
-                  <span class="badge bg-label-danger">VOID</span>
-                <% } else { %>
-                  <span class="badge bg-label-<%= (sale.paymentStatus || 'paid') === 'paid' ? 'success' : 'warning' %>">
-                    <%= (sale.paymentStatus || 'paid').toUpperCase() %>
-                  </span>
-                <% } %>
-              </td>
-            </tr>
-          <% }) %>
-        </tbody>
-
-        <tfoot>
-          <tr class="table-dark">
-            <th colspan="3" class="text-end">GRAND TOTAL</th>
-            <th colspan="3"><%= formatRupiah(stats.totalSales) %></th>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </div>
-</div>
-
-<style>
-@media print {
-  @page {
-    size: A4;
-    margin: 1cm;
-  }
-  
-  body * {
-    visibility: hidden;
-  }
-
-  #printArea,
-  #printArea * {
-    visibility: visible;
-  }
-
-  #printArea {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background: white !important;
-  }
-
-  .no-print, 
-  .layout-navbar,
-  .layout-menu-horizontal,
-  .layout-footer-fixed .content-footer,
-  .btn,
-  .footer,
-  .menu-inner-shadow {
-    display: none !important;
-  }
-
-  .layout-page, 
-  .content-wrapper,
-  .container-xxl {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .card {
-    border: none !important;
-    box-shadow: none !important;
-  }
-
-  .print-header {
-    display: block !important;
-  }
-
-  .table {
-    width: 100% !important;
-    border: 1px solid #000 !important;
-    border-collapse: collapse !important;
-  }
-
-  .table th,
-  .table td {
-    border: 1px solid #000 !important;
-    padding: 4px 8px !important;
-    font-size: 10pt !important;
-    color: black !important;
-  }
-
-  .badge {
-    border: 1px solid #ccc !important;
-    background: transparent !important;
-    color: black !important;
-    padding: 2px 4px !important;
-  }
+    tbody.innerHTML = sales.map(sale => `
+        <tr>
+            <td><strong>${sale.invoiceNumber}</strong></td>
+            <td>${new Date(sale.createdAt).toLocaleString('id-ID')}</td>
+            <td>${sale.cashier ? sale.cashier.name : '-'}</td>
+            <td>${sale.customer ? sale.customer.name : 'Walking Customer'}</td>
+            <td><span class="badge bg-label-info">${sale.paymentMethod || 'cash'}</span></td>
+            <td class="text-end fw-bold">${formatMoney(sale.total)}</td>
+            <td><span class="badge bg-${sale.status === 'completed' ? 'success' : 'danger'}">${sale.status}</span></td>
+            <td class="text-center">
+                <button class="btn btn-icon btn-sm btn-outline-primary" onclick="viewDetail('${sale.id}')">
+                    <i class="bx bx-show"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
 }
-</style>
+
+function formatMoney(amount) {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+}
+
+function viewDetail(id) {
+    // Implement detail modal or redirect
+    window.location.href = `/sales?search=${id}`; // Fallback to sales page search
+}
+
+function exportExcel() {
+    const params = new URLSearchParams(new FormData(document.getElementById('filterForm'))).toString();
+    window.location.href = '/reports/sales/export?' + params;
+}
+</script>

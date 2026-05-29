@@ -1,0 +1,126 @@
+<link rel="stylesheet" href="/assets/css/reports-compact.css">
+
+<div class="container-xxl flex-grow-1 container-p-y print-area">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Reports /</span> Profit & Loss</h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="window.print()">
+                <i class="bx bx-printer me-1"></i> Print Statement
+            </button>
+        </div>
+    </div>
+    
+    <div class="d-none d-print-block mb-3">
+        <h4>Laporan Laba Rugi</h4>
+        <p>Periode: <%= filters.dateFrom %> s/d <%= filters.dateTo %></p>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section mb-4 no-print">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Date From</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm" value="<%= filters.dateFrom %>">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Date To</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm" value="<%= filters.dateTo %>">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bx bx-filter-alt me-1"></i> Update Statement
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="row">
+        <!-- Summary Cards -->
+        <div class="col-md-8">
+            <div class="card report-card mb-4">
+                <div class="card-header border-bottom">
+                    <h5 class="card-title mb-0">Income Statement Summary</h5>
+                </div>
+                <div class="card-body pt-4">
+                    <div class="row mb-3">
+                        <div class="col-8"><strong>Total Sales Revenue</strong></div>
+                        <div class="col-4 text-end fw-bold"><%= formatRupiah(totalRevenue) %></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-8 text-danger"><i class="bx bx-minus me-1"></i> Total Cost of Goods (COGS)</div>
+                        <div class="col-4 text-end text-danger">(<%= formatRupiah(totalCost) %>)</div>
+                    </div>
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-8"><strong>Gross Profit</strong></div>
+                        <div class="col-4 text-end fw-bold text-success"><%= formatRupiah(grossProfit) %></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-8 text-danger"><i class="bx bx-minus me-1"></i> Total Discounts Given</div>
+                        <div class="col-4 text-end text-danger">(<%= formatRupiah(totalDiscount) %>)</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-8">Total Taxes Collected</div>
+                        <div class="col-4 text-end"><%= formatRupiah(totalTax) %></div>
+                    </div>
+                    <hr class="border-primary border-2">
+                    <div class="row py-2 bg-label-success rounded">
+                        <div class="col-8 h5 mb-0"><strong>Net Profit (Estimated)</strong></div>
+                        <div class="col-4 h5 mb-0 text-end fw-bold"><%= formatRupiah(netProfit) %></div>
+                    </div>
+                    <div class="mt-4">
+                        <small class="text-muted text-italic">* Calculations are based on current product costs and may not reflect historical cost changes.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profitability Chart -->
+        <div class="col-md-4">
+            <div class="card report-card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Profitability Ratio</h5>
+                </div>
+
+                <div class="card-body text-center">
+                    <div style="height:250px; position:relative;">
+                        <canvas id="profitChart"></canvas>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="h4 mb-0 fw-bold">
+                            <%= ((netProfit / (totalRevenue || 1)) * 100).toFixed(1) %>%
+                        </div>
+                        <small class="text-muted">Net Profit Margin</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('profitChart');
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Expenses (COGS)', 'Net Profit'],
+            datasets: [{
+                data: [
+                    <%= totalCost %>,
+                    <%= netProfit > 0 ? netProfit : 0 %>
+                ],
+                backgroundColor: ['#ff3e1d', '#71dd37'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+});
+</script>

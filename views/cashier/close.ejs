@@ -6,7 +6,7 @@
         <div class="row mb-4">
           <div class="col-md-6">
             <p class="mb-1 text-muted">Dibuka Oleh</p>
-            <h6><%= user.name %></h6>
+            <h6><%= session.user.name || '-' %></h6>
             <p class="mb-1 text-muted">Waktu Buka</p>
             <h6><%= new Date(session.openingTime).toLocaleString('id-ID') %></h6>
           </div>

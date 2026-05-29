@@ -75,7 +75,12 @@ exports.closeSession = async (req, res) => {
             where: {
                 userId: req.user.id,
                 status: 'open'
-            }
+            },
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['name']
+            }]
         });
 
         if (!session) {
@@ -141,7 +146,12 @@ exports.endSession = async (req, res) => {
             where: {
                 userId: req.user.id,
                 status: 'open'
-            }
+            },
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['name']
+            }]
         });
 
         if (!session) {

@@ -124,19 +124,6 @@ function setButtonLoading(button, loading, originalHtml, loadingText) {
 // =====================================================
 
 function initLoginPage() {
-    // Password Toggle untuk login
-    const togglePassword = document.querySelector('.toggle-password');
-    const passwordInput = document.getElementById('password');
-
-    if (togglePassword && passwordInput) {
-        togglePassword.addEventListener('click', function () {
-            const type = passwordInput.type === 'password' ? 'text' : 'password';
-            passwordInput.type = type;
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
-        });
-    }
-
     // Demo Credentials Buttons
     const demoButtons = document.querySelectorAll('.demo-btn');
     demoButtons.forEach(btn => {
@@ -200,18 +187,38 @@ function initLoginPage() {
                     return;
                 }
 
+                if (response.status === 403) {
+                    showAlert('Session expired or security error. Please refresh the page.');
+                    setButtonLoading(loginBtn, false, originalHtml, '');
+                    return;
+                }
+
                 const responseText = await response.text();
 
-                if (responseText.includes('alert alert-danger') || responseText.toLowerCase().includes('invalid') || response.status !== 200) {
+                if (responseText.includes('alert-modern') || responseText.includes('alert alert-danger') || responseText.toLowerCase().includes('invalid') || response.status !== 200) {
                     let errMsg = 'Login failed. Invalid credentials.';
-                    const match = responseText.match(/<div class="alert alert-danger[^>]*>(.*?)<\/div>/s);
-                    if (match && match[1]) {
-                        errMsg = match[1].replace(/<button.*button>/, '').trim();
+                    
+                    // Try to extract message from alert-modern (our new format)
+                    const modernMatch = responseText.match(/<div class="alert-modern[^>]*>.*?<span>(.*?)<\/span>/s);
+                    if (modernMatch && modernMatch[1]) {
+                        errMsg = modernMatch[1].trim();
+                    } else {
+                        // Fallback to old alert-danger format
+                        const match = responseText.match(/<div class="alert alert-danger[^>]*>(.*?)<\/div>/s);
+                        if (match && match[1]) {
+                            errMsg = match[1].replace(/<button.*button>/, '').trim();
+                        }
                     }
+                    
                     showAlert(errMsg);
                     setButtonLoading(loginBtn, false, originalHtml, '');
-                } else if (responseText.includes('dashboard') || response.url.includes('dashboard')) {
-                    window.location.href = '/';
+                } else if (responseText.includes('dashboard') || response.url.includes('dashboard') || response.status === 200) {
+                    // If we got a 200 and it's not an error, it might be a success that didn't redirect (unlikely but safe)
+                    if (responseText.includes('alert-modern success')) {
+                         window.location.href = '/';
+                    } else {
+                        window.location.href = '/';
+                    }
                 } else {
                     showAlert('Unexpected response from server');
                     setButtonLoading(loginBtn, false, originalHtml, '');
@@ -401,31 +408,6 @@ function initResetPasswordPage() {
     // Password validation
     const validatePassword = initPasswordValidation('password', 'lengthReq', 'upperReq', 'numberReq');
 
-    // Password Toggle untuk kedua field
-    const togglePassword = document.querySelector('.toggle-password');
-    const passwordInput = document.getElementById('password');
-
-    if (togglePassword && passwordInput) {
-        togglePassword.addEventListener('click', function () {
-            const type = passwordInput.type === 'password' ? 'text' : 'password';
-            passwordInput.type = type;
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
-        });
-    }
-
-    const togglePassword2 = document.querySelector('.toggle-password2');
-    const confirmPasswordInput = document.getElementById('confirmPassword');
-
-    if (togglePassword2 && confirmPasswordInput) {
-        togglePassword2.addEventListener('click', function () {
-            const type = confirmPasswordInput.type === 'password' ? 'text' : 'password';
-            confirmPasswordInput.type = type;
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
-        });
-    }
-
     // Form submission
     const form = document.getElementById('resetPasswordForm');
     const resetBtn = document.getElementById('resetBtn');
@@ -458,11 +440,11 @@ function initResetPasswordPage() {
 // INITIALIZATION - Detect which page is loaded
 // =====================================================
 
-// Initialize common components
-initPasswordToggle();
-
 // Detect page based on body class or element existence
 document.addEventListener('DOMContentLoaded', function () {
+    // Initialize common components
+    initPasswordToggle();
+
     // Login page detection
     if (document.getElementById('loginForm')) {
         initLoginPage();
@@ -483,3 +465,31 @@ document.addEventListener('DOMContentLoaded', function () {
         initResetPasswordPage();
     }
 });
+
+function initPasswordToggle() {
+    // Untuk toggle password di semua halaman
+    document.querySelectorAll('.toggle-password, .toggle-password2').forEach(toggle => {
+        toggle.addEventListener('click', function () {
+            // Mencari input yang sesuai
+            let input = null;
+
+            // Jika toggle berada di dalam input-wrapper
+            if (this.parentElement && this.parentElement.querySelector('input')) {
+                input = this.parentElement.querySelector('input');
+            }
+            // Atau jika ada struktur yang berbeda (untuk register/reset)
+            else if (this.previousElementSibling && this.previousElementSibling.tagName === 'INPUT') {
+                input = this.previousElementSibling;
+            }
+
+            if (input) {
+                const type = input.type === 'password' ? 'text' : 'password';
+                input.type = type;
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            }
+        });
+    });
+}
+
+// ... rest of the file ...

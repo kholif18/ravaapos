@@ -1,0 +1,70 @@
+<link rel="stylesheet" href="/assets/css/reports-compact.css">
+
+<div class="container-xxl flex-grow-1 container-p-y print-area">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <h4 class="fw-bold py-3 mb-0"><span class="text-muted fw-light">Reports /</span> Low Stock Alerts</h4>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" onclick="window.print()">
+                <i class="bx bx-printer me-1"></i> Print List
+            </button>
+        </div>
+    </div>
+    
+    <div class="d-none d-print-block mb-3">
+        <h4>Laporan Stok Menipis</h4>
+        <p>Tanggal: <%= new Date().toLocaleDateString('id-ID') %></p>
+    </div>
+
+    <div class="card report-card">
+        <div class="card-header border-bottom">
+            <h5 class="card-title mb-0">Products Requiring Attention</h5>
+            <small class="text-muted">Inventory below reorder point threshold</small>
+        </div>
+        <div class="table-responsive text-nowrap">
+            <table class="table table-compact table-hover sticky-header">
+                <thead>
+                    <tr>
+                        <th>Product Info</th>
+                        <th>Category</th>
+                        <th class="text-center">Current Stock</th>
+                        <th class="text-center">Min. Stock</th>
+                        <th>Preferred Qty</th>
+                        <th>Supplier</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center no-print">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                    <% items.forEach(item => { %>
+                    <tr>
+                        <td>
+                            <strong><%= item.name %></strong>
+                            <br><small class="text-muted"><%= item.code %></small>
+                        </td>
+                        <td><%= item.category ? item.category.name : '-' %></td>
+                        <td class="text-center fw-bold text-danger"><%= item.stock %></td>
+                        <td class="text-center text-muted"><%= item.reorderPoint %></td>
+                        <td class="text-center"><%= item.preferredQty %></td>
+                        <td><%= item.supplier ? item.supplier.name : '-' %></td>
+                        <td class="text-center">
+                            <% if (item.stock <= 0) { %>
+                                <span class="badge bg-danger">OUT OF STOCK</span>
+                            <% } else { %>
+                                <span class="badge bg-warning">CRITICAL</span>
+                            <% } %>
+                        </td>
+                        <td class="text-center no-print">
+                            <a href="/purchasing/create?productId=<%= item.id %>" class="btn btn-xs btn-primary">
+                                <i class="bx bx-plus me-1"></i> Order
+                            </a>
+                        </td>
+                    </tr>
+                    <% }) %>
+                    <% if (items.length === 0) { %>
+                        <tr><td colspan="8" class="text-center py-5 text-success"><i class="bx bx-check-circle fs-1 d-block mb-2"></i> All stock levels are healthy</td></tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

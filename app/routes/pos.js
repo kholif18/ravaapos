@@ -21,6 +21,9 @@ router.post('/save-transaction', requireOpenSession, posController.saveTransacti
 router.post('/apply-promo', posController.applyPromo);
 router.post('/void-transaction', isAdmin, posController.voidTransaction);
 
+router.get('/transaction/:invoice', posController.getTransaction);
+router.post('/refund', posController.refundTransaction);
+
 // GET with params
 router.get('/product/:barcode', posController.getProductByBarcode);
 router.get('/search-customers', posController.searchCustomers);

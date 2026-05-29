@@ -69,7 +69,7 @@ function createCartItemRow(item, index) {
     if (isPPOB) badgeHtml += '<span class="badge bg-info">PPOB</span>';
 
     return `
-        <div class="cart-item" data-id="${item.id}" data-index="${index}">
+        <div class="cart-item" data-cart-id="${item.cartId}" data-index="${index}">
             <div class="cart-row">
                 <div class="cart-col product">
                     <div class="cart-product-name" title="${escapeHtml(item.name)}">
@@ -80,7 +80,7 @@ function createCartItemRow(item, index) {
                     ${item.enableAltDesc ? `
                         <input type="text"
                             class="form-control form-control-sm cart-desc-input"
-                            data-id="${item.id}"
+                            data-cart-id="${item.cartId}"
                             data-field="altDesc"
                             placeholder="Deskripsi item..."
                             value="${escapeHtml(item.altDesc || '')}"
@@ -90,7 +90,7 @@ function createCartItemRow(item, index) {
                 <div class="cart-col price">
                     <input type="number" class="form-control form-control-sm price-input ${isPriceEditable ? 'price-editable' : ''}" 
                         value="${price}" 
-                        data-id="${item.id}" 
+                        data-cart-id="${item.cartId}" 
                         data-field="price"
                         step="1000"
                         min="0"
@@ -100,7 +100,7 @@ function createCartItemRow(item, index) {
                     <input type="number"
                         class="form-control form-control-sm qty-input"
                         value="${quantity}"
-                        data-id="${item.id}"
+                        data-cart-id="${item.cartId}"
                         data-field="qty"
                         min="1"
                         step="1"
@@ -110,7 +110,7 @@ function createCartItemRow(item, index) {
                     <input type="number"
                         class="form-control form-control-sm disc-input"
                         value="${discount}"
-                        data-id="${item.id}"
+                        data-cart-id="${item.cartId}"
                         data-field="disc"
                         step="1000"
                         min="0">
@@ -119,7 +119,7 @@ function createCartItemRow(item, index) {
                     ${formatRupiah(itemTotal)}
                 </div>
                 <div class="cart-col action">
-                    <button class="btn-remove" data-id="${item.id}" title="Hapus item">
+                    <button class="btn-remove" data-cart-id="${item.cartId}" title="Hapus item">
                         <i class="bx bx-trash"></i>
                     </button>
                 </div>
@@ -169,51 +169,53 @@ function bindCartItemEvents() {
 function handleQtyClick(e) {
     e.preventDefault();
 
-    const id = parseInt(e.currentTarget.dataset.id, 10);
+    const cartId = e.currentTarget.dataset.cartId;
     const delta = parseInt(e.currentTarget.dataset.delta, 10) || 0;
-    const item = POS.cart.find(i => i.id === id);
+
+    const item = POS.cart.find(i => i.cartId === cartId);
 
     if (item) {
-        updateQuantity(id, item.quantity + delta);
+        updateQuantity(cartId, item.quantity + delta);
     }
 }
 
 function handleRemoveClick(e) {
     e.preventDefault();
 
-    const id = parseInt(e.currentTarget.dataset.id, 10);
-    if (id) {
-        removeFromCart(id);
+    const cartId = e.currentTarget.dataset.cartId;
+
+    if (cartId) {
+        removeFromCart(cartId);
     }
 }
 
 function handlePriceChange(e) {
     const input = e.currentTarget;
-    const id = parseInt(input.dataset.id, 10);
+    const cartId = input.dataset.cartId;
     const price = parseFloat(input.value) || 0;
 
-    if (id && price > 0) {
-        updatePrice(id, price);
+    if (cartId && price > 0) {
+        updatePrice(cartId, price);
     }
 }
 
 function handleQtyInputChange(e) {
     const input = e.currentTarget;
-    const id = parseInt(input.dataset.id, 10);
+    const cartId = input.dataset.cartId;
     const quantity = parseFloat(input.value) || 0;
 
-    if (id) {
-        updateQuantity(id, quantity);
+    if (cartId) {
+        updateQuantity(cartId, quantity);
     }
 }
 
 function handleDiscChange(e) {
     const input = e.currentTarget;
-    const id = parseInt(input.dataset.id, 10);
+    const cartId = input.dataset.cartId;
     const discount = parseFloat(input.value) || 0;
 
-    if (id) {
-        updateItemDiscount(id, discount);
+    if (cartId) {
+        updateItemDiscount(cartId, discount);
     }
 }
 
@@ -223,9 +225,9 @@ function truncateText(text, maxLength) {
 }
 
 function handleAltDescChange(e) {
-    const id = parseInt(e.currentTarget.dataset.id);
+    const cartId = e.currentTarget.dataset.cartId;
     const value = e.currentTarget.value;
-    const item = POS.cart.find(i => i.id === id);
+    const item = POS.cart.find(i => i.cartId === cartId);
     if (item) {
         item.altDesc = value;
         POS.saveToStorage();
@@ -238,6 +240,7 @@ function calculateAndDisplayTotals() {
     if (DOM.subtotal) DOM.subtotal.textContent = formatRupiah(totals.subtotal);
     if (DOM.taxAmount) DOM.taxAmount.textContent = formatRupiah(totals.taxAmount);
     if (DOM.total) DOM.total.textContent = formatRupiah(totals.total);
+    if (DOM.mobileTotal) DOM.mobileTotal.textContent = formatRupiah(totals.total);
 }
 
 export function renderMobileCart() {
@@ -253,7 +256,7 @@ export function renderMobileCart() {
             const itemTotal = Math.max(0, (price * quantity) - discount);
 
             return `
-                <div class="mobile-cart-item" data-id="${item.id}">
+                <div class="mobile-cart-item" data-cart-id="${item.cartId}">
                     <div class="mobile-cart-item-info">
                         <div class="mobile-cart-item-name">
                             ${escapeHtml(item.name)}
@@ -263,12 +266,12 @@ export function renderMobileCart() {
                     </div>
                     <div class="mobile-cart-item-actions">
                         <div class="mobile-cart-item-qty">
-                            <button class="btn-qty btn-qty-minus-mobile" data-id="${item.id}" data-delta="-1">-</button>
+                            <button class="btn-qty btn-qty-minus-mobile" data-cart-id="${item.cartId}" data-delta="-1">-</button>
                             <span class="qty-value">${item.quantity}</span>
-                            <button class="btn-qty btn-qty-plus-mobile" data-id="${item.id}" data-delta="1">+</button>
+                            <button class="btn-qty btn-qty-plus-mobile" data-cart-id="${item.cartId}" data-delta="1">+</button>
                         </div>
                         <div class="mobile-cart-item-total">${formatRupiah(itemTotal)}</div>
-                        <button class="btn-remove btn-remove-mobile" data-id="${item.id}">
+                        <button class="btn-remove btn-remove-mobile" data-cart-id="${item.cartId}">
                             <i class="bx bx-trash"></i>
                         </button>
                     </div>

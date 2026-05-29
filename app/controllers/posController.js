@@ -922,6 +922,130 @@ exports.voidTransaction = async (req, res) => {
     }
 };
 
+exports.getTransaction = async (req, res) => {
+    try {
+        const { invoice } = req.params;
+
+        const trx = await Sale.findOne({
+            where: { invoiceNumber: invoice },
+            include: [
+                { model: SaleItem, as: 'items' },
+                { model: Customer, as: 'customer' }
+            ]
+        });
+
+        if (!trx) {
+            return res.status(404).json({
+                success: false,
+                message: 'Invoice tidak ditemukan'
+            });
+        }
+
+        res.json({
+            success: true,
+            transaction: {
+                id: trx.id,
+                invoiceNumber: trx.invoiceNumber,
+                total: trx.total,
+                status: trx.status,
+                customerName: trx.customer?.name || null,
+                items: trx.items
+            }
+        });
+
+    } catch (err) {
+        console.error('getTransaction error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error: ' + err.message
+        });
+    }
+};
+
+exports.refundTransaction = async (req, res) => {
+    const t = await db.sequelize.transaction();
+
+    try {
+        const { invoiceNumber } = req.body;
+
+        const trx = await Sale.findOne({
+            where: { invoiceNumber },
+            include: [{ model: SaleItem, as: 'items' }],
+            transaction: t
+        });
+
+        if (!trx) {
+            await t.rollback();
+            return res.status(404).json({
+                success: false,
+                message: 'Invoice tidak ditemukan'
+            });
+        }
+
+        if (trx.status === 'refunded') {
+            await t.rollback();
+            return res.status(400).json({
+                success: false,
+                message: 'Transaksi sudah direfund'
+            });
+        }
+
+        // 1. Rollback stock & create movements
+        for (const item of trx.items) {
+            const product = await Product.findByPk(item.productId, { transaction: t });
+            if (product && product.type === 'fisik') {
+                const beforeStock = product.stock;
+                const afterStock = beforeStock + item.qty;
+
+                await product.update({ stock: afterStock }, { transaction: t });
+
+                await StockMovement.create({
+                    productId: product.id,
+                    qty: item.qty,
+                    type: 'return',
+                    referenceId: trx.id,
+                    referenceType: 'Sale',
+                    beforeStock: beforeStock,
+                    afterStock: afterStock,
+                    notes: `Refund invoice ${invoiceNumber}`,
+                    createdBy: req.user?.id || null
+                }, { transaction: t });
+            }
+        }
+
+        // 2. Update transaction status
+        await trx.update({
+            status: 'refunded',
+            notes: (trx.notes ? trx.notes + '\n' : '') + `Refunded at ${new Date().toLocaleString()}`
+        }, { transaction: t });
+
+        // 3. Audit log
+        await recordAudit(req, {
+            action: 'refund_sale',
+            entity: 'Sale',
+            entityId: trx.id,
+            oldValue: { status: 'completed' },
+            newValue: { status: 'refunded' },
+            transaction: t
+        });
+
+        await t.commit();
+
+        return res.json({
+            success: true,
+            message: 'Refund berhasil diproses'
+        });
+
+    } catch (err) {
+        if (t) await t.rollback();
+        console.error('refund error:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Gagal proses refund: ' + err.message
+        });
+    }
+};
+
 exports.getTransactionHistory = async (req, res) => {
     try {
         const { limit = 50, offset = 0, status } = req.query;
